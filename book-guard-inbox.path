@@ -1,0 +1,18 @@
+[Unit]
+Description=Read book-guard photos the moment the phone uploads them
+
+[Path]
+# dufs-cloud (WebDAV) writes phone uploads here. PathChanged fires as a file
+# is created and again as it is closed; the service waits out in-flight
+# uploads itself, and book-guard-inbox.timer is the fallback for any event
+# that lands while a run is already active.
+PathChanged=%h/data/cloud/Reading/inbox
+# The app's request files and dropped ebook files are handled by the same pass.
+PathChanged=%h/data/cloud/Reading/requests
+PathChanged=%h/data/cloud/Reading/books
+MakeDirectory=yes
+DirectoryMode=0755
+Unit=book-guard-inbox.service
+
+[Install]
+WantedBy=paths.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=Lock the PC while this month's reading is behind the pace line
+After=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+# Decides first and exits 0 without a window when on pace, before 2026-10-01,
+# on a free day or after an escape -- so arming it at login and on the timer
+# is idempotent.
+ExecStart=/usr/bin/python3 -m book_guard lock --production
+Restart=on-failure
+RestartSec=2s
+RestartPreventExitStatus=0
+
+[Install]
+WantedBy=graphical-session.target

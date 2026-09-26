@@ -1,0 +1,159 @@
+# Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
+"""_pace (debt, free days, finished books) and _books (registrations)."""
+
+from __future__ import annotations
+
+from datetime import UTC, date, datetime, timedelta
+from typing import TYPE_CHECKING
+
+import pytest
+
+from book_guard import _books, _ledger, _pace
+from book_guard._constants import GATE_START_DATE, MONTHLY_PAGES
+from book_guard._ledger import BOOK, CREDIT, ESCAPE, Entry, Ledger
+from book_guard._openlibrary import BookInfo
+
+if TYPE_CHECKING:
+    from book_guard._paths import Paths
+
+
+def _never(_day: date) -> bool:
+    return False
+
+
+def _book(isbn: str, pages: str, created: str, *, title: str = "T") -> Entry:
+    return Entry(
+        entry_id=f"book:{isbn}:{created}",
+        kind=BOOK,
+        day=created[:10],
+        detail={"isbn": isbn, "title": title, "author": "", "pages": pages},
+        created_at=created,
+    )
+
+
+def _credit(day: str, amount: int, *, isbn: str = "", end_page: str = "") -> Entry:
+    return Entry(
+        entry_id=f"credit:{day}:{amount}:{end_page}",
+        kind=CREDIT,
+        day=day,
+        amount=amount,
+        detail={"isbn": isbn, "end_page": end_page},
+    )
+
+
+def test_month_helpers() -> None:
+    assert _pace.month_start(date(2026, 12, 31)) == date(2026, 12, 1)
+    assert _pace._next_month(date(2026, 12, 1)) == date(2027, 1, 1)
+    assert len(_pace._days(date(2027, 2, 1))) == 28
+
+
+def test_before_gate_start_nothing_is_owed() -> None:
+    ledger = Ledger([_credit("2026-09-10", 50)])
+    pace = _pace.compute_pace(ledger, date(2026, 9, 20), _never)
+    assert (pace.month, pace.target, pace.carried_debt) == (date(2026, 9, 1), 300, 0)
+    assert pace.pages == 50
+    assert pace.required == 0
+    assert pace.behind == 0
+
+
+def test_first_day_of_gate_requires_nothing() -> None:
+    pace = _pace.compute_pace(Ledger(), GATE_START_DATE, _never)
+    assert pace.required == 0
+
+
+def test_required_is_prorated_over_elapsed_days() -> None:
+    ledger = Ledger([_credit("2026-10-03", 40), _credit("2026-09-30", 500)])
+    pace = _pace.compute_pace(ledger, date(2026, 10, 11), _never)
+    assert pace.target == MONTHLY_PAGES
+    assert pace.pages == 40
+    assert pace.required == 97  # ceil(300 * 10 / 31)
+    assert pace.behind == 57
+
+
+def test_debt_carries_across_months() -> None:
+    ledger = Ledger([_credit("2026-10-05", 100), _credit("2026-11-02", 700)])
+    november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
+    assert (november.carried_debt, november.target) == (200, 500)
+    december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
+    assert (december.carried_debt, december.target) == (0, 300)
+    january = _pace.compute_pace(Ledger(), date(2027, 1, 15), _never)
+    # Oct owes 300, Nov's 600-page target leaves 600, Dec's 900 leaves 900.
+    assert january.carried_debt == 900
+    assert january.target == 1200
+
+
+def test_finished_book_clears_debt() -> None:
+    ledger = Ledger(
+        [
+            _book("111", "250", "2026-10-01T08:00:00+00:00"),
+            _book("222", "", "2026-10-01T09:00:00+00:00"),
+            _credit("2026-10-10", 20, isbn="111", end_page="250"),
+            _credit("2026-10-11", 5, isbn="111", end_page="249"),
+            _credit("2026-10-12", 5, isbn="111", end_page="n/a"),
+            _credit("2026-10-13", 5, isbn="222", end_page="999"),
+            _credit("2026-10-14", 5, isbn="333", end_page="999"),
+            Entry(entry_id="esc", kind=ESCAPE, day="2026-10-15"),
+        ]
+    )
+    october = _pace.compute_pace(ledger, date(2026, 10, 20), _never)
+    assert october.finished_books == 1
+    assert october.pages == 40
+    november = _pace.compute_pace(ledger, date(2026, 11, 3), _never)
+    assert november.carried_debt == 0
+
+
+def test_free_days_move_the_line() -> None:
+    free = {date(2026, 10, d) for d in range(1, 11)}
+    pace = _pace.compute_pace(Ledger(), date(2026, 10, 11), free.__contains__)
+    assert pace.required == 0
+    later = _pace.compute_pace(Ledger(), date(2026, 10, 16), free.__contains__)
+    assert later.required == 72  # ceil(300 * 5 / 21)
+
+
+def test_all_days_free() -> None:
+    pace = _pace.compute_pace(Ledger(), date(2026, 10, 20), lambda _d: True)
+    assert pace.required == 0
+
+
+def test_book_label_and_lookup() -> None:
+    first = _book("111", "300", "2025-01-01T08:00:00+00:00", title="One")
+    second = _book("222", "x", "2025-01-05T08:00:00+00:00", title="Two")
+    ledger = Ledger([first, second, _credit("2026-10-02", 3)])
+    books = _books.all_books(ledger)
+    assert [(b.isbn, b.pages) for b in books] == [("111", 300), ("222", None)]
+    assert books[0].label == "One"
+    moment = datetime(2025, 1, 3, tzinfo=UTC)
+    assert _books.book_at(ledger, moment) == books[0]
+    assert _books.book_at(ledger, moment + timedelta(days=10)) == books[1]
+    assert _books.book_at(ledger, moment - timedelta(days=10)) == books[0]
+    assert _books.book_at(Ledger(), moment) is None
+    assert _books.current(ledger) == books[1]
+
+
+def test_label_with_author() -> None:
+    book = _books.Book("1", "Solaris", "Lem", 204, datetime.now(tz=UTC))
+    assert book.label == "Solaris -- Lem"
+
+
+def test_register_writes_signed_entry(bg_paths: Paths) -> None:
+    book = _books.register(bg_paths, BookInfo("Solaris", "Lem", 204, "978"))
+    assert (book.isbn, book.title, book.author, book.pages) == (
+        "978",
+        "Solaris",
+        "Lem",
+        204,
+    )
+    ledger = _ledger.load(bg_paths.ledger, bg_paths.key_file)
+    assert _books.current(ledger) == book
+    override = _books.register(bg_paths, BookInfo("S", "", 204, "978"), pages=190)
+    assert override.pages == 190
+    unknown = _books.register(bg_paths, BookInfo("S", "", None, "979"))
+    assert unknown.pages is None
+    entries = _ledger.load(bg_paths.ledger, bg_paths.key_file).of_kind(BOOK)
+    assert [e.detail["pages"] for e in entries] == ["204", "190", ""]
+
+
+def test_register_needs_isbn(bg_paths: Paths) -> None:
+    with pytest.raises(ValueError, match="needs an ISBN"):
+        _books.register(bg_paths, BookInfo("T", "A", 10, None))
+    assert not bg_paths.ledger.exists()

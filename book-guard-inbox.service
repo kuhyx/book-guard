@@ -1,0 +1,17 @@
+[Unit]
+Description=Read new book-guard photos (Claude vision) and refresh NEXT.txt
+
+[Service]
+Type=oneshot
+# Installed into the system python's user site-packages (install.sh), so no
+# WorkingDirectory: the checked-out branch must never be the running config.
+ExecStart=/usr/bin/python3 -m book_guard process
+# Indexing a book (multilingual embeddings on CPU) is the heaviest thing
+# here, and it can start while a game is running: the same ceiling capped.sh
+# enforces for every heavy job -- 10 % of all 24 cores, 4 GiB (2 GiB was
+# measured to be too little for the embedding model plus a whole book).
+Nice=19
+IOSchedulingClass=idle
+CPUQuota=240%
+MemoryMax=4G
+TimeoutStartSec=15min

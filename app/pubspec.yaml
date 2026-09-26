@@ -1,0 +1,55 @@
+name: book_guard_app
+description: "book-guard's phone + desktop client: sessions, book, summary."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.3
+
+# Exact pins, newest stable (dependency-freshness gate). The app talks to the
+# PC only through the dufs WebDAV share, so there is no sync library here.
+dependencies:
+  design_system:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: design_system-v0.2.1
+      path: design_system
+  # Picks the book file (epub, pdf, mobi, ...) on both phone and desktop.
+  file_selector: 1.1.0
+  flutter:
+    sdk: flutter
+  # The dufs login on the phone. The desktop build never holds it: the local
+  # wrapper injects it when proxying WebDAV.
+  flutter_secure_storage: 11.2.0
+  http: 1.6.0
+  # Session photos from the camera. Called with no resize/quality options so
+  # the camera's original bytes -- and their EXIF capture time -- are uploaded.
+  image_picker: 1.2.3
+  path: 1.9.1
+
+dev_dependencies:
+  flutter_launcher_icons: 0.14.4
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+
+# The shared icon family (python_pkg/app_icons in testsAndMisc, key
+# book_guard_app): charcoal field, open-book glyph in the family accent.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#211D1B"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_monochrome: "assets/icon/icon_monochrome.png"
+  min_sdk_android: 24
+  # The desktop build is web-in-Chrome: favicon + manifest icons are what
+  # the app window and the taskbar show.
+  web:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    background_color: "#211D1B"
+    theme_color: "#211D1B"
