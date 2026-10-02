@@ -28,10 +28,9 @@ void main() {
 
   test('an author narrows the search', () async {
     final seen = <Uri>[];
-    await _library(
-      const {'docs': <Object>[]},
-      seen: seen,
-    ).search('Dune', author: 'Herbert');
+    await _library(const {
+      'docs': <Object>[],
+    }, seen: seen).search('Dune', author: 'Herbert');
     expect(seen.single.queryParameters['author'], 'Herbert');
   });
 

@@ -123,6 +123,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^app/(lib|test|bin)/.*\.dart$
+      - id: app-format
+        name: dart format (app, as CI checks it)
+        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) dart format --output=none --set-exit-if-changed lib test bin'
+        language: system
+        pass_filenames: false
+        files: ^app/(lib|test|bin)/.*\.dart$
       - id: app-test
         name: flutter test (app)
         entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter test'
