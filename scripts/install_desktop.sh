@@ -35,11 +35,18 @@ run_capped() {
     fi
 }
 
+# The SDK pinned in app/.fvmrc when fvm is installed (what CI builds with);
+# the ambient one differs by a patch release, which is enough to invalidate
+# the native-asset build cache the other tools share.
+SDK=()
+command -v fvm >/dev/null 2>&1 && SDK=(fvm)
+readonly SDK
+
 build() {
     log "building the web app"
-    (cd "$APP_DIR" && run_capped flutter build web --release) >/dev/null || fail "flutter build web"
+    (cd "$APP_DIR" && run_capped "${SDK[@]}" flutter build web --release) >/dev/null || fail "flutter build web"
     log "building the wrapper"
-    (cd "$APP_DIR" && run_capped dart build cli -t bin/book_guard_desktop.dart -o build/cli) \
+    (cd "$APP_DIR" && run_capped "${SDK[@]}" dart build cli -t bin/book_guard_desktop.dart -o build/cli) \
         >/dev/null || fail "dart build cli"
 }
 
