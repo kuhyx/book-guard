@@ -63,6 +63,7 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
             "required": pace.required,
             "behind": pace.behind,
             "carried_debt": pace.carried_debt,
+            "carried_credit": pace.carried_credit,
             "finished_books": pace.finished_books,
         },
         "open_start": None

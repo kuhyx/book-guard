@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import timedelta
 
 import pytest
@@ -103,3 +104,12 @@ def test_status_lines_without_a_book() -> None:
     lines = status_lines(make_snap())
     assert lines[1] == "Book: (none)"
     assert lines[-1].startswith("  * No book registered")
+
+
+def test_status_lines_show_carried_credit() -> None:
+    snap = dataclasses.replace(
+        make_snap(), pace=dataclasses.replace(make_snap().pace, carried_credit=80)
+    )
+    assert (
+        "carried debt 5; carried credit 80; books finished 1" in (status_lines(snap)[2])
+    )

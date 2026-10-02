@@ -66,6 +66,7 @@ def status_lines(snap: Snapshot, *, recent: int = 6) -> list[str]:
         (
             f"{p.month:%B %Y}: {p.pages}/{p.target} pages "
             f"(pace line today: {p.required}; carried debt {p.carried_debt}; "
+            f"{f'carried credit {p.carried_credit}; ' if p.carried_credit else ''}"
             f"books finished {p.finished_books})"
         ),
         f"Escapes left this month: {snap.escapes_left}",

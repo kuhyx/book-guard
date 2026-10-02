@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 ISBN13: Final = "9780140449136"
 T0: Final = datetime(2026, 10, 5, 16, 0, tzinfo=UTC)
 LOCKED_DAY: Final = date(2026, 10, 15)
-"""Mid-October with no credits: 440 pages behind, so the gate locks."""
+"""Mid-October with no credits: 420 pages behind, so the gate locks."""
 LONG_TEXT: Final = " ".join(f"word{i % 97} sentence{i % 13}." for i in range(4000))
 """Comfortably over MIN_BOOK_CHARS once normalised."""
 

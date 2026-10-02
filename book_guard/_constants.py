@@ -9,6 +9,10 @@ from typing import Final
 GATE_START_DATE: Final = date(2026, 10, 1)
 """No lock and no debt before this. September is never owed."""
 
+PACE_START_DATE: Final = date(2026, 10, 2)
+"""The first day with a page quota: the weekly pace was set on this day, so
+2026-10-01 (gated, but before the quotas existed) owes nothing."""
+
 WORKDAY_PAGES: Final = 20
 OFFDAY_PAGES: Final = 40
 """Each counted (non-free) day's share of its month's target:
