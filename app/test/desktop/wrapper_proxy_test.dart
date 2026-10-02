@@ -55,6 +55,7 @@ void main() {
       webRoot: dir.path,
       loginEnv: loginEnv,
       dufs: Uri.parse('http://127.0.0.1:${dufs.port}'),
+      nationalLibrary: Uri.parse('http://127.0.0.1:${dufs.port}'),
       client: HttpClient(),
     );
     port = await server.start(port: 0);
@@ -145,5 +146,42 @@ void main() {
     final response = await request.close();
     await response.drain<void>();
     expect(response.statusCode, HttpStatus.badGateway);
+  });
+
+  group('/bn (Biblioteka Narodowa)', () {
+    test('title search is forwarded without the dufs login', () async {
+      final (status, type, text) = await call(
+        'GET',
+        '/bn$kNationalLibraryPath?title=Cesarz',
+      );
+      expect((status, type, text), (200, 'application/json', '{"ok":true}'));
+      final request = seen.single;
+      expect(request.path, kNationalLibraryPath);
+      expect(request.query, 'title=Cesarz');
+      expect(request.auth, isNull);
+    });
+
+    test('a bare search path forwards no query', () async {
+      await call('GET', '/bn$kNationalLibraryPath');
+      expect(seen.single.query, '');
+    });
+
+    test('any other path or method is refused, nothing forwarded', () async {
+      expect(
+        (await call('GET', '/bn/api/other.json')).$1,
+        HttpStatus.forbidden,
+      );
+      expect(
+        (await call('POST', '/bn$kNationalLibraryPath')).$1,
+        HttpStatus.forbidden,
+      );
+      expect(seen, isEmpty);
+    });
+
+    test('defaults to the real catalogue', () {
+      final idle = WrapperServer(webRoot: dir.path, loginEnv: loginEnv);
+      expect(idle.nationalLibrary, kNationalLibrary);
+      expect(kNationalLibrary.host, 'data.bn.org.pl');
+    });
   });
 }

@@ -1,4 +1,3 @@
-import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:file_selector/file_selector.dart';
@@ -9,27 +8,37 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fake_api.dart';
 import '../../support/states.dart';
 
-final _epub = Uint8List.fromList([0x50, 0x4b]);
-
 void main() {
   late FakeApi api;
   late int changed;
+  late List<bool> cameras;
 
   setUp(() {
     api = FakeApi();
     changed = 0;
+    cameras = [];
   });
 
-  Future<void> pump(WidgetTester tester, {GuardState? state, XFile? file}) =>
-      pumpTab(
-        tester,
-        BookTab(
-          api: api,
-          state: state ?? sampleState(),
-          onChanged: () async => changed++,
-          bookSource: () async => file,
-        ),
-      );
+  Future<void> pump(
+    WidgetTester tester, {
+    GuardState? state,
+    XFile? file,
+    XFile? photo,
+    bool desktop = false,
+  }) => pumpTab(
+    tester,
+    BookTab(
+      api: api,
+      state: state ?? sampleState(),
+      onChanged: () async => changed++,
+      bookSource: () async => file,
+      desktop: desktop,
+      photoSource: ({required camera}) async {
+        cameras.add(camera);
+        return photo;
+      },
+    ),
+  );
 
   testWidgets('describes a fully registered book', (tester) async {
     await pump(tester);
@@ -50,61 +59,64 @@ void main() {
     );
   });
 
-  testWidgets('Set sends the last page as a number', (tester) async {
+  testWidgets('a known chapter or chapter count shows on the card', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      state: sampleState({
+        'book': {
+          'title': 'Cesarz',
+          'chapters': [
+            {'start': 9, 'title': 'Wstęp'},
+          ],
+          'chapter': {'number': 1, 'of': 1, 'title': 'Wstęp'},
+        },
+      }),
+    );
+    expect(
+      find.text(
+        'Unknown author - last page not set - no ebook file\n'
+        'Chapter 1 of 1: Wstęp',
+      ),
+      findsOneWidget,
+    );
+    await pump(
+      tester,
+      state: sampleState({
+        'book': {
+          'title': 'Cesarz',
+          'chapters': [
+            {'start': 9, 'title': 'Wstęp'},
+            {'start': 25, 'title': 'Jeden'},
+          ],
+        },
+      }),
+    );
+    expect(find.textContaining('\n2 chapters'), findsOneWidget);
+  });
+
+  testWidgets('Edit opens the form; saving refreshes', (tester) async {
     await pump(tester);
-    await tester.enterText(find.byType(TextField).first, ' 311 ');
-    await tapVisible(tester, find.text('Set'));
-    await settle(tester);
-    expect(api.sent.single.type, 'set_pages');
-    expect(api.sent.single.body, {'pages': 311});
-    expect(find.text('done set_pages'), findsOneWidget);
+    await tapVisible(tester, find.byTooltip('Edit book'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit book'), findsOneWidget);
+    await tapVisible(tester, find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(api.sent.single.type, 'edit_book');
+    expect(find.text('Fill from ISBN'), findsNothing);
     expect(changed, 1);
   });
 
-  testWidgets('Set with no number sends null for the PC to refuse', (
+  testWidgets('leaving the form without saving does not refresh', (
     tester,
   ) async {
     await pump(tester);
-    await tapVisible(tester, find.text('Set'));
-    await settle(tester);
-    expect(api.sent.single.body, {'pages': null});
-  });
-
-  testWidgets('a refused Set is shown as an error', (tester) async {
-    api.onSend = (_) async =>
-        const GuardResponse(ok: false, message: 'Must be positive');
-    await pump(tester);
-    await tapVisible(tester, find.text('Set'));
-    await settle(tester);
-    expect(find.text('Must be positive'), findsOneWidget);
-  });
-
-  testWidgets('attaching uploads the picked file', (tester) async {
-    await pump(tester, file: XFile.fromData(_epub, path: '/b/Atomic.epub'));
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
-    expect(api.books, {'Atomic.epub': _epub});
-    expect(
-      find.text('Uploaded - the PC indexes it in a few minutes.'),
-      findsOneWidget,
-    );
-    expect(changed, 1);
-  });
-
-  testWidgets('a cancelled pick uploads nothing', (tester) async {
-    await pump(tester);
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
-    expect(api.books, isEmpty);
-    expect(find.textContaining('Uploaded'), findsNothing);
-  });
-
-  testWidgets('an upload failure is shown', (tester) async {
-    api.uploadError = shareDown();
-    await pump(tester, file: XFile.fromData(_epub, path: '/b/a.pdf'));
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
-    expect(find.text('dufs Reading/x failed (500)'), findsOneWidget);
+    await tapVisible(tester, find.byTooltip('Edit book'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(changed, 0);
   });
 
   testWidgets('defaults to the file_selector ebook picker', (tester) async {

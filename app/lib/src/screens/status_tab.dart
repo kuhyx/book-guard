@@ -1,4 +1,6 @@
+import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/session_screen.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +21,7 @@ class StatusTab extends StatelessWidget {
     required this.error,
     required this.onRefresh,
     super.key,
+    this.api,
   });
 
   /// The latest snapshot, or null before one arrived.
@@ -29,6 +32,9 @@ class StatusTab extends StatelessWidget {
 
   /// Pull-to-refresh.
   final Future<void> Function() onRefresh;
+
+  /// For opening a session's history; null hides the link.
+  final GuardApi? api;
 
   @override
   Widget build(BuildContext context) {
@@ -114,12 +120,28 @@ class StatusTab extends StatelessWidget {
       if (s.sessions.isNotEmpty) ...[
         const SectionHeader('Sessions'),
         for (final session in s.sessions.reversed)
-          ListTile(
-            title: Text(
-              'p. ${session.startPage}-${session.endPage} '
-              '(${session.pages} p, ${session.minutes} min)',
+          Builder(
+            builder: (context) => ListTile(
+              title: Text(
+                'p. ${session.startPage}-${session.endPage} '
+                '(${session.pages} p, ${session.minutes} min)',
+              ),
+              subtitle: Text(
+                sessionStatusText[session.status] ?? session.status,
+              ),
+              trailing: api == null || session.detail.isEmpty
+                  ? null
+                  : const Icon(Icons.chevron_right),
+              onTap: switch (api) {
+                final api? when session.detail.isNotEmpty =>
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => SessionScreen(api: api, session: session),
+                    ),
+                  ),
+                _ => null,
+              },
             ),
-            subtitle: Text(sessionStatusText[session.status] ?? session.status),
           ),
       ],
     ];

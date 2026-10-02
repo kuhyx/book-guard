@@ -81,14 +81,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final state = _state;
     final tabs = [
-      StatusTab(state: state, error: _error, onRefresh: refresh),
+      StatusTab(
+        state: state,
+        error: _error,
+        onRefresh: refresh,
+        api: widget.api,
+      ),
       ReadTab(
         api: widget.api,
         state: state,
         desktop: widget.desktop,
         onChanged: refresh,
       ),
-      BookTab(api: widget.api, state: state, onChanged: refresh),
+      BookTab(
+        api: widget.api,
+        state: state,
+        onChanged: refresh,
+        desktop: widget.desktop,
+      ),
     ];
     return Scaffold(
       appBar: AppBar(

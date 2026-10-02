@@ -186,7 +186,7 @@ def test_record_verdict_credit_row(bg_paths: Paths) -> None:
     big = only_session([rec("b1", 10, T0), rec("b2", 40, T0.replace(hour=17))])
     assert _quiz.bonus_eligible(big)
     entry = _quiz.record_verdict(
-        bg_paths, make_book(), big, Verdict(True, "f" * 400), " sum "
+        bg_paths, make_book(), big, Verdict(True, "f" * 2000), " sum "
     )
     assert (entry.kind, entry.amount, entry.day) == (
         CREDIT,
@@ -196,7 +196,7 @@ def test_record_verdict_credit_row(bg_paths: Paths) -> None:
     assert entry.detail["bonus"] == "1"
     assert entry.detail["isbn"] == ISBN13
     assert entry.detail["check_page"] == str(big.check_page)
-    assert len(entry.detail["feedback"]) == 300
+    assert len(entry.detail["feedback"]) == 1500
     assert entry.detail["summary"] == "sum"
     assert entry.detail["ended_at"] == str(int(big.end.taken.timestamp()))
     assert _ledger.load(bg_paths.ledger, bg_paths.key_file).has(big.session_id)

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:book_guard_app/src/guard_api.dart';
+import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:flutter/material.dart';
@@ -23,12 +24,36 @@ const Map<String, Object> _docs = {
   ],
 };
 
+Map<String, Object> _bnBib(String isbn) => {
+  'isbnIssn': isbn,
+  'marc': {
+    'fields': [
+      {
+        '100': {
+          'subfields': [
+            {'a': 'F., Herbert'},
+          ],
+        },
+      },
+      {
+        '245': {
+          'subfields': [
+            {'a': 'Czerwony cesarz'},
+          ],
+        },
+      },
+    ],
+  },
+};
+
 void main() {
   late FakeApi api;
   late int changed;
   late List<Map<String, String>> queries;
   late Map<String, Object> docs;
   late int status;
+  late List<Object> bibs;
+  late int bnStatus;
 
   setUp(() {
     api = FakeApi();
@@ -36,6 +61,8 @@ void main() {
     queries = [];
     docs = _docs;
     status = 200;
+    bibs = [];
+    bnStatus = 200;
   });
 
   Future<void> pump(WidgetTester tester) => pumpTab(
@@ -49,6 +76,12 @@ void main() {
           queries.add(request.url.queryParameters);
           return http.Response(jsonEncode(docs), status);
         }),
+      ),
+      nationalLibrary: NationalLibrary(
+        web: false,
+        client: MockClient(
+          (_) async => http.Response(jsonEncode({'bibs': bibs}), bnStatus),
+        ),
       ),
       bookSource: () async => null,
     ),
@@ -125,12 +158,43 @@ void main() {
     expect(find.text('Unknown ISBN'), findsOneWidget);
   });
 
-  testWidgets('a failed search is shown, not thrown', (tester) async {
+  testWidgets('both catalogues failing is shown, not thrown', (tester) async {
     status = 503;
+    bnStatus = 500;
     await pump(tester);
     await search(tester, 'Dune');
-    expect(find.text('Exception: Open Library answered 503'), findsOneWidget);
+    expect(
+      find.text(
+        'Exception: Neither Open Library nor Biblioteka Narodowa answered',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(ListTile), findsNothing);
+  });
+
+  testWidgets('one catalogue failing still shows the other', (tester) async {
+    status = 503;
+    bibs = [_bnBib('9788368380002')];
+    await pump(tester);
+    await search(tester, 'Czerwony cesarz');
+    expect(find.text('Czerwony cesarz'), findsWidgets);
+    expect(find.textContaining('ISBN 9788368380002'), findsOneWidget);
+  });
+
+  testWidgets('national hits come first; a repeated ISBN is listed once', (
+    tester,
+  ) async {
+    bibs = [_bnBib('9780441013593')];
+    await pump(tester);
+    await search(tester, 'Dune');
+    final subtitles = [
+      for (final tile in tester.widgetList<ListTile>(find.byType(ListTile)))
+        (tile.subtitle! as Text).data,
+    ];
+    expect(subtitles, [
+      'Herbert F. - ? p - ISBN 9780441013593',
+      '? - ? p - ISBN none',
+    ]);
   });
 
   testWidgets('a result arriving after the tab closed is dropped', (
@@ -147,61 +211,5 @@ void main() {
     await settle(tester);
     expect(find.text('late'), findsNothing);
     expect(changed, 2);
-  });
-
-  testWidgets('the author field searches too, narrowing by author', (
-    tester,
-  ) async {
-    await pump(tester);
-    await tester.enterText(field('Title, e.g. Atomic Habits'), 'Dune');
-    await tester.enterText(field('Author (optional)'), ' Herbert ');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await settle(tester);
-    expect(queries.single['author'], 'Herbert');
-  });
-
-  testWidgets('an empty title is refused without a request', (tester) async {
-    await pump(tester);
-    await tapVisible(tester, find.byIcon(Icons.search));
-    await settle(tester);
-    expect(find.text('Enter a title to search.'), findsOneWidget);
-    expect(queries, isEmpty);
-  });
-
-  testWidgets('no hits says so, and a later hit clears it', (tester) async {
-    docs = const {'docs': <Object>[]};
-    await pump(tester);
-    await search(tester, 'Czerwony Cesarz', author: 'Sheridan');
-    expect(
-      find.text("No books found for 'Czerwony Cesarz' - enter the ISBN below."),
-      findsOneWidget,
-    );
-    docs = _docs;
-    await search(tester, 'Dune');
-    expect(find.textContaining('No books found'), findsNothing);
-    expect(find.text('Dune Notes'), findsOneWidget);
-  });
-
-  testWidgets('a typed ISBN registers with the typed title and author', (
-    tester,
-  ) async {
-    await pump(tester);
-    await tester.enterText(field('Title, e.g. Atomic Habits'), ' Cesarz ');
-    await tester.enterText(field('Author (optional)'), 'Sheridan');
-    await tester.enterText(field('ISBN (optional)'), ' 9788368380002 ');
-    await tapVisible(tester, find.text('Register'));
-    await settle(tester);
-    expect(api.sent.single.type, 'register');
-    expect(api.sent.single.body, {
-      'isbn': '9788368380002',
-      'title': 'Cesarz',
-      'author': 'Sheridan',
-    });
-    expect(find.text('done register'), findsOneWidget);
-    expect(queries, isEmpty);
-  });
-
-  test('every format the PC reads is pickable', () {
-    expect(ebookExtensions, containsAll(['epub', 'pdf', 'mobi', 'azw3']));
   });
 }

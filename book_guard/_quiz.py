@@ -148,7 +148,7 @@ def record_verdict(
             "started_at": str(int(session.start.taken.timestamp())),
             "ended_at": str(int(ended.timestamp())),
             "bonus": "1" if verdict.passed and bonus_eligible(session) else "0",
-            "feedback": verdict.feedback[:300],
+            "feedback": verdict.feedback[:1500],
             "summary": summary.strip()[:1000],
         },
     )

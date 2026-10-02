@@ -5,7 +5,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+import json
+import logging
+from typing import TYPE_CHECKING, Final, NamedTuple
 
 from book_guard import _ledger
 from book_guard._ledger import BOOK, Entry
@@ -14,6 +16,16 @@ if TYPE_CHECKING:
     from book_guard._ledger import Ledger
     from book_guard._openlibrary import BookInfo
     from book_guard._paths import Paths
+
+
+_logger: Final = logging.getLogger(__name__)
+
+
+class Chapter(NamedTuple):
+    """One table-of-contents line: where a chapter starts, and its title."""
+
+    start: int
+    title: str
 
 
 @dataclass(frozen=True)
@@ -25,11 +37,42 @@ class Book:
     author: str
     pages: int | None
     registered_at: datetime
+    chapters: tuple[Chapter, ...] = ()
+
+    def chapter_at(self, page: int) -> tuple[int, Chapter] | None:
+        """(1-based number, chapter) that ``page`` falls in, if any."""
+        found = None
+        for number, chapter in enumerate(self.chapters, 1):
+            if chapter.start <= page:
+                found = (number, chapter)
+        return found
 
     @property
     def label(self) -> str:
         """``Title -- Author`` for humans."""
         return f"{self.title} -- {self.author}" if self.author else self.title
+
+
+def normalise_chapters(rows: object) -> tuple[Chapter, ...]:
+    """Valid ``[start, title]`` rows, sorted by start page, one per start."""
+    by_start: dict[int, str] = {}
+    for row in rows if isinstance(rows, list | tuple) else []:
+        if not isinstance(row, list | tuple) or len(row) != len(Chapter._fields):
+            continue
+        start, title = row
+        if isinstance(start, int) and start > 0 and str(title).strip():
+            by_start[start] = str(title).strip()
+    return tuple(Chapter(start, by_start[start]) for start in sorted(by_start))
+
+
+def _chapters_of(raw: str) -> tuple[Chapter, ...]:
+    if not raw:
+        return ()
+    try:
+        return normalise_chapters(json.loads(raw))
+    except ValueError as exc:
+        _logger.warning("unreadable chapter list in the ledger (%s); ignoring it", exc)
+        return ()
 
 
 def _from_entry(entry: Entry) -> Book:
@@ -40,6 +83,7 @@ def _from_entry(entry: Entry) -> Book:
         author=entry.detail.get("author", ""),
         pages=int(pages) if pages.isdigit() else None,
         registered_at=datetime.fromisoformat(entry.created_at),
+        chapters=_chapters_of(entry.detail.get("chapters", "")),
     )
 
 
@@ -70,14 +114,23 @@ def current(ledger: Ledger) -> Book | None:
     return book_at(ledger, datetime.now(tz=UTC))
 
 
-def register(paths: Paths, info: BookInfo, *, pages: int | None = None) -> Book:
+def register(
+    paths: Paths,
+    info: BookInfo,
+    *,
+    pages: int | None = None,
+    chapters: tuple[Chapter, ...] | None = None,
+) -> Book:
     """Record ``info`` as the book being read (a new registration row).
 
     Args:
         paths: Where the ledger lives.
-        info: Metadata, typically from Open Library.
-        pages: Overrides ``info.pages`` -- Open Library counts front matter
+        info: Metadata, typically from a lookup.
+        pages: Overrides ``info.pages`` -- catalogues count front matter
             differently from the printed last page.
+        chapters: The table of contents; ``None`` keeps the current book's
+            when it is the same ISBN (re-registering to fix a field must not
+            lose an imported contents list).
 
     Raises:
         ValueError: The book has no ISBN.
@@ -88,6 +141,10 @@ def register(paths: Paths, info: BookInfo, *, pages: int | None = None) -> Book:
         raise ValueError(msg)
     now = datetime.now(tz=UTC)
     count = pages if pages is not None else info.pages
+    if chapters is None:
+        now_reading = current(_ledger.load(paths.ledger, paths.key_file))
+        same = now_reading is not None and now_reading.isbn == info.isbn
+        chapters = now_reading.chapters if same and now_reading else ()
     entry = Entry(
         entry_id=f"book:{info.isbn}:{now.isoformat()}",
         kind=BOOK,
@@ -97,6 +154,9 @@ def register(paths: Paths, info: BookInfo, *, pages: int | None = None) -> Book:
             "title": info.title,
             "author": info.author,
             "pages": str(count) if count else "",
+            "chapters": json.dumps([list(c) for c in chapters], ensure_ascii=False)
+            if chapters
+            else "",
         },
         created_at=now.isoformat(),
     )

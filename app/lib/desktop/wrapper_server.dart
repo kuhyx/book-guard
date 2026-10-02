@@ -33,15 +33,25 @@ Map<String, String> readEnv(File file) {
   return values;
 }
 
-/// Serves [webRoot] and proxies `/dav` to [dufs].
+/// Biblioteka Narodowa's catalogue API. It sends no CORS header, so the web
+/// build cannot call it directly; the wrapper forwards `/bn` to it.
+final Uri kNationalLibrary = Uri.parse('https://data.bn.org.pl');
+
+/// The only national-library path forwarded: title search. Anything else is
+/// refused, so the wrapper is never an open proxy.
+const kNationalLibraryPath = '/api/institutions/bibs.json';
+
+/// Serves [webRoot], proxies `/dav` to [dufs] and `/bn` to [nationalLibrary].
 class WrapperServer {
   /// Creates a server.
   new({
     required this.webRoot,
     required this.loginEnv,
     Uri? dufs,
+    Uri? nationalLibrary,
     HttpClient? client,
   }) : dufs = dufs ?? kLocalDufs,
+       nationalLibrary = nationalLibrary ?? kNationalLibrary,
        _client = client ?? HttpClient();
 
   /// The Flutter web build.
@@ -52,6 +62,9 @@ class WrapperServer {
 
   /// The dufs server to forward to.
   final Uri dufs;
+
+  /// Where `/bn` searches go.
+  final Uri nationalLibrary;
 
   final HttpClient _client;
   HttpServer? _server;
@@ -72,6 +85,8 @@ class WrapperServer {
       final path = request.uri.path;
       if (path == '/dav' || path.startsWith('/dav/')) {
         await _proxy(request, path.substring('/dav'.length));
+      } else if (path.startsWith('/bn/')) {
+        await _search(request, path.substring('/bn'.length));
       } else {
         await _static(request, path);
       }
@@ -106,6 +121,21 @@ class WrapperServer {
     request.response.statusCode = answer.statusCode;
     final type = answer.headers.contentType;
     if (type != null) request.response.headers.contentType = type;
+    await request.response.addStream(answer);
+  }
+
+  Future<void> _search(HttpRequest request, String rest) async {
+    if (request.method != 'GET' || rest != kNationalLibraryPath) {
+      request.response.statusCode = HttpStatus.forbidden;
+      return;
+    }
+    final target = nationalLibrary.replace(
+      path: rest,
+      query: request.uri.query.isEmpty ? null : request.uri.query,
+    );
+    final answer = await (await _client.getUrl(target)).close();
+    request.response.statusCode = answer.statusCode;
+    request.response.headers.contentType = ContentType.json;
     await request.response.addStream(answer);
   }
 

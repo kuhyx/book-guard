@@ -11,6 +11,7 @@ from PIL import Image
 import pytest
 
 from book_guard import _inbox, _photos
+from book_guard._books import Chapter
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._photo import PhotoFile
 from book_guard._photos import REJECTED
@@ -45,8 +46,10 @@ def _photo(name: str, taken: datetime | None = T0) -> PhotoFile:
     return PhotoFile(sha=sha(name), taken_at=taken, jpeg_b64=name)
 
 
-def _page_reader(page: int = 12) -> Callable[[str], Reading]:
-    return lambda _b64: Reading(kind=PAGE, page_number=page, isbn=None, text="words")
+def _page_reader(page: int = 12) -> Callable[[Path, str], Reading]:
+    return lambda _path, _b64: Reading(
+        kind=PAGE, page_number=page, isbn=None, text="words"
+    )
 
 
 def test_missing_inbox_reads_nothing(bg_paths: Paths) -> None:
@@ -111,7 +114,7 @@ def test_duplicate_is_filed_without_reading(
     _drop(bg_paths, "again.jpg")
     _fake_open(monkeypatch, {"again.jpg": _photo("a")})
 
-    def no_read(_b64: str) -> Reading:
+    def no_read(_path: Path, _b64: str) -> Reading:
         raise AssertionError
 
     result = _inbox.process_inbox(bg_paths, reader=no_read, now=NOW)
@@ -152,7 +155,7 @@ def test_claude_down_stops_the_pass(
     _fake_open(monkeypatch, {"1.jpg": _photo("1"), "2.jpg": _photo("2")})
     calls: list[str] = []
 
-    def down(b64: str) -> Reading:
+    def down(_path: Path, b64: str) -> Reading:
         calls.append(b64)
         msg = "offline"
         raise ClaudeUnavailableError(msg)
@@ -173,7 +176,9 @@ def test_isbn_collection(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> No
         "a": Reading(kind=ISBN, page_number=None, isbn="9780140449136", text=""),
         "b": Reading(kind=ISBN, page_number=None, isbn=None, text=""),
     }
-    result = _inbox.process_inbox(bg_paths, reader=readings.__getitem__, now=NOW)
+    result = _inbox.process_inbox(
+        bg_paths, reader=lambda _path, b64: readings[b64], now=NOW
+    )
     assert result.new_isbns == ["9780140449136"]
     assert len(result.read) == 2
 
@@ -194,3 +199,25 @@ def test_real_jpeg_with_exif_default_clock(bg_paths: Paths) -> None:
     assert record.taken_at.startswith(taken.astimezone().strftime("%Y-%m-%dT%H:%M"))
     (bg_paths.inbox / "uploading.jpg").write_bytes(b"x")
     assert _inbox.unsettled(bg_paths.inbox) == 1  # real clock, just written
+
+
+def test_contents_photo_is_read_as_chapters(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _drop(bg_paths, "toc-a.jpg")
+    _drop(bg_paths, "toc-b.jpg", mtime=UPLOADED.timestamp() + 1)
+    _fake_open(
+        monkeypatch,
+        {"toc-a.jpg": _photo("toc-a", taken=None), "toc-b.jpg": _photo("toc-b")},
+    )
+    found = {
+        "toc-a": (Chapter(1, "One"), Chapter(30, "Two")),
+        "toc-b": (),
+    }
+    result = _inbox.process_inbox(
+        bg_paths, toc_reader=lambda _path, b64: found[b64], now=NOW
+    )
+    first, second = result.read
+    assert (first.kind, first.taken_at, first.text) == ("toc", "", "1\tOne\n30\tTwo")
+    assert second.taken_at == T0.isoformat()
+    assert result.contents == [found["toc-a"]]

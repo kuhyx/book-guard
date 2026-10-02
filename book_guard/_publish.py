@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard._atomic_json import write_json, write_text
 from book_guard._render import status_lines
+from book_guard._session_files import write_session_files
 from book_guard._state_json import to_json
+from book_guard._thumbs import backfill
 
 if TYPE_CHECKING:
     from book_guard._paths import Paths
@@ -34,6 +36,8 @@ def write_next_file(paths: Paths, snap: Snapshot) -> None:
             "Reading/inbox with the dufs app. Page numbers must be visible.",
         ]
     )
+    backfill(paths.processed, paths.thumbs)
+    write_session_files(paths, snap)
     try:
         write_text(paths.next_file, body + "\n")
         write_json(paths.state_file, to_json(paths, snap), indent=1)

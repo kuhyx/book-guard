@@ -73,4 +73,94 @@ void main() {
     expect(book.pages, isNull);
     expect(book.hasFile, isFalse);
   });
+
+  test('parses chapters, the current chapter, photos and session detail', () {
+    final state = GuardState.fromJson({
+      'book': {
+        'title': 'Cesarz',
+        'chapters': [
+          {'start': 9, 'title': 'Wstęp'},
+          'junk',
+          {'start': '25', 'title': 'Rozdział 1'},
+        ],
+        'chapter': {'number': 2, 'of': 2, 'title': 'Rozdział 1'},
+      },
+      'photos': [
+        {
+          'name': 'check19_a.jpg',
+          'file': 'processed/abc-check19_a.jpg',
+          'thumb': 'thumbs/abc.jpg',
+          'kind': 'page',
+          'page': 19,
+          'status': 'ok',
+          'taken_at': '2026-10-02T18:14:00Z',
+        },
+        7,
+        <String, dynamic>{},
+      ],
+      'sessions': [
+        {'id': 's', 'detail': 'sessions/s.json'},
+      ],
+    });
+    final book = state.book!;
+    expect(
+      [for (final c in book.chapters) (c.start, c.title)],
+      [(9, 'Wstęp'), (25, 'Rozdział 1')],
+    );
+    expect(book.chapters.first.toJson(), {'start': 9, 'title': 'Wstęp'});
+    expect(book.chapter?.label, 'Chapter 2 of 2: Rozdział 1');
+    final photo = state.photos.first;
+    expect(
+      (photo.name, photo.file, photo.thumb, photo.page, photo.takenAt),
+      (
+        'check19_a.jpg',
+        'processed/abc-check19_a.jpg',
+        'thumbs/abc.jpg',
+        19,
+        DateTime.utc(2026, 10, 2, 18, 14),
+      ),
+    );
+    expect(state.photos, hasLength(2));
+    final bare = state.photos.last;
+    expect((bare.kind, bare.page, bare.takenAt), ('', null, null));
+    expect(state.sessions.single.detail, 'sessions/s.json');
+  });
+
+  test('a bare book has no chapters and no current chapter', () {
+    final book = GuardState.fromJson({
+      'book': {
+        'title': 'T',
+        'chapter': 'junk',
+        'chapters': [
+          {'title': 'no start'},
+        ],
+      },
+    }).book!;
+    expect(book.chapter, isNull);
+    expect(book.chapters.single.start, 0);
+    const empty = CurrentChapter(number: 0, of: 0, title: '');
+    expect(CurrentChapter.fromJson(const {}).label, empty.label);
+  });
+
+  test('photo captions say what the PC made of each photo', () {
+    PhotoInfo photo(String kind, {int? page, String status = 'ok'}) =>
+        PhotoInfo.fromJson({
+          'kind': kind,
+          'page': page,
+          'status': status,
+          'reason': 'too late',
+        });
+    expect(photo('page', page: 7).caption, 'page 7');
+    expect(photo('page').caption, 'page ?');
+    expect(photo('isbn').caption, 'barcode');
+    expect(photo('toc').caption, 'contents');
+    expect(photo('other').caption, 'not a page');
+    expect(
+      photo('page', page: 1, status: 'rejected').caption,
+      'page 1 - rejected: too late',
+    );
+    expect(photo('page', page: 7).accepted, isTrue);
+    expect(photo('other').accepted, isFalse);
+    expect(photo('page', page: 7, status: 'rejected').accepted, isFalse);
+  });
 }

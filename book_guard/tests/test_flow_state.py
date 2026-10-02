@@ -116,6 +116,8 @@ def test_to_json_full(bg_paths: Paths) -> None:
         "author": "Tol",
         "pages": 300,
         "has_file": True,
+        "chapters": [],
+        "chapter": None,
     }
     assert doc["pace"]["month"] == "2026-10"
     assert doc["pace"]["behind"] == 419
@@ -127,6 +129,12 @@ def test_to_json_full(bg_paths: Paths) -> None:
         None,
     )
     assert doc["todo"][0].startswith("TAKE A PHOTO of page ")
+    assert first["detail"].startswith("sessions/session_")
+    assert len(doc["photos"]) == 7
+    newest = doc["photos"][0]
+    assert newest["file"].startswith("processed/")
+    assert newest["file"].endswith(newest["name"])
+    assert newest["thumb"].startswith("thumbs/")
     json.dumps(doc)
 
 
@@ -162,3 +170,13 @@ def test_publish_failure_is_logged_not_raised(
         _publish.write_next_file(bg_paths, snapshot(bg_paths, today=LOCKED_DAY))
     assert "disk full" in caplog.text
     assert not bg_paths.state_file.exists()
+
+
+def test_caught_up_after_an_escape_says_on_pace(bg_paths: Paths) -> None:
+    add_escape(bg_paths, LOCKED_DAY.isoformat())
+    assert snapshot(bg_paths, today=LOCKED_DAY).reason == (
+        "today's lock was skipped with the escape hatch"
+    )
+    add_credit(bg_paths, "2026-10-14", 420)
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+    assert (snap.locked, snap.reason, snap.escaped_today) == (False, "on pace", True)

@@ -18,7 +18,7 @@ import logging
 import re
 from typing import TYPE_CHECKING, Final
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -110,7 +110,10 @@ def open_photo(path: Path) -> PhotoFile | None:
         with Image.open(path) as image:
             image.load()
             taken = capture_time(image)
-            copy = image.convert("RGB")
+            # Upright first: the camera stores pixels sideways and says so in
+            # EXIF. Sent as stored, the model read "1953" off a chapter
+            # heading instead of the page number 19 (2026-10-02).
+            copy = ImageOps.exif_transpose(image).convert("RGB")
     except (OSError, UnidentifiedImageError, SyntaxError) as exc:
         _logger.warning("%s is not (yet) a readable image: %s", path.name, exc)
         return None

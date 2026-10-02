@@ -1,3 +1,7 @@
+import 'package:book_guard_app/src/book_extras.dart';
+
+export 'package:book_guard_app/src/book_extras.dart';
+
 /// `Reading/state.json`, as book-guard on the PC writes it (schema 1).
 ///
 /// The app never derives pace or session state itself: the PC is the only
@@ -13,6 +17,7 @@ class GuardState {
     required this.sessions,
     required this.openStart,
     required this.generatedAt,
+    this.photos = const [],
   });
 
   /// Parses the JSON document.
@@ -31,6 +36,10 @@ class GuardState {
       ],
       openStart: start is Map<String, dynamic> ? _int(start['page']) : null,
       generatedAt: DateTime.tryParse('${json['generated_at']}'),
+      photos: [
+        for (final p in json['photos'] as List? ?? const [])
+          if (p is Map<String, dynamic>) PhotoInfo.fromJson(p),
+      ],
     );
   }
 
@@ -58,6 +67,9 @@ class GuardState {
   /// When the PC wrote this snapshot.
   final DateTime? generatedAt;
 
+  /// The newest uploaded photos, newest first.
+  final List<PhotoInfo> photos;
+
   /// Sessions waiting for their check-page photo.
   List<SessionInfo> get needCheck =>
       sessions.where((s) => s.status == 'needs-check-photo').toList();
@@ -78,6 +90,8 @@ class BookInfo {
     required this.author,
     required this.pages,
     required this.hasFile,
+    this.chapters = const [],
+    this.chapter,
   });
 
   /// Parses the `book` object.
@@ -87,6 +101,13 @@ class BookInfo {
     author: '${json['author'] ?? ''}',
     pages: _int(json['pages']),
     hasFile: json['has_file'] == true,
+    chapters: [
+      for (final c in json['chapters'] as List? ?? const [])
+        if (c is Map<String, dynamic>) ChapterInfo.fromJson(c),
+    ],
+    chapter: json['chapter'] is Map<String, dynamic>
+        ? CurrentChapter.fromJson(json['chapter'] as Map<String, dynamic>)
+        : null,
   );
 
   /// ISBN-10 or -13.
@@ -103,6 +124,12 @@ class BookInfo {
 
   /// Whether an ebook file is attached (the grader reads it).
   final bool hasFile;
+
+  /// The table of contents, by start page.
+  final List<ChapterInfo> chapters;
+
+  /// The chapter of the latest photographed page, when known.
+  final CurrentChapter? chapter;
 }
 
 /// The month's pace position.
@@ -158,6 +185,7 @@ class SessionInfo {
     required this.minutes,
     required this.status,
     required this.startedAt,
+    this.detail = '',
   });
 
   /// Parses one `sessions[]` entry.
@@ -170,7 +198,11 @@ class SessionInfo {
     minutes: _int(json['minutes']) ?? 0,
     status: '${json['status'] ?? ''}',
     startedAt: DateTime.tryParse('${json['started_at']}'),
+    detail: '${json['detail'] ?? ''}',
   );
+
+  /// The session's detail file, relative to `Reading/`.
+  final String detail;
 
   /// Ledger id (`session:<hash>-<hash>`).
   final String id;

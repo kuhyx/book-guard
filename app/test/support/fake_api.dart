@@ -41,6 +41,18 @@ class FakeApi extends GuardApi {
   /// When set, uploads throw it.
   Exception? uploadError;
 
+  /// Files [fetchBytes] serves, by `Reading/`-relative path.
+  final Map<String, Uint8List> files = {};
+
+  /// Every path [fetchBytes] was asked for.
+  final List<String> fetched = [];
+
+  /// What [waitFor] finds (if its test holds); null = the PC never answers.
+  GuardState? awaited;
+
+  /// What [waitForPhoto] returns per uploaded name; absent = not read yet.
+  final Map<String, PhotoInfo> readings = {};
+
   @override
   Future<GuardState?> fetchState() async {
     fetches++;
@@ -59,11 +71,27 @@ class FakeApi extends GuardApi {
   }
 
   @override
-  Future<void> uploadPhoto(String name, Uint8List bytes) async {
+  Future<String> uploadPhoto(String name, Uint8List bytes) async {
     final error = uploadError;
     if (error != null) throw error;
     photos[name] = bytes;
+    return name;
   }
+
+  @override
+  Future<Uint8List?> fetchBytes(String path) async {
+    fetched.add(path);
+    return files[path];
+  }
+
+  @override
+  Future<GuardState?> waitFor(bool Function(GuardState state) test) async {
+    final found = awaited;
+    return found != null && test(found) ? found : null;
+  }
+
+  @override
+  Future<PhotoInfo?> waitForPhoto(String name) async => readings[name];
 
   @override
   Future<void> uploadBook(String name, Uint8List bytes) async {
@@ -100,3 +128,21 @@ Future<void> settle(WidgetTester tester, [int frames = 5]) async {
     await tester.pump(const Duration(milliseconds: 10));
   }
 }
+
+/// A photo reading the way the PC reports it.
+PhotoInfo reading({
+  String name = 'x.jpg',
+  String kind = 'page',
+  int? page = 19,
+  String status = 'ok',
+  String reason = '',
+}) => PhotoInfo(
+  name: name,
+  file: 'processed/abc-$name',
+  thumb: 'thumbs/abc.jpg',
+  kind: kind,
+  page: page,
+  status: status,
+  reason: reason,
+  takenAt: DateTime.utc(2026, 10, 2, 18, 14),
+);

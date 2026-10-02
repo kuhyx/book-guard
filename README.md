@@ -18,8 +18,10 @@ Paper cannot be proven read, only made cheaper to read than to fake:
 
 The app (phone camera, or the desktop window) uploads to
 `~/data/cloud/Reading/` over dufs; the `.path` unit reads each photo within
-seconds. Claude (**Haiku**, always, unless `--model` is given for one run)
-reads the page number and transcribes the text. The EXIF capture times are
+seconds. Tesseract transcribes the page and zbar reads ISBN barcodes, both
+local and free; Claude (**Haiku**, always, unless `--model` is given for one
+run) is asked only for the printed page number -- or for everything, when
+Tesseract finds too little text. The EXIF capture times are
 the session clock: under 50 s per page is page-flipping and does not count.
 
 The grader reads the **book's own text** for the stretch when an ebook file
@@ -59,9 +61,12 @@ book-guard status                      # or: status --json
 book-guard quiz                        # write the pending summary
 ```
 
-The Flutter app (`app/`) does all of it: Status, Read (camera buttons +
-summary) and Book (title + optional author search, or a typed ISBN;
-attach file). Phone: installed APK with the `bookguard` dufs login. Desktop: `book-guard-desktop` serves
+The Flutter app (`app/`) does all of it: Status (pace; tap a session for
+its photos, what was read off them, your summary and the grader's reply),
+Read (camera buttons that wait for the PC's verdict, summary, a gallery
+of every photo) and Book (Open Library + Biblioteka Narodowa search, a
+typed ISBN, Edit with "Fill from ISBN", a contents photo that becomes
+the chapter list, attach file). Phone: installed APK with the `bookguard` dufs login. Desktop: `book-guard-desktop` serves
 the web build on `localhost:8773` and opens it in a Chrome `--app` window;
 it proxies WebDAV with the login, so the browser never holds it.
 

@@ -73,6 +73,18 @@ void main() {
       );
     });
 
+    test(
+      'getBytes returns null for 404, bytes otherwise, throws on error',
+      () async {
+        final dav = share.dav();
+        expect(await dav.getBytes('missing'), isNull);
+        share.files['a.jpg'] = Uint8List.fromList([7, 8]);
+        expect(await dav.getBytes('a.jpg'), [7, 8]);
+        share.forceStatus = 500;
+        await expectLater(dav.getBytes('a.jpg'), throwsA(isA<DavException>()));
+      },
+    );
+
     test('put uploads the bytes and throws on failure', () async {
       final dav = share.dav();
       await dav.put('dir/f.bin', Uint8List.fromList([1, 2, 3]));

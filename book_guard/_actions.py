@@ -12,17 +12,20 @@ from typing import TYPE_CHECKING, Final
 from book_guard import _ledger
 from book_guard._app_handlers import HANDLERS
 from book_guard._attach import attach_dropped
+from book_guard._books import current, normalise_chapters, register
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
 from book_guard._flock import exclusive
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
 from book_guard._ledger import ESCAPE, Entry
+from book_guard._openlibrary import BookInfo
 from book_guard._publish import write_next_file
 from book_guard._render import todo_lines
 from book_guard._requests import handle_requests
 from book_guard._state import Snapshot, awaiting_quiz, snapshot
 
 if TYPE_CHECKING:
+    from book_guard._books import Chapter
     from book_guard._paths import Paths
     from book_guard._state import SessionView
 
@@ -71,6 +74,8 @@ def process(
         result.deferred = more.deferred
     for isbn in result.new_isbns:
         _logger.info("%s", register_isbn(paths, isbn)[1])
+    for chapters in result.contents:
+        _logger.info("%s", add_chapters(paths, chapters))
     # Requests and dropped book files after the photos, and outside the
     # write lock: their handlers take it themselves around each write, and a
     # grading call or a book index must not hold up the next photo pass.
@@ -81,6 +86,18 @@ def process(
     if result.read or attached:
         _notify(todo_lines(snap) + attached)
     return result, snap
+
+
+def add_chapters(paths: Paths, chapters: tuple[Chapter, ...]) -> str:
+    """Merge a contents photo's chapters into the current book's list."""
+    with exclusive(paths):
+        book = current(_ledger.load(paths.ledger, paths.key_file))
+        if book is None:
+            return "contents photo read, but no book is registered to attach it to"
+        merged = normalise_chapters([*book.chapters, *chapters])
+        info = BookInfo(book.title, book.author, book.pages, book.isbn)
+        register(paths, info, chapters=merged)
+    return f"{book.label}: {len(merged)} chapters"
 
 
 def next_quiz(paths: Paths, *, session_id: str | None = None) -> SessionView | None:

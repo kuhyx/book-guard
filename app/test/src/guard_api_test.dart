@@ -76,6 +76,16 @@ void main() {
       );
     });
 
+    test("carries a lookup's data back", () async {
+      share.answer = (_) => {
+        'ok': true,
+        'message': 'Found',
+        'data': {'title': 'Cesarz', 'pages': 406},
+      };
+      final response = await api.send('lookup', {'isbn': '978'});
+      expect(response.data, {'title': 'Cesarz', 'pages': 406});
+    });
+
     test('tolerates a sparse answer', () async {
       share.answer = (_) => {'ok': 'yes'};
       final response = await api.send('set_pages', {'pages': 3});
@@ -115,7 +125,10 @@ void main() {
     final bytes = Uint8List.fromList([9, 8]);
 
     test('photos go to the inbox with a safe name', () async {
-      await api.uploadPhoto(r'C:\cam\IMG 1(2).jpg', bytes);
+      expect(
+        await api.uploadPhoto(r'C:\cam\IMG 1(2).jpg', bytes),
+        'IMG_1_2_.jpg',
+      );
       await api.uploadPhoto('/sdcard/DCIM/a/b.jpg', bytes);
       expect(share.files.keys, [
         'Reading/inbox/IMG_1_2_.jpg',
@@ -130,6 +143,50 @@ void main() {
       final names = share.files.keys.toList();
       expect(names.first, 'Reading/books/Atomic_Habits.epub');
       expect(names.last, matches(RegExp(r'^Reading/books/[0-9a-f]{24}\.bin$')));
+    });
+  });
+
+  group('reading back', () {
+    test('fetchBytes reads under Reading/, null when missing', () async {
+      share.files['Reading/thumbs/a.jpg'] = Uint8List.fromList([1, 2]);
+      expect(await api.fetchBytes('thumbs/a.jpg'), [1, 2]);
+      expect(await api.fetchBytes('thumbs/b.jpg'), isNull);
+    });
+
+    test('waitFor polls until the test holds', () async {
+      var polls = 0;
+      final pending = api.waitFor((s) => s.locked);
+      while (polls < 2) {
+        await Future<void>.delayed(Duration.zero);
+        polls = share.requests.length;
+      }
+      share.putText('Reading/state.json', jsonEncode({'reason': 'x'}));
+      await Future<void>.delayed(Duration.zero);
+      share.putText('Reading/state.json', jsonEncode({'locked': true}));
+      expect((await pending)?.locked, isTrue);
+    });
+
+    test('waitForPhoto finds the reading by upload name', () async {
+      share.putText(
+        'Reading/state.json',
+        jsonEncode({
+          'photos': [
+            {'name': 'other.jpg', 'kind': 'other'},
+            {'name': 'check19_a.jpg', 'kind': 'page', 'page': 19},
+          ],
+        }),
+      );
+      final photo = await api.waitForPhoto('check19_a.jpg');
+      expect((photo?.kind, photo?.page), ('page', 19));
+    });
+
+    test('a PC that never reads the photo gives null', () async {
+      final slow = GuardApi(
+        share.dav(),
+        pollEvery: const Duration(milliseconds: 5),
+        timeout: const Duration(milliseconds: 30),
+      );
+      expect(await slow.waitForPhoto('x.jpg'), isNull);
     });
   });
 }

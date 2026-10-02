@@ -8,7 +8,7 @@ import 'package:book_guard_app/src/guard_state.dart';
 /// The PC's answer to one request file.
 class GuardResponse {
   /// Creates a response.
-  const new({required this.ok, required this.message, this.passed});
+  const new({required this.ok, required this.message, this.passed, this.data});
 
   /// Whether the request was carried out.
   final bool ok;
@@ -18,6 +18,9 @@ class GuardResponse {
 
   /// For summaries: whether the session was credited.
   final bool? passed;
+
+  /// For lookups: the fields found.
+  final Map<String, dynamic>? data;
 }
 
 /// book-guard's file protocol over the dufs share (see the Python side's
@@ -72,6 +75,7 @@ class GuardApi {
         ok: json['ok'] == true,
         message: '${json['message'] ?? ''}',
         passed: json['passed'] as bool?,
+        data: json['data'] as Map<String, dynamic>?,
       );
     }
     return const GuardResponse(
@@ -80,9 +84,34 @@ class GuardApi {
     );
   }
 
-  /// Uploads a session photo; [name] keeps the camera's file name.
-  Future<void> uploadPhoto(String name, Uint8List bytes) =>
-      dav.put('$_root/inbox/${_safe(name)}', bytes);
+  /// Uploads a photo; [name] keeps the camera's file name. Returns the name
+  /// it landed under, to find the PC's reading with [waitForPhoto].
+  Future<String> uploadPhoto(String name, Uint8List bytes) async {
+    final safe = _safe(name);
+    await dav.put('$_root/inbox/$safe', bytes);
+    return safe;
+  }
+
+  /// A file under `Reading/` (a thumbnail, a photo), or null.
+  Future<Uint8List?> fetchBytes(String path) => dav.getBytes('$_root/$path');
+
+  /// Polls the snapshot until [test] holds, or gives up after the timeout.
+  Future<GuardState?> waitFor(bool Function(GuardState state) test) async {
+    final deadline = DateTime.now().add(_timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(_pollEvery);
+      final state = await fetchState();
+      if (state != null && test(state)) return state;
+    }
+    return null;
+  }
+
+  /// The PC's reading of the photo uploaded as [name]; null if it has not
+  /// read it before the timeout (the PC may be off).
+  Future<PhotoInfo?> waitForPhoto(String name) async {
+    final state = await waitFor((s) => s.photos.any((p) => p.name == name));
+    return state?.photos.firstWhere((p) => p.name == name);
+  }
 
   /// Uploads an ebook file for the current book.
   Future<void> uploadBook(String name, Uint8List bytes) =>

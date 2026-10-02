@@ -90,3 +90,26 @@ def read_photo(jpeg_b64: str, *, model: str = DEFAULT_MODEL) -> Reading:
             stays in the inbox and is retried, it is never filed as "other".
     """
     return from_answer(ask(_SYSTEM, _PROMPT, [jpeg_b64], model=model))
+
+
+_NUMBER_PROMPT: Final = """Classify this photo. Answer with ONE line of JSON
+and nothing else:
+{"kind": "page" | "isbn" | "other",
+ "page_number": <int or null>, "isbn": <string or null>}
+
+- "page": an open book page. page_number = the PRINTED page number of the
+  page that is most fully in view (for a two-page spread, the LOWER number of
+  the pair). null if no page number is legible -- never guess one.
+- "isbn": a back cover, copyright page or barcode showing an ISBN; isbn = the
+  digits (hyphens removed).
+- "other": anything else.
+"""
+
+
+def read_page_number(jpeg_b64: str, *, model: str = DEFAULT_MODEL) -> Reading:
+    """Ask only what the photo is and its page number -- no transcription.
+
+    Used when Tesseract already has the text: the answer is a few tokens
+    instead of ~1500 characters, and the text cannot be hallucinated.
+    """
+    return from_answer(ask(_SYSTEM, _NUMBER_PROMPT, [jpeg_b64], model=model))

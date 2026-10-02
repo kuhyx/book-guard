@@ -71,6 +71,17 @@ class DavClient {
     return utf8.decode(response.bodyBytes);
   }
 
+  /// The file at [path] as bytes, or null when it does not exist.
+  Future<Uint8List?> getBytes(String path) async {
+    final response = await _send(
+      () => _client.get(_uri(path), headers: _headers),
+      path,
+    );
+    if (response.statusCode == 404) return null;
+    _check(path, response);
+    return response.bodyBytes;
+  }
+
   /// Uploads [bytes] to [path], creating or replacing the file.
   Future<void> put(String path, Uint8List bytes) async {
     final response = await _send(

@@ -83,13 +83,15 @@ def _session_views(
 def _verdict(today: date, pace: Pace, *, free: bool, escaped: bool) -> tuple[bool, str]:
     if today < GATE_START_DATE:
         return False, f"book-guard starts on {GATE_START_DATE}"
+    if not pace.behind:
+        # Reading caught up: that is the reason it is open, whatever else
+        # happened today (an escape used this morning no longer matters).
+        return False, "on pace"
     if free:
         return False, "today is a free day"
     if escaped:
         return False, "today's lock was skipped with the escape hatch"
-    if pace.behind:
-        return True, f"{pace.behind} pages behind the pace line"
-    return False, "on pace"
+    return True, f"{pace.behind} pages behind the pace line"
 
 
 def snapshot(

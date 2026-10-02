@@ -117,4 +117,50 @@ void main() {
     expect(refreshed, 1);
     expect(sessionStatusText['too-fast'], contains('50 s'));
   });
+
+  testWidgets('a session with details opens its history', (tester) async {
+    final api = FakeApi();
+    await pumpTab(
+      tester,
+      StatusTab(
+        state: sampleState({
+          'sessions': [
+            {
+              'id': 's1',
+              'start_page': 7,
+              'end_page': 51,
+              'pages': 44,
+              'minutes': 43,
+              'status': 'credited',
+              'detail': 'sessions/s1.json',
+            },
+            {'id': 's2', 'start_page': 1, 'end_page': 3, 'status': 'credited'},
+          ],
+        }),
+        error: null,
+        onRefresh: () async {},
+        api: api,
+      ),
+    );
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    await tapVisible(tester, find.text('p. 1-3 (0 p, 0 min)'));
+    await tester.pumpAndSettle();
+    expect(find.text('p. 1-3'), findsNothing);
+    await tapVisible(tester, find.text('p. 7-51 (44 p, 43 min)'));
+    await tester.pumpAndSettle();
+    expect(find.text('p. 7-51'), findsOneWidget);
+    expect(api.fetched, ['sessions/s1.json']);
+  });
+
+  testWidgets('without an api, sessions are not links', (tester) async {
+    await _pump(
+      tester,
+      state: sampleState({
+        'sessions': [
+          {'id': 's1', 'detail': 'sessions/s1.json', 'status': 'credited'},
+        ],
+      }),
+    );
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+  });
 }

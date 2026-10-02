@@ -10,13 +10,12 @@ import pytest
 
 from book_guard import _app_handlers, _grading, _ledger
 from book_guard._app_handlers import HANDLERS
-from book_guard._books import current
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._http import UnavailableError
 from book_guard._openlibrary import BookInfo
 from book_guard._quiz import Verdict
 from book_guard._requests import Response, handle_requests
-from book_guard.tests._flow_helpers import ISBN13, add_book, quiz_pair, seed_photos
+from book_guard.tests._flow_helpers import ISBN13, quiz_pair, seed_photos
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -155,22 +154,6 @@ def test_register_offline_is_not_ok(
     assert not bg_paths.ledger.exists()
 
 
-def test_set_pages(bg_paths: Paths) -> None:
-    assert HANDLERS["set_pages"](bg_paths, {"pages": -3}) == Response(
-        ok=False, message="The last page must be a positive number."
-    )
-    assert HANDLERS["set_pages"](bg_paths, {"pages": 5}) == Response(
-        ok=False, message="No book registered yet."
-    )
-    add_book(bg_paths, pages=None)
-    assert HANDLERS["set_pages"](bg_paths, {"pages": 412}) == Response(
-        ok=True, message="War -- Tol: last page 412"
-    )
-    book = current(_ledger.load(bg_paths.ledger, bg_paths.key_file))
-    assert book is not None
-    assert book.pages == 412
-
-
 def test_summary_for_a_stale_session(bg_paths: Paths) -> None:
     response = HANDLERS["summary"](bg_paths, {"session_id": "session:gone"})
     assert response == Response(
@@ -190,3 +173,13 @@ def test_summary_grades_the_session(
     response = HANDLERS["summary"](bg_paths, {"session_id": sid, "summary": "text"})
     assert response == Response(ok=True, message="Good.", passed=True)
     assert _ledger.load(bg_paths.ledger, bg_paths.key_file).has(sid)
+
+
+def test_response_data_reaches_the_app(bg_paths: Paths) -> None:
+    _put(bg_paths, f"{RID}.json", {"id": RID, "type": "x"})
+
+    def with_data(_paths: Paths, _req: dict[str, Any]) -> Response:
+        return Response(ok=True, message="m", data={"title": "War"})
+
+    assert handle_requests(bg_paths, {"x": with_data}) == 1
+    assert _answer(bg_paths)["data"] == {"title": "War"}

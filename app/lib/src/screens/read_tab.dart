@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,7 +12,8 @@ import 'package:image_picker/image_picker.dart';
 /// re-encode would strip the EXIF capture time the session clock runs on.
 typedef PhotoSource = Future<XFile?> Function({required bool camera});
 
-Future<XFile?> _pickPhoto({required bool camera}) => ImagePicker().pickImage(
+/// The default [PhotoSource]: the camera, or the gallery on the desktop.
+Future<XFile?> pickPhoto({required bool camera}) => ImagePicker().pickImage(
   source: camera ? ImageSource.camera : ImageSource.gallery,
 );
 
@@ -24,7 +26,7 @@ class ReadTab extends StatefulWidget {
     required this.desktop,
     required this.onChanged,
     super.key,
-    this.photoSource = _pickPhoto,
+    this.photoSource = pickPhoto,
   });
 
   /// The PC.
@@ -50,6 +52,7 @@ class _ReadTabState extends State<ReadTab> {
   final _summary = TextEditingController();
   bool _busy = false;
   String? _verdict;
+  String? _photoNote;
   bool? _passed;
 
   @override
@@ -70,16 +73,25 @@ class _ReadTabState extends State<ReadTab> {
     }
   }
 
+  /// Uploads a photo and keeps the buttons locked until the PC has read
+  /// it, then says what it saw -- a photo must never just vanish.
   Future<void> _photo(String label) => _run(() async {
     final file = await widget.photoSource(camera: !widget.desktop);
     if (file == null) return;
-    await widget.api.uploadPhoto(
+    setState(() => _photoNote = 'Uploading...');
+    final name = await widget.api.uploadPhoto(
       '${label}_${file.name}',
       await file.readAsBytes(),
     );
-    if (mounted) {
-      showToast(context, 'Uploaded - the PC reads it in a few seconds.');
-    }
+    if (!mounted) return;
+    setState(() => _photoNote = 'Uploaded - waiting for the PC to read it...');
+    final read = await widget.api.waitForPhoto(name);
+    if (!mounted) return;
+    final note = photoVerdict(read);
+    setState(() => _photoNote = note);
+    read != null && read.accepted
+        ? showToast(context, note)
+        : showError(context, note);
   });
 
   Future<void> _submit(SessionInfo session) => _run(() async {
@@ -140,6 +152,10 @@ class _ReadTabState extends State<ReadTab> {
               ),
           ],
         ),
+        if (_photoNote case final note?) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(note),
+        ],
         if (quiz.isNotEmpty) ...[
           SectionHeader(
             'Summary for p. ${quiz.first.startPage}-${quiz.first.endPage}',
@@ -173,6 +189,10 @@ class _ReadTabState extends State<ReadTab> {
               },
             ),
           ),
+        ],
+        if (state != null && state.photos.isNotEmpty) ...[
+          const SectionHeader('Your photos'),
+          PhotoGallery(api: widget.api, photos: state.photos),
         ],
       ],
     );

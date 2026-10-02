@@ -44,6 +44,7 @@ class Response:
     ok: bool
     message: str
     passed: bool | None = None
+    data: dict[str, Any] | None = None
 
 
 def _pending(requests_dir: Path) -> list[Path]:
@@ -97,6 +98,8 @@ def handle_requests(
         payload = {"id": rid, "ok": response.ok, "message": response.message}
         if response.passed is not None:
             payload["passed"] = response.passed
+        if response.data is not None:
+            payload["data"] = response.data
         write_json(paths.responses / f"{rid}.json", payload, indent=1)
         path.unlink(missing_ok=True)
         answered += 1

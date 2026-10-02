@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
+import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ class BookFinder extends StatefulWidget {
     required this.api,
     required this.onChanged,
     required this.library,
+    required this.nationalLibrary,
     super.key,
   });
 
@@ -24,6 +26,9 @@ class BookFinder extends StatefulWidget {
 
   /// Title search.
   final OpenLibrary library;
+
+  /// Title search in the Polish national catalogue.
+  final NationalLibrary nationalLibrary;
 
   @override
   State<BookFinder> createState() => _BookFinderState();
@@ -66,16 +71,31 @@ class _BookFinderState extends State<BookFinder> {
       return;
     }
     await _run(() async {
-      final hits = await widget.library.search(
-        title,
-        author: _author.text.trim(),
-      );
+      final hits = await _searchBoth(title, _author.text.trim());
       if (!mounted) return;
       setState(() {
         _hits = hits;
         _missed = hits.isEmpty ? title : null;
       });
     });
+  }
+
+  /// Both catalogues at once; one failing still shows the other's hits.
+  Future<List<BookHit>> _searchBoth(String title, String author) async {
+    Future<List<BookHit>?> safe(Future<List<BookHit>> search) =>
+        search.then<List<BookHit>?>((h) => h, onError: (Object _) => null);
+    final [open, national] = await Future.wait([
+      safe(widget.library.search(title, author: author)),
+      safe(widget.nationalLibrary.search(title, author: author)),
+    ]);
+    if (open == null && national == null) {
+      throw Exception('Neither Open Library nor Biblioteka Narodowa answered');
+    }
+    final seen = <String>{};
+    return [
+      for (final hit in [...?national, ...?open])
+        if (hit.isbn == null || seen.add(hit.isbn!)) hit,
+    ];
   }
 
   Future<void> _answer(Future<GuardResponse> request) async {

@@ -71,6 +71,16 @@ class Paths:
         return self.reading_dir / "processed"
 
     @property
+    def thumbs(self) -> Path:
+        """Small copies of the filed photos, for the app's gallery."""
+        return self.reading_dir / "thumbs"
+
+    @property
+    def sessions(self) -> Path:
+        """One detail file per session, for the app's history view."""
+        return self.reading_dir / "sessions"
+
+    @property
     def requests(self) -> Path:
         """Where the app drops request files."""
         return self.reading_dir / "requests"

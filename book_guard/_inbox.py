@@ -7,8 +7,8 @@ just filed away.
 
 Three outcomes per file, and only the first two move it out of the inbox:
 
-* **read** -- cached as a page / ISBN / other, or as rejected with a reason
-  (no capture time, uploaded too late);
+* **read** -- cached as a page / ISBN / other / table of contents, or as
+  rejected with a reason (no capture time, uploaded too late);
 * **duplicate** -- same bytes as a cached photo;
 * **not yet** -- still settling, undecodable (half-uploaded) or Claude was
   unreachable. Left where it is, nothing recorded, retried next trigger.
@@ -27,15 +27,22 @@ from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import MAX_UPLOAD_DELAY, UPLOAD_SETTLE_SECONDS
 from book_guard._photo import open_photo
 from book_guard._photos import REJECTED, PhotoRecord
-from book_guard._vision import ISBN, read_photo
+from book_guard._reader import read
+from book_guard._thumbs import make_thumb
+from book_guard._toc import TOC_PREFIX, read_toc
+from book_guard._vision import ISBN
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    from book_guard._books import Chapter
     from book_guard._paths import Paths
     from book_guard._photo import PhotoFile
     from book_guard._vision import Reading
+
+    Reader = Callable[[Path, str], Reading]
+    TocReader = Callable[[Path, str], tuple[Chapter, ...]]
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -50,6 +57,7 @@ class InboxResult:
     duplicates: int = 0
     deferred: list[str] = field(default_factory=list)
     new_isbns: list[str] = field(default_factory=list)
+    contents: list[tuple[Chapter, ...]] = field(default_factory=list)
 
 
 def _candidates(inbox: Path, now: float) -> list[Path]:
@@ -71,9 +79,11 @@ def _candidates(inbox: Path, now: float) -> list[Path]:
     return [path for _, path in sorted(stamped)]
 
 
-def _file_away(path: Path, processed: Path, sha: str) -> None:
-    processed.mkdir(parents=True, exist_ok=True)
-    path.replace(processed / f"{sha[:12]}-{path.name}")
+def _file_away(path: Path, paths: Paths, sha: str) -> None:
+    paths.processed.mkdir(parents=True, exist_ok=True)
+    target = paths.processed / f"{sha[:12]}-{path.name}"
+    path.replace(target)
+    make_thumb(target, paths.thumbs)
 
 
 def _rejected(
@@ -91,8 +101,22 @@ def _rejected(
     )
 
 
+def _contents_record(
+    photo: PhotoFile, path: Path, uploaded: datetime, chapters: tuple[Chapter, ...]
+) -> PhotoRecord:
+    """A contents photo: not session evidence, so no clock checks."""
+    return PhotoRecord(
+        sha=photo.sha,
+        name=path.name,
+        taken_at=photo.taken_at.isoformat() if photo.taken_at else "",
+        uploaded_at=uploaded.isoformat(),
+        kind="toc",
+        text="\n".join(f"{c.start}\t{c.title}" for c in chapters),
+    )
+
+
 def _record(
-    photo: PhotoFile, path: Path, uploaded: datetime, reader: Callable[[str], Reading]
+    photo: PhotoFile, path: Path, uploaded: datetime, reader: Reader
 ) -> PhotoRecord:
     """Classify one photo. Raises ``ClaudeUnavailableError`` from ``reader``."""
     if photo.taken_at is None:
@@ -101,7 +125,7 @@ def _record(
         return _rejected(
             photo, path, uploaded, "uploaded more than 24h after it was taken"
         )
-    reading = reader(photo.jpeg_b64)
+    reading = reader(path, photo.jpeg_b64)
     return PhotoRecord(
         sha=photo.sha,
         name=path.name,
@@ -117,7 +141,8 @@ def _record(
 def process_inbox(
     paths: Paths,
     *,
-    reader: Callable[[str], Reading] = read_photo,
+    reader: Reader = read,
+    toc_reader: TocReader = read_toc,
     now: float | None = None,
 ) -> InboxResult:
     """Read every settled photo in the inbox into the cache.
@@ -136,22 +161,29 @@ def process_inbox(
             result.deferred.append(path.name)
             continue
         if photo.sha in records:
-            _file_away(path, paths.processed, photo.sha)
+            _file_away(path, paths, photo.sha)
             result.duplicates += 1
             continue
         uploaded = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        chapters: tuple[Chapter, ...] = ()
         try:
-            record = _record(photo, path, uploaded, reader)
+            if path.name.startswith(TOC_PREFIX):
+                chapters = toc_reader(path, photo.jpeg_b64)
+                record = _contents_record(photo, path, uploaded, chapters)
+            else:
+                record = _record(photo, path, uploaded, reader)
         except ClaudeUnavailableError as exc:
             _logger.warning("could not read %s (%s); retrying later", path.name, exc)
             result.deferred.append(path.name)
             break
         records[photo.sha] = record
         _photos.save(paths.photos, records)
-        _file_away(path, paths.processed, photo.sha)
+        _file_away(path, paths, photo.sha)
         result.read.append(record)
         if record.kind == ISBN and record.isbn:
             result.new_isbns.append(record.isbn)
+        if chapters:
+            result.contents.append(chapters)
     return result
 
 
