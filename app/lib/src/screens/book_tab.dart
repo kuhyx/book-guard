@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/open_library.dart';
+import 'package:book_guard_app/src/screens/book_finder.dart';
 import 'package:design_system/design_system.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +25,7 @@ Future<XFile?> _pickBook() => openFile(
   ],
 );
 
-/// This month's book: find it by title, register it, attach its file.
+/// This month's book: find it (see [BookFinder]), register it, attach its file.
 class BookTab extends StatefulWidget {
   /// Creates the tab.
   const new({
@@ -56,15 +57,12 @@ class BookTab extends StatefulWidget {
 }
 
 class _BookTabState extends State<BookTab> {
-  final _query = TextEditingController();
   final _pages = TextEditingController();
   late final OpenLibrary _library = widget.library ?? OpenLibrary();
-  List<BookHit> _hits = const [];
   bool _busy = false;
 
   @override
   void dispose() {
-    _query.dispose();
     _pages.dispose();
     super.dispose();
   }
@@ -81,11 +79,6 @@ class _BookTabState extends State<BookTab> {
     }
   }
 
-  Future<void> _search() => _run(() async {
-    final hits = await _library.search(_query.text.trim());
-    if (mounted) setState(() => _hits = hits);
-  });
-
   Future<void> _answer(Future<GuardResponse> request) async {
     final response = await request;
     if (!mounted) return;
@@ -93,13 +86,6 @@ class _BookTabState extends State<BookTab> {
         ? showToast(context, response.message)
         : showError(context, response.message);
   }
-
-  Future<void> _register(BookHit hit) => _run(() async {
-    await _answer(
-      widget.api.send('register', {'isbn': hit.isbn, 'pages': hit.pages}),
-    );
-    if (mounted) setState(() => _hits = const []);
-  });
 
   Future<void> _setPages() => _run(
     () => _answer(
@@ -160,30 +146,11 @@ class _BookTabState extends State<BookTab> {
             label: const Text('Attach ebook file (epub, pdf, mobi, ...)'),
           ),
         ],
-        const SectionHeader('Find a book'),
-        TextField(
-          controller: _query,
-          textInputAction: TextInputAction.search,
-          onSubmitted: (_) => _search(),
-          decoration: InputDecoration(
-            labelText: 'Title, e.g. Atomic Habits',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: _search,
-            ),
-          ),
+        BookFinder(
+          api: widget.api,
+          onChanged: widget.onChanged,
+          library: _library,
         ),
-        for (final hit in _hits)
-          ListTile(
-            title: Text(hit.title),
-            subtitle: Text(
-              '${hit.author.isEmpty ? '?' : hit.author} - '
-              '${hit.pages ?? '?'} p - ISBN ${hit.isbn ?? 'none'}',
-            ),
-            trailing: const Icon(Icons.add),
-            enabled: hit.isbn != null && !_busy,
-            onTap: () => _register(hit),
-          ),
       ],
     );
   }

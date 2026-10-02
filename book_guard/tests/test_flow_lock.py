@@ -70,7 +70,7 @@ def test_demo_lock_arms_without_waiting(
         "window.grab_input",
     ]
     assert [ms for ms, _cb in _root(gate).scheduled] == [POLL_INTERVAL_MS, 500]
-    assert gate._vars.status.get().startswith("LOCKED: 136 pages behind")
+    assert gate._vars.status.get().startswith("LOCKED: 440 pages behind")
     assert gate._vars.todo.get().startswith("No book registered")
     assert gate._vars.quiz_title.get() == "No session is waiting for a summary."
     gate.run()
@@ -171,7 +171,7 @@ def test_run_gate_on_pace_does_not_lock(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seen = install_lock_fakes(monkeypatch)
-    add_credit(bg_paths, "2026-10-02", 300)
+    add_credit(bg_paths, "2026-10-02", 1000)
     assert _lock.run_gate(bg_paths, production=False, today=date(2026, 10, 20)) == 0
     assert bg_paths.next_file.exists()
     assert seen.events == []

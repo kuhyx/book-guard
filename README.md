@@ -36,8 +36,8 @@ A passed session is a signed `credit` row in
 
 | | |
 |---|---|
-| Monthly target | 300 pages + debt carried from last month |
-| Pace line | `ceil(target * elapsed / counted)` over non-free days; today's share is due tomorrow |
+| Monthly target | 20 pages per Tue-Thu + 40 per Fri-Mon (220/week) over non-free days, plus debt carried from last month |
+| Pace line | `ceil(target * elapsed / counted)`, days weighted by their quota; today's share is due tomorrow |
 | Debt | 0 if a book was finished that month, else `target - pages read` |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up |
 | Escape | 2 per month; forgives the day, credits no pages |
@@ -60,8 +60,8 @@ book-guard quiz                        # write the pending summary
 ```
 
 The Flutter app (`app/`) does all of it: Status, Read (camera buttons +
-summary) and Book (title search, register, attach file). Phone: installed
-APK with the `bookguard` dufs login. Desktop: `book-guard-desktop` serves
+summary) and Book (title + optional author search, or a typed ISBN;
+attach file). Phone: installed APK with the `bookguard` dufs login. Desktop: `book-guard-desktop` serves
 the web build on `localhost:8773` and opens it in a Chrome `--app` window;
 it proxies WebDAV with the login, so the browser never holds it.
 

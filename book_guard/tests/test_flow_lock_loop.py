@@ -76,7 +76,7 @@ def test_refresh_releases_once_on_pace(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gate, seen = _arm(bg_paths, monkeypatch)
-    add_credit(bg_paths, "2026-10-03", 300)
+    add_credit(bg_paths, "2026-10-03", 1000)
     _job(gate).finish = True
     before = len(_scheduled(gate))
     gate._tick()

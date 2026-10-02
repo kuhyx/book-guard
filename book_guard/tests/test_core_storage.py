@@ -83,7 +83,7 @@ def test_exclusive_releases_on_error(bg_paths: Paths) -> None:
 
 def test_constants_are_consistent() -> None:
     assert date(2026, 10, 1) == _constants.GATE_START_DATE
-    assert _constants.MONTHLY_PAGES > 0
+    assert 7 * _constants.WORKDAY_PAGES < 220 < 7 * _constants.OFFDAY_PAGES
     assert _constants.MAX_SESSION.total_seconds() == 6 * 3600
     assert "skipping" in _constants.ESCAPE_PHRASE
 

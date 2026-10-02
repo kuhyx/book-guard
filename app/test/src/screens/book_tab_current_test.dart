@@ -1,3 +1,4 @@
+import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:file_selector/file_selector.dart';
@@ -67,6 +68,15 @@ void main() {
     await tapVisible(tester, find.text('Set'));
     await settle(tester);
     expect(api.sent.single.body, {'pages': null});
+  });
+
+  testWidgets('a refused Set is shown as an error', (tester) async {
+    api.onSend = (_) async =>
+        const GuardResponse(ok: false, message: 'Must be positive');
+    await pump(tester);
+    await tapVisible(tester, find.text('Set'));
+    await settle(tester);
+    expect(find.text('Must be positive'), findsOneWidget);
   });
 
   testWidgets('attaching uploads the picked file', (tester) async {

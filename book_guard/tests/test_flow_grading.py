@@ -55,9 +55,10 @@ def test_register_unknown_isbn_asks_for_pages(
 ) -> None:
     monkeypatch.setattr(_grading, "lookup_isbn", _lookup(None))
     message = _grading.register_isbn(bg_paths, ISBN13)
-    assert (
-        message == f"Now reading: ISBN {ISBN13}; set the last page: book-guard pages N"
-    )
+    tail = "set the last page of your copy (app, or: book-guard pages N)"
+    assert message == f"Now reading: ISBN {ISBN13}; {tail}"
+    named = _grading.register_isbn(bg_paths, ISBN13, title="Cesarz", author="Sher")
+    assert named == f"Now reading: Cesarz -- Sher; {tail}"
 
 
 def test_register_with_pages_override(

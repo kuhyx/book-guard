@@ -9,8 +9,12 @@ from typing import Final
 GATE_START_DATE: Final = date(2026, 10, 1)
 """No lock and no debt before this. September is never owed."""
 
-MONTHLY_PAGES: Final = 300
-"""The pace line's monthly target before any carried debt."""
+WORKDAY_PAGES: Final = 20
+OFFDAY_PAGES: Final = 40
+"""Each counted (non-free) day's share of its month's target:
+:data:`WORKDAY_PAGES` on ``freedays.WORKDAYS`` (Tue-Thu), :data:`OFFDAY_PAGES`
+on Fri-Mon -- 220 a week, the long weekend doing the heavy lifting while
+workdays keep the book moving."""
 
 MIN_SECONDS_PER_PAGE: Final = 60
 """A session faster than this is page-flipping, not reading."""

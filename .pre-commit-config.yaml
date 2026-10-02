@@ -119,13 +119,13 @@ repos:
           |\.fvmrc|\.github/workflows/.*\.ya?ml)$
       - id: app-analyze
         name: flutter analyze (app)
-        entry: bash -c 'cd app && flutter analyze --fatal-infos'
+        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter analyze --fatal-infos'
         language: system
         pass_filenames: false
         files: ^app/(lib|test|bin)/.*\.dart$
       - id: app-test
         name: flutter test (app)
-        entry: bash -c 'cd app && flutter test'
+        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter test'
         language: system
         pass_filenames: false
         files: ^app/(lib|test|bin)/.*\.dart$

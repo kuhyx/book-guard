@@ -26,13 +26,15 @@ const Map<String, Object> _docs = {
 void main() {
   late FakeApi api;
   late int changed;
-  late List<String> queries;
+  late List<Map<String, String>> queries;
+  late Map<String, Object> docs;
   late int status;
 
   setUp(() {
     api = FakeApi();
     changed = 0;
     queries = [];
+    docs = _docs;
     status = 200;
   });
 
@@ -44,16 +46,23 @@ void main() {
       onChanged: () async => changed++,
       library: OpenLibrary(
         client: MockClient((request) async {
-          queries.add(request.url.queryParameters['title'] ?? '');
-          return http.Response(jsonEncode(_docs), status);
+          queries.add(request.url.queryParameters);
+          return http.Response(jsonEncode(docs), status);
         }),
       ),
       bookSource: () async => null,
     ),
   );
 
-  Future<void> search(WidgetTester tester, String title) async {
-    await tester.enterText(find.byType(TextField), title);
+  Finder field(String label) => find.widgetWithText(TextField, label);
+
+  Future<void> search(
+    WidgetTester tester,
+    String title, {
+    String author = '',
+  }) async {
+    await tester.enterText(field('Title, e.g. Atomic Habits'), title);
+    await tester.enterText(field('Author (optional)'), author);
     await tapVisible(tester, find.byIcon(Icons.search));
     await settle(tester);
   }
@@ -73,7 +82,8 @@ void main() {
   ) async {
     await pump(tester);
     await search(tester, '  Dune ');
-    expect(queries, ['Dune']);
+    expect(queries.single['title'], 'Dune');
+    expect(queries.single.containsKey('author'), isFalse);
     expect(
       find.text('Frank Herbert - 604 p - ISBN 9780441013593'),
       findsOneWidget,
@@ -86,10 +96,10 @@ void main() {
 
   testWidgets('the keyboard search action searches too', (tester) async {
     await pump(tester);
-    await tester.enterText(find.byType(TextField), 'Dune');
+    await tester.enterText(field('Title, e.g. Atomic Habits'), 'Dune');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await settle(tester);
-    expect(queries, ['Dune']);
+    expect(queries.single['title'], 'Dune');
     expect(find.text('Dune Notes'), findsOneWidget);
   });
 
@@ -137,6 +147,58 @@ void main() {
     await settle(tester);
     expect(find.text('late'), findsNothing);
     expect(changed, 2);
+  });
+
+  testWidgets('the author field searches too, narrowing by author', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.enterText(field('Title, e.g. Atomic Habits'), 'Dune');
+    await tester.enterText(field('Author (optional)'), ' Herbert ');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await settle(tester);
+    expect(queries.single['author'], 'Herbert');
+  });
+
+  testWidgets('an empty title is refused without a request', (tester) async {
+    await pump(tester);
+    await tapVisible(tester, find.byIcon(Icons.search));
+    await settle(tester);
+    expect(find.text('Enter a title to search.'), findsOneWidget);
+    expect(queries, isEmpty);
+  });
+
+  testWidgets('no hits says so, and a later hit clears it', (tester) async {
+    docs = const {'docs': <Object>[]};
+    await pump(tester);
+    await search(tester, 'Czerwony Cesarz', author: 'Sheridan');
+    expect(
+      find.text("No books found for 'Czerwony Cesarz' - enter the ISBN below."),
+      findsOneWidget,
+    );
+    docs = _docs;
+    await search(tester, 'Dune');
+    expect(find.textContaining('No books found'), findsNothing);
+    expect(find.text('Dune Notes'), findsOneWidget);
+  });
+
+  testWidgets('a typed ISBN registers with the typed title and author', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.enterText(field('Title, e.g. Atomic Habits'), ' Cesarz ');
+    await tester.enterText(field('Author (optional)'), 'Sheridan');
+    await tester.enterText(field('ISBN (optional)'), ' 9788368380002 ');
+    await tapVisible(tester, find.text('Register'));
+    await settle(tester);
+    expect(api.sent.single.type, 'register');
+    expect(api.sent.single.body, {
+      'isbn': '9788368380002',
+      'title': 'Cesarz',
+      'author': 'Sheridan',
+    });
+    expect(find.text('done register'), findsOneWidget);
+    expect(queries, isEmpty);
   });
 
   test('every format the PC reads is pickable', () {

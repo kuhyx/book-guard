@@ -23,6 +23,16 @@ void main() {
     expect(uri.queryParameters['title'], 'Dune');
     expect(uri.queryParameters['limit'], '10');
     expect(uri.queryParameters['fields'], contains('number_of_pages_median'));
+    expect(uri.queryParameters.containsKey('author'), isFalse);
+  });
+
+  test('an author narrows the search', () async {
+    final seen = <Uri>[];
+    await _library(
+      const {'docs': <Object>[]},
+      seen: seen,
+    ).search('Dune', author: 'Herbert');
+    expect(seen.single.queryParameters['author'], 'Herbert');
   });
 
   test('maps docs to hits, preferring an ISBN-13', () async {

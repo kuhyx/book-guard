@@ -33,10 +33,11 @@ class OpenLibrary {
 
   final http.Client _client;
 
-  /// Books matching [title], most relevant first.
-  Future<List<BookHit>> search(String title) async {
+  /// Books matching [title] (and [author], when given), most relevant first.
+  Future<List<BookHit>> search(String title, {String author = ''}) async {
     final uri = Uri.https('openlibrary.org', '/search.json', {
       'title': title,
+      if (author.isNotEmpty) 'author': author,
       'fields': 'title,author_name,number_of_pages_median,isbn',
       'limit': '10',
     });

@@ -9,12 +9,18 @@ from typing import TYPE_CHECKING
 import pytest
 
 from book_guard import _books, _ledger, _pace
-from book_guard._constants import GATE_START_DATE, MONTHLY_PAGES
+from book_guard._constants import GATE_START_DATE, OFFDAY_PAGES, WORKDAY_PAGES
 from book_guard._ledger import BOOK, CREDIT, ESCAPE, Entry, Ledger
 from book_guard._openlibrary import BookInfo
 
 if TYPE_CHECKING:
     from book_guard._paths import Paths
+
+
+# Quota sums: Oct 2026 has 13 Tue-Thu and 18 Fri-Mon days, Nov 12/18, Dec 15/16.
+OCTOBER = 13 * WORKDAY_PAGES + 18 * OFFDAY_PAGES
+NOVEMBER = 12 * WORKDAY_PAGES + 18 * OFFDAY_PAGES
+DECEMBER = 15 * WORKDAY_PAGES + 16 * OFFDAY_PAGES
 
 
 def _never(_day: date) -> bool:
@@ -50,7 +56,7 @@ def test_month_helpers() -> None:
 def test_before_gate_start_nothing_is_owed() -> None:
     ledger = Ledger([_credit("2026-09-10", 50)])
     pace = _pace.compute_pace(ledger, date(2026, 9, 20), _never)
-    assert (pace.month, pace.target, pace.carried_debt) == (date(2026, 9, 1), 300, 0)
+    assert (pace.month, pace.target, pace.carried_debt) == (date(2026, 9, 1), 0, 0)
     assert pace.pages == 50
     assert pace.required == 0
     assert pace.behind == 0
@@ -64,22 +70,23 @@ def test_first_day_of_gate_requires_nothing() -> None:
 def test_required_is_prorated_over_elapsed_days() -> None:
     ledger = Ledger([_credit("2026-10-03", 40), _credit("2026-09-30", 500)])
     pace = _pace.compute_pace(ledger, date(2026, 10, 11), _never)
-    assert pace.target == MONTHLY_PAGES
+    assert pace.target == OCTOBER
     assert pace.pages == 40
-    assert pace.required == 97  # ceil(300 * 10 / 31)
-    assert pace.behind == 57
+    # Oct 1-10: Thu(20) Fri Sat Sun Mon(4x40) Tue Wed Thu(3x20) Fri Sat(2x40)
+    assert pace.required == 20 + 4 * 40 + 3 * 20 + 2 * 40
+    assert pace.behind == pace.required - 40
 
 
 def test_debt_carries_across_months() -> None:
     ledger = Ledger([_credit("2026-10-05", 100), _credit("2026-11-02", 700)])
     november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
-    assert (november.carried_debt, november.target) == (200, 500)
+    assert november.carried_debt == OCTOBER - 100
+    assert november.target == OCTOBER - 100 + NOVEMBER
+    ledger = Ledger([_credit("2026-10-05", 2000)])
     december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
-    assert (december.carried_debt, december.target) == (0, 300)
+    assert (december.carried_debt, december.target) == (NOVEMBER, NOVEMBER + DECEMBER)
     january = _pace.compute_pace(Ledger(), date(2027, 1, 15), _never)
-    # Oct owes 300, Nov's 600-page target leaves 600, Dec's 900 leaves 900.
-    assert january.carried_debt == 900
-    assert january.target == 1200
+    assert january.carried_debt == OCTOBER + NOVEMBER + DECEMBER
 
 
 def test_finished_book_clears_debt() -> None:
@@ -107,7 +114,9 @@ def test_free_days_move_the_line() -> None:
     pace = _pace.compute_pace(Ledger(), date(2026, 10, 11), free.__contains__)
     assert pace.required == 0
     later = _pace.compute_pace(Ledger(), date(2026, 10, 16), free.__contains__)
-    assert later.required == 72  # ceil(300 * 5 / 21)
+    # Oct 11-15 counted: Sun Mon (2x40) Tue Wed Thu (3x20)
+    assert later.required == 2 * 40 + 3 * 20
+    assert later.target == OCTOBER - (20 + 4 * 40 + 3 * 20 + 2 * 40)
 
 
 def test_all_days_free() -> None:

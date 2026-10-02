@@ -27,12 +27,22 @@ def _positive_int(raw: object) -> int | None:
     return int(text) if text.isdigit() and int(text) > 0 else None
 
 
+def _text(raw: object) -> str:
+    return raw.strip() if isinstance(raw, str) else ""
+
+
 def _register(paths: Paths, request: dict[str, Any]) -> Response:
     isbn = normalise_isbn(request.get("isbn"))
     if isbn is None:
         return Response(ok=False, message="That is not a 10- or 13-digit ISBN.")
     with exclusive(paths):
-        message = register_isbn(paths, isbn, pages=_positive_int(request.get("pages")))
+        message = register_isbn(
+            paths,
+            isbn,
+            pages=_positive_int(request.get("pages")),
+            title=_text(request.get("title")),
+            author=_text(request.get("author")),
+        )
     return Response(not message.startswith("Open Library unreachable"), message)
 
 

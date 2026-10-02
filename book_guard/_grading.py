@@ -27,24 +27,35 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 
-def register_isbn(paths: Paths, isbn: str, *, pages: int | None = None) -> str:
+def register_isbn(
+    paths: Paths,
+    isbn: str,
+    *,
+    pages: int | None = None,
+    title: str = "",
+    author: str = "",
+) -> str:
     """Look ``isbn`` up and register it; returns a line for the human.
 
     An ISBN Open Library does not know is still registered -- with no page
     count, which ``book-guard pages N`` fills in -- so an obscure book never
-    blocks reading. A network failure registers nothing and says so.
+    blocks reading. Such a book is named by ``title``/``author`` when the
+    caller has them, else "ISBN <n>". A network failure registers nothing
+    and says so.
     """
     try:
         info = lookup_isbn(isbn)
     except OSError as exc:
         _logger.warning("ISBN lookup for %s failed: %s", isbn, exc)
         return f"Open Library unreachable ({exc}); try again later"
-    info = info or BookInfo(title=f"ISBN {isbn}", author="", pages=None, isbn=isbn)
+    info = info or BookInfo(
+        title=title or f"ISBN {isbn}", author=author, pages=None, isbn=isbn
+    )
     book = register(paths, info, pages=pages)
     tail = (
         f", last page {book.pages}"
         if book.pages
-        else "; set the last page: book-guard pages N"
+        else "; set the last page of your copy (app, or: book-guard pages N)"
     )
     return f"Now reading: {book.label}{tail}"
 
