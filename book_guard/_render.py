@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 _STATUS_TEXT: Final = {
     NEEDS_CHECK: "photograph page {check}",
     NEEDS_QUIZ: "write the summary at the PC (book-guard quiz)",
-    TOO_FAST: "not counted: under 60 s per page",
+    TOO_FAST: "not counted: under 50 s per page",
     CREDITED: "credited",
     FAILED: "not counted: summary failed",
 }

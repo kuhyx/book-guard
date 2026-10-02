@@ -20,7 +20,7 @@ The app (phone camera, or the desktop window) uploads to
 `~/data/cloud/Reading/` over dufs; the `.path` unit reads each photo within
 seconds. Claude (**Haiku**, always, unless `--model` is given for one run)
 reads the page number and transcribes the text. The EXIF capture times are
-the session clock: under 60 s per page is page-flipping and does not count.
+the session clock: under 50 s per page is page-flipping and does not count.
 
 The grader reads the **book's own text** for the stretch when an ebook file
 is attached (any format: epub, mobi, azw3, fb2, pdf, djvu, docx, ...). The

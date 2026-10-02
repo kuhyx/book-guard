@@ -30,7 +30,7 @@ CHECK = only_session(check_pair())
     [
         (NEEDS_CHECK, f"photograph page {CHECK.check_page}"),
         (NEEDS_QUIZ, "write the summary at the PC (book-guard quiz)"),
-        (TOO_FAST, "not counted: under 60 s per page"),
+        (TOO_FAST, "not counted: under 50 s per page"),
         (CREDITED, "credited"),
         (FAILED, "not counted: summary failed"),
         ("mystery", "mystery"),

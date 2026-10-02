@@ -16,7 +16,7 @@ OFFDAY_PAGES: Final = 40
 on Fri-Mon -- 220 a week, the long weekend doing the heavy lifting while
 workdays keep the book moving."""
 
-MIN_SECONDS_PER_PAGE: Final = 60
+MIN_SECONDS_PER_PAGE: Final = 50
 """A session faster than this is page-flipping, not reading."""
 
 MAX_SESSION: Final = timedelta(hours=6)

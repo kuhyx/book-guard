@@ -115,6 +115,6 @@ void main() {
     await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
     await settle(tester, 20);
     expect(refreshed, 1);
-    expect(sessionStatusText['too-fast'], contains('60 s'));
+    expect(sessionStatusText['too-fast'], contains('50 s'));
   });
 }

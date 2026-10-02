@@ -8,7 +8,7 @@ const sessionStatusText = {
   'needs-quiz': 'write the summary',
   'credited': 'credited',
   'failed-quiz': 'not counted: summary failed',
-  'too-fast': 'not counted: under 60 s per page',
+  'too-fast': 'not counted: under 50 s per page',
 };
 
 /// Pace, what to do next, and recent sessions.

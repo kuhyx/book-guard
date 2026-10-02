@@ -44,10 +44,14 @@ def test_pages_with_missing_numbers() -> None:
 
 
 def test_too_fast() -> None:
-    session = Session(_p("a", 10, 0), _p("b", 30, 19), None)
+    # 20 pages need 20 * 50 s = 16 min 40 s.
+    session = Session(_p("a", 10, 0), _p("b", 30, 16), None)
     assert session.state == TOO_FAST
-    exactly = Session(_p("a", 10, 0), _p("b", 30, 20), None)
-    assert exactly.state == NEEDS_QUIZ
+    enough = Session(_p("a", 10, 0), _p("b", 30, 17), None)
+    assert enough.state == NEEDS_QUIZ
+    # The real 2026-10-02 session: 44 pages in 43 minutes counts.
+    real = Session(_p("a", 7, 0), _p("b", 51, 43), None)
+    assert real.state == NEEDS_QUIZ
 
 
 def test_check_page_for() -> None:
