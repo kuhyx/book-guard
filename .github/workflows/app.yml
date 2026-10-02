@@ -1,7 +1,8 @@
 name: app
 
 # The Flutter client: analyzer with fatal infos, tests, and the web build the
-# desktop wrapper serves.
+# desktop wrapper serves. Three parallel jobs rather than one serial one: in
+# series they took 112 s on a warm cache, past the one-minute budget.
 on:
   push:
     branches: [main]
@@ -11,18 +12,26 @@ on:
 jobs:
   flutter:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [analyze, test, web]
+    name: flutter (${{ matrix.task }})
     defaults:
       run:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: kuhyx/utils/flutter-setup@flutter-setup-v1
         with:
           flutter-version: 3.47.6
-          channel: stable
-          cache: true
+          working-directory: app
       - run: flutter pub get
-      - run: flutter analyze --fatal-infos
-      - run: dart format --output=none --set-exit-if-changed lib test bin
-      - run: flutter test --coverage
-      - run: flutter build web --release
+      - if: matrix.task == 'analyze'
+        run: |
+          flutter analyze --fatal-infos
+          dart format --output=none --set-exit-if-changed lib test bin
+      - if: matrix.task == 'test'
+        run: flutter test --coverage
+      - if: matrix.task == 'web'
+        run: flutter build web --release
