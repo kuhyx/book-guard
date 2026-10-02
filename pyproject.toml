@@ -8,7 +8,7 @@ requires-python = ">=3.14"
 # pillow: EXIF capture time + downscaling before the vision call.
 # fastembed: multilingual embeddings that anchor photos in the ebook file.
 dependencies = [
-    "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.8.2#subdirectory=gatelock",
+    "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.9.0#subdirectory=gatelock",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.3.0#subdirectory=freedays",
     "fastembed==0.8.1",
     "pillow==12.3.0",
@@ -22,7 +22,7 @@ book-guard = "book_guard._cli:main"
 [project.optional-dependencies]
 mcp = ["mcp==2.2.0"]
 # The test + lint toolchain the pre-commit gate runs from .venv.
-dev = ["mypy==2.3.1", "pylint==4.0.9", "pytest==9.1.1", "pytest-cov==7.1.0"]
+dev = ["mypy==2.4.0", "pylint==4.1.1", "pytest==9.1.1", "pytest-cov==7.1.0"]
 
 [build-system]
 requires = ["setuptools>=61"]

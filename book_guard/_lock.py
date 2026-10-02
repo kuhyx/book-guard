@@ -37,6 +37,7 @@ from book_guard._lock_view import (
     install_demo_close,
     make_vars,
 )
+from book_guard._morning import morning_skip_for
 from book_guard._publish import write_next_file
 from book_guard._render import status_lines, todo_lines
 from book_guard._state import Snapshot, awaiting_quiz, snapshot
@@ -238,6 +239,9 @@ def run_gate(paths: Paths, *, production: bool, today: date | None = None) -> in
     write_next_file(paths, snap)
     if not snap.locked:
         _logger.info("not locking: %s", snap.reason)
+        return 0
+    if skip := morning_skip_for(paths, wait=production):
+        _logger.warning("not locking yet: %s; %s", snap.reason, skip)
         return 0
     _logger.warning("locking: %s", snap.reason)
     BookGuardLock(paths, snap, production=production).run()

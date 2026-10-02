@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
@@ -12,7 +13,6 @@ import pytest
 from book_guard import _lock
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import POLL_INTERVAL_MS, RANK_BOOK_GUARD
-from book_guard._paths import Paths
 from book_guard._quiz import Verdict
 from book_guard._state import snapshot
 from book_guard.tests._flow_helpers import (
@@ -24,6 +24,7 @@ from book_guard.tests._flow_helpers import (
 from book_guard.tests._flow_helpers_lock import FakeJob, FakeRoot, install_lock_fakes
 
 if TYPE_CHECKING:
+    from book_guard._paths import Paths
     from book_guard.tests._flow_helpers_lock import LockFakes
 
 
@@ -160,7 +161,7 @@ def test_ignore_completion() -> None:
 def test_run_gate_refuses_without_a_key(
     bg_paths: Paths, caplog: pytest.LogCaptureFixture
 ) -> None:
-    keyless = Paths(bg_paths.data_dir, bg_paths.reading_dir, bg_paths.data_dir / "no")
+    keyless = replace(bg_paths, key_file=bg_paths.data_dir / "no")
     assert _lock.run_gate(keyless, production=True, today=LOCKED_DAY) == 0
     assert "gate not armed" in caplog.text
     assert not keyless.next_file.exists()

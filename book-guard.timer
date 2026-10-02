@@ -5,6 +5,10 @@ Description=Re-check the reading pace during the day
 # Offset from leetcode-guard (09:00/13:00) so the two gates do not queue on
 # each other every time; gatelock's arbiter would order them anyway.
 OnCalendar=*-*-* 10:00:00
+# The morning-session carrot (wake-alarm) holds the gate until 11:00 for a
+# morning completed in time; this slot re-decides the moment it expires,
+# like screen-locker's early-bird check.
+OnCalendar=*-*-* 11:00:30
 OnCalendar=*-*-* 14:00:00
 OnCalendar=*-*-* 18:00:00
 Unit=book-guard.service

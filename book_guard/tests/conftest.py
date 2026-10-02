@@ -52,6 +52,7 @@ def bg_paths(tmp_path: Path) -> Paths:
         data_dir=tmp_path / "data",
         reading_dir=tmp_path / "Reading",
         key_file=key,
+        morning_session=tmp_path / "morning_session.json",
     )
 
 
@@ -74,5 +75,8 @@ def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     monkeypatch.setattr(_embed, "TextEmbedding", lambda *_a, **_k: FakeEmbedder())
     monkeypatch.setattr("freedays.is_free_day", lambda *_a, **_k: False)
     monkeypatch.setattr("shutil.which", lambda _name: None)
+    # The morning carrot reads bg_paths.morning_session (under tmp_path), and
+    # a production-mode test must never wait 30 real seconds for it.
+    monkeypatch.setattr("book_guard._morning.MORNING_RETRY_SECONDS", 0.0)
     yield
     _paths.set_override(None)

@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 from typing import Final
 
+from gatelock.morning_session import MORNING_SESSION_FILE
+
 _REAL_KEY: Final = Path("/etc/workout-locker/hmac.key")
 
 
@@ -25,11 +27,13 @@ class Paths:
         data_dir: Private state (ledger, photo cache).
         reading_dir: The WebDAV-served folder the phone uploads into.
         key_file: The HMAC key shared with the sibling lockers.
+        morning_session: wake-alarm's signed morning (the 11:00 carrot).
     """
 
     data_dir: Path
     reading_dir: Path
     key_file: Path
+    morning_session: Path
 
     @property
     def ledger(self) -> Path:
@@ -86,12 +90,14 @@ def _default() -> Paths:
             data_dir=Path(root) / "data",
             reading_dir=Path(root) / "Reading",
             key_file=_REAL_KEY,
+            morning_session=Path(root) / "morning_session.json",
         )
     home = Path.home()
     return Paths(
         data_dir=home / ".local/share/book_guard",
         reading_dir=home / "data/cloud/Reading",
         key_file=_REAL_KEY,
+        morning_session=MORNING_SESSION_FILE,
     )
 
 
