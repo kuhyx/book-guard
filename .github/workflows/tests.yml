@@ -57,4 +57,4 @@ jobs:
         name: pre-commit (Python hooks)
         run: |
           .venv/bin/python -m pip install --quiet pre-commit
-          SKIP=app-analyze,app-test,dependency-freshness .venv/bin/pre-commit run --all-files
+          SKIP=app-analyze,app-format,app-test,dependency-freshness .venv/bin/pre-commit run --all-files
