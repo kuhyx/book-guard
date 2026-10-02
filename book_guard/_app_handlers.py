@@ -35,15 +35,14 @@ def _register(paths: Paths, request: dict[str, Any]) -> Response:
     isbn = normalise_isbn(request.get("isbn"))
     if isbn is None:
         return Response(ok=False, message="That is not a 10- or 13-digit ISBN.")
-    with exclusive(paths):
-        message = register_isbn(
-            paths,
-            isbn,
-            pages=_positive_int(request.get("pages")),
-            title=_text(request.get("title")),
-            author=_text(request.get("author")),
-        )
-    return Response(not message.startswith("Open Library unreachable"), message)
+    ok, message = register_isbn(
+        paths,
+        isbn,
+        pages=_positive_int(request.get("pages")),
+        title=_text(request.get("title")),
+        author=_text(request.get("author")),
+    )
+    return Response(ok=ok, message=message)
 
 
 def _set_pages(paths: Paths, request: dict[str, Any]) -> Response:

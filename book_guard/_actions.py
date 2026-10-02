@@ -70,8 +70,7 @@ def process(
         result.new_isbns += more.new_isbns
         result.deferred = more.deferred
     for isbn in result.new_isbns:
-        with exclusive(paths):
-            _logger.info("%s", register_isbn(paths, isbn))
+        _logger.info("%s", register_isbn(paths, isbn)[1])
     # Requests and dropped book files after the photos, and outside the
     # write lock: their handlers take it themselves around each write, and a
     # grading call or a book index must not hold up the next photo pass.

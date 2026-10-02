@@ -63,7 +63,10 @@ def _cmd_search(args: argparse.Namespace) -> int:
 
 
 def _cmd_add(args: argparse.Namespace) -> int:
-    _say(register_isbn(paths(), args.isbn, pages=args.pages))
+    ok, message = register_isbn(paths(), args.isbn, pages=args.pages)
+    _say(message)
+    if not ok:
+        return 1
     if args.file:
         return _cmd_attach(args)
     return 0

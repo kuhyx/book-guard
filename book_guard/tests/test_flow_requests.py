@@ -12,6 +12,7 @@ from book_guard import _app_handlers, _grading, _ledger
 from book_guard._app_handlers import HANDLERS
 from book_guard._books import current
 from book_guard._claude import ClaudeUnavailableError
+from book_guard._http import UnavailableError
 from book_guard._openlibrary import BookInfo
 from book_guard._quiz import Verdict
 from book_guard._requests import Response, handle_requests
@@ -128,11 +129,11 @@ def test_register_through_open_library(
 ) -> None:
     seen: list[str] = []
 
-    def lookup(isbn: str) -> BookInfo:
+    def lookup(_paths: Paths, isbn: str) -> BookInfo:
         seen.append(isbn)
         return BookInfo(title="War", author="Tol", pages=900, isbn=isbn)
 
-    monkeypatch.setattr(_grading, "lookup_isbn", lookup)
+    monkeypatch.setattr(_grading, "lookup_book", lookup)
     response = HANDLERS["register"](
         bg_paths, {"isbn": "978-0-14-044913-6", "pages": "1225"}
     )
@@ -143,14 +144,15 @@ def test_register_through_open_library(
 def test_register_offline_is_not_ok(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def offline(_isbn: str) -> BookInfo:
+    def offline(_paths: Paths, _isbn: str) -> BookInfo:
         msg = "no route"
-        raise OSError(msg)
+        raise UnavailableError(msg)
 
-    monkeypatch.setattr(_grading, "lookup_isbn", offline)
+    monkeypatch.setattr(_grading, "lookup_book", offline)
     response = HANDLERS["register"](bg_paths, {"isbn": ISBN13})
     assert not response.ok
-    assert response.message.startswith("Open Library unreachable")
+    assert response.message.startswith("No book source reachable")
+    assert not bg_paths.ledger.exists()
 
 
 def test_set_pages(bg_paths: Paths) -> None:

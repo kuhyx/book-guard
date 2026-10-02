@@ -15,6 +15,7 @@ import pytest
 
 from book_guard import _cli, _grading
 from book_guard._claude import ClaudeUnavailableError
+from book_guard._http import UnavailableError
 from book_guard._inbox import InboxResult
 from book_guard._openlibrary import BookInfo
 from book_guard._photos import REJECTED
@@ -68,7 +69,7 @@ def test_add_and_attach(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Out
 ) -> None:
     info = BookInfo(title="War", author="Tol", pages=900, isbn=ISBN13)
-    monkeypatch.setattr(_grading, "lookup_isbn", lambda _isbn: info)
+    monkeypatch.setattr(_grading, "lookup_book", lambda _paths, _isbn: info)
     assert _cli.main(["add", ISBN13, "--pages", "1225"]) == 0
     assert capsys.readouterr().out == "Now reading: War -- Tol, last page 1225\n"
 
@@ -234,3 +235,15 @@ def test_python_dash_m(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
         runpy.run_module("book_guard", run_name="__main__")
     assert exc.value.code == 0
     assert "Book: (none)" in capsys.readouterr().out
+
+
+def test_add_with_no_source_reachable_fails(
+    monkeypatch: pytest.MonkeyPatch, capsys: Out
+) -> None:
+    def offline(_paths: Paths, _isbn: str) -> None:
+        msg = "no book source answered"
+        raise UnavailableError(msg)
+
+    monkeypatch.setattr(_grading, "lookup_book", offline)
+    assert _cli.main(["add", ISBN13]) == 1
+    assert capsys.readouterr().out.startswith("No book source reachable")

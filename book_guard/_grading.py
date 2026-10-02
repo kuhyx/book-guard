@@ -15,7 +15,9 @@ from book_guard._anchor import find_span
 from book_guard._books import register
 from book_guard._claude import DEFAULT_MODEL
 from book_guard._flock import exclusive
-from book_guard._openlibrary import BookInfo, lookup_isbn
+from book_guard._http import UnavailableError
+from book_guard._lookup import lookup_book
+from book_guard._openlibrary import BookInfo
 from book_guard._publish import write_next_file
 from book_guard._quiz import Verdict, grade, record_verdict
 from book_guard._state import snapshot
@@ -34,30 +36,32 @@ def register_isbn(
     pages: int | None = None,
     title: str = "",
     author: str = "",
-) -> str:
-    """Look ``isbn`` up and register it; returns a line for the human.
+) -> tuple[bool, str]:
+    """Look ``isbn`` up everywhere and register it: (registered, a line).
 
-    An ISBN Open Library does not know is still registered -- with no page
-    count, which ``book-guard pages N`` fills in -- so an obscure book never
+    An ISBN no source knows is still registered -- with no page count, which
+    the app or ``book-guard pages N`` fills in -- so an obscure book never
     blocks reading. Such a book is named by ``title``/``author`` when the
-    caller has them, else "ISBN <n>". A network failure registers nothing
-    and says so.
+    caller has them, else "ISBN <n>". Only when no source answered at all is
+    nothing registered. The lookup runs outside the ledger lock (it can take
+    a minute); only the write takes it.
     """
     try:
-        info = lookup_isbn(isbn)
-    except OSError as exc:
+        info = lookup_book(paths, isbn)
+    except UnavailableError as exc:
         _logger.warning("ISBN lookup for %s failed: %s", isbn, exc)
-        return f"Open Library unreachable ({exc}); try again later"
+        return False, f"No book source reachable ({exc}); try again later"
     info = info or BookInfo(
         title=title or f"ISBN {isbn}", author=author, pages=None, isbn=isbn
     )
-    book = register(paths, info, pages=pages)
+    with exclusive(paths):
+        book = register(paths, info, pages=pages)
     tail = (
         f", last page {book.pages}"
         if book.pages
         else "; set the last page of your copy (app, or: book-guard pages N)"
     )
-    return f"Now reading: {book.label}{tail}"
+    return True, f"Now reading: {book.label}{tail}"
 
 
 def quiz_one(

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 
-from book_guard import _embed, _openlibrary, _paths
+from book_guard import _embed, _http, _openlibrary, _paths
 from book_guard._paths import Paths
 
 if TYPE_CHECKING:
@@ -70,6 +70,9 @@ def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
 
     monkeypatch.setattr("book_guard._claude.subprocess.run", no_claude)
     monkeypatch.setattr(_openlibrary, "urlopen", no_network)
+    monkeypatch.setattr(_http, "urlopen", no_network)
+    # Lookup pacing must never really sleep in a test.
+    monkeypatch.setattr("book_guard._lookup.time.sleep", lambda _s: None)
     # The fastembed CLASS is faked, not the factory, so _embed._embedder
     # itself runs (and is covered) without downloading a model.
     monkeypatch.setattr(_embed, "TextEmbedding", lambda *_a, **_k: FakeEmbedder())

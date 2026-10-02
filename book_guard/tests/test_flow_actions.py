@@ -78,9 +78,9 @@ def test_process_reads_registers_and_notifies(
     )
     registered: list[str] = []
 
-    def register_isbn(_paths: Paths, isbn: str) -> str:
+    def register_isbn(_paths: Paths, isbn: str) -> tuple[bool, str]:
         registered.append(isbn)
-        return "ok"
+        return True, "ok"
 
     monkeypatch.setattr(_actions, "register_isbn", register_isbn)
     result, _snap = _actions.process(bg_paths, settle_wait=False)

@@ -46,6 +46,21 @@ class Paths:
         return self.data_dir / "photos.json"
 
     @property
+    def isbn_cache(self) -> Path:
+        """What each ISBN lookup found, so a book is asked about rarely."""
+        return self.data_dir / "isbn_cache.json"
+
+    @property
+    def lookup_sources(self) -> Path:
+        """Per-source request times and rate-limit backoffs."""
+        return self.data_dir / "lookup_sources.json"
+
+    @property
+    def google_key_file(self) -> Path:
+        """Optional Google Books API key (one line); absent means anonymous."""
+        return self.data_dir / "google_books_api_key"
+
+    @property
     def inbox(self) -> Path:
         """Where the phone drops new photos (dufs-cloud upload)."""
         return self.reading_dir / "inbox"
