@@ -101,3 +101,16 @@ def test_reader_box_is_read_first(
     # A box entirely off the image reads as nothing at all.
     _reader_with(monkeypatch, page=_page(), found=[51], boxed=[9])
     assert _reader.read(path, Context(near=51), (500, 500, 600, 600)).page_number == 51
+
+
+def test_a_box_the_phone_read_differently_is_not_trusted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A misread "108" in a stop photo's box must not beat the phone's 103."""
+    path = _jpeg(tmp_path)
+    _reader_with(monkeypatch, page=_page(), found=[3, 103], boxed=[108])
+    context = Context(after=51, hint=103)
+    assert _reader.read(path, context, (10, 10, 20, 20)).page_number == 103
+    # Agreeing readers: the box decides.
+    _reader_with(monkeypatch, page=_page(), found=[3], boxed=[103])
+    assert _reader.read(path, context, (10, 10, 20, 20)).page_number == 103

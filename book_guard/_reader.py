@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING, Final
 
@@ -29,6 +30,8 @@ from book_guard._vision import ISBN, OTHER, PAGE, Reading, normalise_isbn
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+_logger: Final = logging.getLogger(__name__)
 
 MIN_LOCAL_TEXT: Final = 200
 """Below this (and no number) it is a cover, a blank or a dark shot, not a page."""
@@ -63,8 +66,15 @@ def read(path: Path, context: Context, box: Box | None = None) -> Reading:
         with Image.open(path) as stored:
             turned = upright_box(stored, box, page.rotation)
         found = read_box(page.image, turned) if turned else []
+        if found and context.hint is not None and found != [context.hint]:
+            # The two readers disagree on the same box: trust neither alone
+            # (a misread "108" for 103 on a stop is extra credit).
+            _logger.warning(
+                "%s: box reads %s, the phone read %s", path.name, found, context.hint
+            )
+            found = []
     boxed = bool(found)
-    if not boxed:  # no box, or nothing legible in it: the whole page decides
+    if not boxed:  # no box, nothing legible, or disputed: the whole page decides
         found = candidates(page)
     choice = choose(found, context, boxed=boxed)
     if choice.page is not None:
