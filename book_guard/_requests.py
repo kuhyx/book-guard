@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from book_guard._atomic_json import write_json
 from book_guard._claude import ClaudeUnavailableError
+from book_guard._errlog import log_error
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -94,6 +95,7 @@ def handle_requests(
             continue
         except (OSError, ValueError) as exc:
             _logger.warning("request %s failed: %s", rid, exc)
+            log_error(paths, "request", str(exc), request=rid, type=request.get("type"))
             response = Response(ok=False, message=str(exc))
         payload = {"id": rid, "ok": response.ok, "message": response.message}
         if response.passed is not None:

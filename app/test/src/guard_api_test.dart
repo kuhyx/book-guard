@@ -125,10 +125,10 @@ void main() {
     final bytes = Uint8List.fromList([9, 8]);
 
     test('photos go to the inbox with a safe name', () async {
-      expect(
-        await api.uploadPhoto(r'C:\cam\IMG 1(2).jpg', bytes),
+      expect(await api.uploadPhoto(r'C:\cam\IMG 1(2).jpg', bytes), (
         'IMG_1_2_.jpg',
-      );
+        true,
+      ));
       await api.uploadPhoto('/sdcard/DCIM/a/b.jpg', bytes);
       expect(share.files.keys, [
         'Reading/inbox/IMG_1_2_.jpg',

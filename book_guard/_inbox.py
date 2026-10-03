@@ -10,23 +10,29 @@ Three outcomes per file, and only the first two move it out of the inbox:
 * **read** -- cached as a page / ISBN / other / table of contents, or as
   rejected with a reason (no capture time, uploaded too late);
 * **duplicate** -- same bytes as a cached photo;
-* **not yet** -- still settling, undecodable (half-uploaded) or Claude was
-  unreachable. Left where it is, nothing recorded, retried next trigger.
+* **not yet** -- still settling, undecodable (half-uploaded), or a contents
+  photo while Claude was unreachable. Left where it is, nothing recorded,
+  retried next trigger.
+
+Page photos never wait for Claude: they are read on this PC
+(:mod:`book_guard._reader`), with the phone's sidecar note, if any.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 import logging
 import time
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _photos
+from book_guard import _ledger, _photos
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import MAX_UPLOAD_DELAY, UPLOAD_SETTLE_SECONDS
+from book_guard._errlog import log_error
 from book_guard._photo import open_photo
-from book_guard._photos import REJECTED, PhotoRecord
+from book_guard._photo_context import context_for, read_sidecar, sidecar_path
+from book_guard._photos import OK, REJECTED, PhotoRecord
 from book_guard._reader import read
 from book_guard._thumbs import make_thumb
 from book_guard._toc import TOC_PREFIX, read_toc
@@ -37,11 +43,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from book_guard._books import Chapter
+    from book_guard._ledger import Ledger
+    from book_guard._pagenum import Box, Context
     from book_guard._paths import Paths
     from book_guard._photo import PhotoFile
     from book_guard._vision import Reading
 
-    Reader = Callable[[Path, str], Reading]
+    Reader = Callable[[Path, Context, Box | None], Reading]
     TocReader = Callable[[Path, str], tuple[Chapter, ...]]
 
 _logger: Final = logging.getLogger(__name__)
@@ -79,11 +87,12 @@ def _candidates(inbox: Path, now: float) -> list[Path]:
     return [path for _, path in sorted(stamped)]
 
 
-def _file_away(path: Path, paths: Paths, sha: str) -> None:
+def _file_away(path: Path, paths: Paths, sha: str, rotation: int = 0) -> None:
     paths.processed.mkdir(parents=True, exist_ok=True)
     target = paths.processed / f"{sha[:12]}-{path.name}"
     path.replace(target)
-    make_thumb(target, paths.thumbs)
+    sidecar_path(path).unlink(missing_ok=True)
+    make_thumb(target, paths.thumbs, rotation)
 
 
 def _rejected(
@@ -116,17 +125,28 @@ def _contents_record(
 
 
 def _record(
-    photo: PhotoFile, path: Path, uploaded: datetime, reader: Reader
-) -> PhotoRecord:
-    """Classify one photo. Raises ``ClaudeUnavailableError`` from ``reader``."""
+    photo: PhotoFile,
+    path: Path,
+    uploaded: datetime,
+    reader: Reader,
+    known: tuple[dict[str, PhotoRecord], Ledger],
+) -> tuple[PhotoRecord, int]:
+    """Classify one photo against the ``known`` photo cache and ledger.
+
+    Returns the record and the turn that makes it upright (for the thumb).
+    """
     if photo.taken_at is None:
-        return _rejected(photo, path, uploaded, "no EXIF capture time")
+        return _rejected(photo, path, uploaded, "no EXIF capture time"), 0
     if uploaded - photo.taken_at > MAX_UPLOAD_DELAY:
-        return _rejected(
-            photo, path, uploaded, "uploaded more than 24h after it was taken"
-        )
-    reading = reader(path, photo.jpeg_b64)
-    return PhotoRecord(
+        reason = "uploaded more than 24h after it was taken"
+        return _rejected(photo, path, uploaded, reason), 0
+    records, ledger = known
+    note = read_sidecar(path)
+    context = replace(
+        context_for(path.name, photo.taken_at, records, ledger), hint=note.hint
+    )
+    reading = reader(path, context, note.box)
+    record = PhotoRecord(
         sha=photo.sha,
         name=path.name,
         taken_at=photo.taken_at.isoformat(),
@@ -135,7 +155,10 @@ def _record(
         page=reading.page_number,
         isbn=reading.isbn,
         text=reading.text,
+        status=REJECTED if reading.reason else OK,
+        reason=reading.reason,
     )
+    return record, reading.rotation
 
 
 def process_inbox(
@@ -152,6 +175,7 @@ def process_inbox(
     """
     clock = time.time() if now is None else now
     records = _photos.load(paths.photos)
+    ledger = _ledger.load(paths.ledger, paths.key_file)
     result = InboxResult()
     for path in _candidates(paths.inbox, clock):
         if not path.exists():
@@ -166,19 +190,31 @@ def process_inbox(
             continue
         uploaded = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
         chapters: tuple[Chapter, ...] = ()
+        rotation = 0
         try:
             if path.name.startswith(TOC_PREFIX):
                 chapters = toc_reader(path, photo.jpeg_b64)
                 record = _contents_record(photo, path, uploaded, chapters)
             else:
-                record = _record(photo, path, uploaded, reader)
+                record, rotation = _record(
+                    photo, path, uploaded, reader, (records, ledger)
+                )
         except ClaudeUnavailableError as exc:
             _logger.warning("could not read %s (%s); retrying later", path.name, exc)
             result.deferred.append(path.name)
             break
         records[photo.sha] = record
         _photos.save(paths.photos, records)
-        _file_away(path, paths, photo.sha)
+        if record.status == REJECTED:
+            log_error(
+                paths,
+                "photo",
+                record.reason,
+                photo=path.name,
+                kind=record.kind,
+                rotation=rotation,
+            )
+        _file_away(path, paths, photo.sha, rotation)
         result.read.append(record)
         if record.kind == ISBN and record.isbn:
             result.new_isbns.append(record.isbn)

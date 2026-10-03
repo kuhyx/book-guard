@@ -8,7 +8,7 @@ the transcribed pages. Keyed by SHA-256 so a photo uploaded twice is read once.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 import json
 import logging
@@ -75,7 +75,13 @@ def load(path: Path) -> dict[str, PhotoRecord]:
     if not isinstance(raw, dict):
         msg = f"{path} is not a photo cache"
         raise CorruptFileError(msg)
-    return {sha: PhotoRecord(**row) for sha, row in raw.items()}
+    # Fields a newer or older writer added are ignored (e.g. "rotation",
+    # written for a few hours on 2026-10-03): a cache row must always load.
+    known = {f.name for f in fields(PhotoRecord)}
+    return {
+        sha: PhotoRecord(**{k: v for k, v in row.items() if k in known})
+        for sha, row in raw.items()
+    }
 
 
 def save(path: Path, records: dict[str, PhotoRecord]) -> None:

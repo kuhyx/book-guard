@@ -139,3 +139,14 @@ def test_photos_roundtrip_and_usable_pages(tmp_path: Path) -> None:
     assert [r.sha for r in usable] == ["a", "c", "b"]
     assert all(r.status == OK for r in usable)
     assert usable[0].taken.hour == 9
+
+
+def test_photos_load_ignores_fields_it_does_not_know(tmp_path: Path) -> None:
+    """A cache written by another version (e.g. with "rotation") still loads."""
+    target = tmp_path / "photos.json"
+    target.write_text(
+        '{"s": {"sha": "s", "name": "a.jpg", "taken_at": "", "uploaded_at": "",'
+        ' "kind": "page", "page": 51, "rotation": 180}}',
+        encoding="utf-8",
+    )
+    assert _photos.load(target)["s"].page == 51

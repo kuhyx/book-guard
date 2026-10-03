@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from book_guard import _photos as _photo_cache
 from book_guard._bookindex import index_path
+from book_guard._errlog import claude_down_since
 from book_guard._render import todo_lines
 from book_guard._session_files import file_name
 from book_guard._thumbs import thumb_name
@@ -124,4 +125,5 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         "sessions": [_session(v) for v in snap.sessions],
         "escapes_left": snap.escapes_left,
         "photos": _photos(paths),
+        "claude_down_since": claude_down_since(paths),
     }

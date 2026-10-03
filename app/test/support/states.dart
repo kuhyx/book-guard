@@ -42,3 +42,32 @@ Map<String, dynamic> fullState() => {
 /// [fullState] parsed, with [overrides] applied on top.
 GuardState sampleState([Map<String, dynamic> overrides = const {}]) =>
     GuardState.fromJson({...fullState(), ...overrides});
+
+/// A plain snapshot for the reading flow: [openStart] if reading, one
+/// credited session ending at [lastEnd], one asking for page [check].
+GuardState readingState({int? openStart, int? lastEnd, int? check}) =>
+    GuardState.fromJson({
+      'book': {'isbn': '9788368380002', 'title': 'T', 'pages': 406},
+      'pace': const <String, dynamic>{},
+      'sessions': [
+        if (lastEnd != null)
+          {
+            'id': 'session:old',
+            'start_page': 7,
+            'end_page': lastEnd,
+            'status': 'credited',
+            'started_at': '2026-10-02T19:05:00+02:00',
+          },
+        if (check != null)
+          {
+            'id': 'session:chk',
+            'start_page': 1,
+            'end_page': 40,
+            'check_page': check,
+            'status': 'needs-check-photo',
+            'started_at': '2026-10-03T10:00:00+02:00',
+          },
+      ],
+      'open_start': openStart == null ? null : {'page': openStart},
+      'photos': const <Object>[],
+    });

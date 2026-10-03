@@ -16,6 +16,7 @@ from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book
 from book_guard._openlibrary import BookInfo
 from book_guard._requests import Response
+from book_guard._reread import box_photo
 from book_guard._state import awaiting_quiz, snapshot
 from book_guard._vision import normalise_isbn
 
@@ -142,4 +143,5 @@ HANDLERS: dict[str, Callable[[Paths, dict[str, Any]], Response]] = {
     "edit_book": _edit_book,
     "lookup": _lookup,
     "summary": _summary,
+    "box": box_photo,
 }

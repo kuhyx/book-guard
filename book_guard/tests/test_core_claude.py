@@ -1,17 +1,20 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
-"""_claude (fake subprocess.run) and _vision (fake ask)."""
+"""_claude (fake subprocess.run) and _vision's ISBN helper."""
 
 from __future__ import annotations
 
 import json
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from book_guard import _claude, _vision
+from book_guard import _claude, _errlog, _vision
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import CLAUDE_TIMEOUT_SECONDS
+
+if TYPE_CHECKING:
+    from book_guard._paths import Paths
 
 
 def _result(result: str, *, is_error: bool = False) -> str:
@@ -150,54 +153,58 @@ def test_cannot_run(monkeypatch: pytest.MonkeyPatch, error: BaseException) -> No
 
 
 @pytest.mark.parametrize(
-    ("answer", "expected"),
+    ("raw", "expected"),
     [
-        ({"kind": "page", "page_number": 12, "text": "abc"}, ("page", 12, None, "abc")),
-        ({"kind": "page", "page_number": "7"}, ("page", 7, None, "")),
-        ({"kind": "page", "page_number": True}, ("other", None, None, "")),
-        ({"kind": "page", "page_number": "xii"}, ("other", None, None, "")),
-        ({"kind": "page", "page_number": 0}, ("other", None, None, "")),
-        ({"kind": "page", "page_number": 3.0}, ("other", None, None, "")),
-        ({"kind": "page"}, ("other", None, None, "")),
-        (
-            {"kind": "isbn", "isbn": "978-83-240-1234-5"},
-            ("isbn", None, "9788324012345", ""),
-        ),
-        ({"kind": "isbn", "isbn": "0-306-40615-x"}, ("isbn", None, "030640615X", "")),
-        ({"kind": "isbn", "isbn": "12345"}, ("other", None, None, "")),
-        ({"kind": "isbn", "isbn": None}, ("other", None, None, "")),
-        ({"kind": "cat", "page_number": 4, "text": None}, ("other", None, None, "")),
-        ({}, ("other", None, None, "")),
-        ({"kind": "other", "isbn": "9788324012345"}, ("other", None, None, "")),
+        ("978-83-240-1234-5", "9788324012345"),
+        ("0-306-40615-x", "030640615X"),
+        ("12345", None),
+        (None, None),
     ],
 )
-def test_from_answer(answer: dict[str, object], expected: tuple[object, ...]) -> None:
-    reading = _vision.from_answer(answer)
-    assert (reading.kind, reading.page_number, reading.isbn, reading.text) == expected
+def test_normalise_isbn(raw: object, expected: str | None) -> None:
+    assert _vision.normalise_isbn(raw) == expected
 
 
-def test_read_photo(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[tuple[object, ...]] = []
+@pytest.mark.parametrize(
+    ("stdout", "expected"),
+    [
+        (
+            _stream(
+                json.dumps(
+                    {
+                        "type": "result",
+                        "is_error": True,
+                        "api_error_status": 429,
+                        "result": "Claude AI usage limit reached",
+                    }
+                )
+            ),
+            "Claude AI usage limit reached (API status 429)",
+        ),
+        (_stream(json.dumps({"type": "result", "result": ""})), "not json"),
+        ("", "no output"),
+        ('{"type":"result", "result": "cut sh', '{"type":"result", "result": "cut sh'),
+        ("plain failure text", "plain failure text"),
+    ],
+)
+def test_why_reads_the_cli_s_own_reason(stdout: str, expected: str) -> None:
+    assert _claude.why(stdout).startswith(expected.split("\n", maxsplit=1)[0][:20])
 
-    def fake_ask(
-        system: str, prompt: str, images: list[str], *, model: str
-    ) -> dict[str, object]:
-        calls.append((system, prompt, images, model))
-        return {"kind": "page", "page_number": 5, "text": "words"}
 
-    monkeypatch.setattr(_vision, "ask", fake_ask)
-    reading = _vision.read_photo("B64", model="sonnet")
-    assert reading == _vision.Reading("page", 5, None, "words")
-    assert calls[0][2] == ["B64"]
-    assert calls[0][3] == "sonnet"
-    assert "---TEXT---" in str(calls[0][1])
-
-
-def test_read_photo_propagates_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    def broken(*_a: object, **_k: object) -> dict[str, object]:
-        msg = "down"
-        raise ClaudeUnavailableError(msg)
-
-    monkeypatch.setattr(_vision, "ask", broken)
-    with pytest.raises(ClaudeUnavailableError):
-        _vision.read_photo("B64")
+def test_failure_is_logged_with_reason_and_marks_the_outage(
+    monkeypatch: pytest.MonkeyPatch, bg_paths: Paths
+) -> None:
+    limit = json.dumps(
+        {"type": "result", "is_error": True, "result": "usage limit reached"}
+    )
+    _install(monkeypatch, FakeRun((1, _stream(limit)), (0, _stream(_result("{}")))))
+    with pytest.raises(ClaudeUnavailableError, match="usage limit reached"):
+        _claude.ask("sys", "prompt")
+    (line,) = bg_paths.error_log.read_text(encoding="utf-8").splitlines()
+    entry = json.loads(line)
+    assert (entry["stage"], entry["host"]) == ("claude", "pc")
+    assert "exited 1: usage limit reached" in entry["error"]
+    since = _errlog.claude_down_since(bg_paths)
+    assert since is not None
+    assert _claude.ask("sys", "prompt") == {}
+    assert _errlog.claude_down_since(bg_paths) is None

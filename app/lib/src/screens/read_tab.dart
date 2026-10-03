@@ -2,22 +2,21 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/local_session.dart';
+import 'package:book_guard_app/src/page_reader.dart';
+import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
-/// Takes a photo: the camera on the phone, a file on the desktop. Returns
-/// the original file untouched -- no size or quality options, because any
-/// re-encode would strip the EXIF capture time the session clock runs on.
-typedef PhotoSource = Future<XFile?> Function({required bool camera});
-
-/// The default [PhotoSource]: the camera, or the gallery on the desktop.
-Future<XFile?> pickPhoto({required bool camera}) => ImagePicker().pickImage(
-  source: camera ? ImageSource.camera : ImageSource.gallery,
-);
+export 'package:book_guard_app/src/screens/read_support.dart'
+    show PhotoSource, pickPhoto;
 
 /// The reading session itself: start / stop / check photos, then the summary.
+///
+/// Works with the PC off: the phone reads the page number itself, keeps
+/// the photo, names the check page as the PC will, and queues everything.
 class ReadTab extends StatefulWidget {
   /// Creates the tab.
   const new({
@@ -27,12 +26,15 @@ class ReadTab extends StatefulWidget {
     required this.onChanged,
     super.key,
     this.photoSource = pickPhoto,
+    this.reader,
+    this.local,
+    this.journal = const [],
   });
 
   /// The PC.
   final GuardApi api;
 
-  /// The latest snapshot.
+  /// The latest snapshot (possibly the cached one).
   final GuardState? state;
 
   /// Desktop: pick photo files instead of opening a camera.
@@ -43,6 +45,15 @@ class ReadTab extends StatefulWidget {
 
   /// Where photos come from; replaced in tests.
   final PhotoSource photoSource;
+
+  /// On-device page reading; null on the desktop.
+  final PageReader? reader;
+
+  /// What the phone knows that the snapshot does not show yet.
+  final LocalView? local;
+
+  /// Every photo taken on this device.
+  final List<JournalEntry> journal;
 
   @override
   State<ReadTab> createState() => _ReadTabState();
@@ -61,11 +72,23 @@ class _ReadTabState extends State<ReadTab> {
     super.dispose();
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  int? get _openStart {
+    final local = widget.local;
+    return local != null ? local.openStart : widget.state?.openStart;
+  }
+
+  List<SessionInfo> get _checks =>
+      widget.local?.needCheck ?? widget.state?.needCheck ?? const [];
+
+  List<SessionInfo> get _quiz =>
+      widget.local?.needSummary ?? widget.state?.needSummary ?? const [];
+
+  Future<void> _run(String stage, Future<void> Function() action) async {
     setState(() => _busy = true);
     try {
       await action();
     } on Exception catch (error) {
+      unawaited(widget.api.errors.log(stage, '$error'));
       if (mounted) showError(context, '$error');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -73,63 +96,99 @@ class _ReadTabState extends State<ReadTab> {
     }
   }
 
-  /// Uploads a photo and keeps the buttons locked until the PC has read
-  /// it, then says what it saw -- a photo must never just vanish.
-  Future<void> _photo(String label) => _run(() async {
+  /// Reads the photo on the device, lets the reader confirm or box the
+  /// number, then queues it; waits for the PC's verdict only if the PC
+  /// is reachable -- a photo must never just vanish.
+  Future<void> _photo(String label) => _run('photo', () async {
     final file = await widget.photoSource(camera: !widget.desktop);
     if (file == null) return;
-    setState(() => _photoNote = 'Uploading...');
-    final name = await widget.api.uploadPhoto(
-      '${label}_${file.name}',
-      await file.readAsBytes(),
-    );
+    final bytes = await file.readAsBytes();
     if (!mounted) return;
-    setState(() => _photoNote = 'Uploaded - waiting for the PC to read it...');
+    if (widget.reader != null) _note('Reading the page number...');
+    final review = await reviewPhoto(
+      context,
+      reader: widget.reader,
+      bytes: bytes,
+      fileName: file.name,
+      pageContext: pageContextFor(
+        label,
+        widget.state,
+        widget.journal,
+        _openStart,
+      ),
+      errors: widget.api.errors,
+    );
+    if (review == null) return _note('Photo discarded - take it again.');
+    final name = await widget.api.queuePhoto(
+      label,
+      file.name,
+      bytes,
+      page: review.page,
+      box: review.box,
+    );
+    final seen = review.page == null ? '' : ' (p. ${review.page})';
+    if (await widget.api.flush() > 0) {
+      return _note(
+        'Saved on the phone$seen - it goes to the PC as soon as the PC is '
+        'reachable.',
+      );
+    }
+    _note('Uploaded$seen - waiting for the PC...');
     final read = await widget.api.waitForPhoto(name);
     if (!mounted) return;
     final note = photoVerdict(read);
-    setState(() => _photoNote = note);
-    read != null && read.accepted
-        ? showToast(context, note)
-        : showError(context, note);
+    _note(note);
+    if (read != null && read.accepted) {
+      showToast(context, note);
+    } else {
+      if (read != null) {
+        unawaited(
+          widget.api.errors.log('photo', read.reason, {
+            'photo': name,
+            'phone_page': review.page,
+          }),
+        );
+      }
+      showError(context, note);
+    }
   });
 
-  Future<void> _submit(SessionInfo session) => _run(() async {
+  void _note(String text) {
+    if (mounted) setState(() => _photoNote = text);
+  }
+
+  Future<void> _submit(SessionInfo session) => _run('summary', () async {
     setState(() {
       _verdict = 'Grading - this takes up to a minute...';
       _passed = null;
     });
-    final response = await widget.api.send('summary', {
+    final response = await widget.api.sendQueued('summary', {
       'session_id': session.id,
       'summary': _summary.text.trim(),
-    });
+    }, 'Summary for p. ${session.startPage}-${session.endPage}');
     if (!mounted) return;
     setState(() {
       _verdict = response.message;
       _passed = response.passed;
     });
-    if (response.passed ?? false) _summary.clear();
+    // Passed, or queued on the phone: either way the text is safe.
+    if (response.passed ?? response.ok) _summary.clear();
   });
 
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final theme = Theme.of(context);
-    final checks = state?.needCheck ?? const [];
-    final quiz = state?.needSummary ?? const [];
-    final reading = state?.openStart;
-    final verdict = _verdict;
+    final (checks, quiz, reading, verdict) = (
+      _checks,
+      _quiz,
+      _openStart,
+      _verdict,
+    );
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         if (_busy) const LinearProgressIndicator(),
-        const SectionHeader('Session photos'),
-        Text(
-          reading == null
-              ? 'Photograph the open page (number visible) when you start.'
-              : 'Reading since p. $reading - photograph the page where you '
-                    'stop.',
-        ),
+        SessionPrompt(reading: reading, waiting: widget.local?.waiting ?? 0),
         const SizedBox(height: AppSpacing.md),
         Wrap(
           spacing: AppSpacing.sm,
@@ -156,40 +215,21 @@ class _ReadTabState extends State<ReadTab> {
           const SizedBox(height: AppSpacing.sm),
           Text(note),
         ],
-        if (quiz.isNotEmpty) ...[
-          SectionHeader(
-            'Summary for p. ${quiz.first.startPage}-${quiz.first.endPage}',
-          ),
-          const Text(
-            '3-5 sentences in your own words (Polish or English) about what '
-            'happened in these pages.',
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
+        if (quiz.isNotEmpty)
+          SummarySection(
+            session: quiz.first,
             controller: _summary,
-            minLines: 5,
-            maxLines: 10,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
+            grader: graderNote(state),
+            onSubmit: _busy ? null : () => _submit(quiz.first),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          FilledButton(
-            onPressed: _busy ? null : () => _submit(quiz.first),
-            child: const Text('Submit summary'),
-          ),
-        ],
-        if (verdict != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            verdict,
-            style: TextStyle(
-              color: switch (_passed) {
-                true => theme.extension<AppStatusColors>()?.success,
-                false => theme.colorScheme.error,
-                null => null,
-              },
-            ),
-          ),
-        ],
+        if (verdict != null) VerdictText(verdict, passed: _passed),
+        FailedPhotos(
+          api: widget.api,
+          state: state,
+          journal: widget.journal,
+          reader: widget.reader,
+          onChanged: widget.onChanged,
+        ),
         if (state != null && state.photos.isNotEmpty) ...[
           const SectionHeader('Your photos'),
           PhotoGallery(api: widget.api, photos: state.photos),

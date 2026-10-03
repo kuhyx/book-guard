@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
-"""Adversarial check of the vision reader and the grader on one model.
+"""Adversarial check of the local page reader and the grader on one model.
 
 Runs against a BOOK_GUARD_ROOT sandbox holding the Treasure Island demo
 session p. 40-62 (see scripts/demo_photos.py). Writes nothing: it calls
-``read_photo`` and ``grade`` directly and prints a pass/fail table, exiting
+the local page reader and ``grade`` directly and prints a pass/fail table, exiting
 non-zero if any case lands on the wrong side.
 
     BOOK_GUARD_ROOT=.demo python3 scripts/grader_suite.py [MODEL]
@@ -18,11 +18,11 @@ from book_guard import _ledger, _photos
 from book_guard._anchor import find_span
 from book_guard._books import book_at
 from book_guard._claude import ask
+from book_guard._pagenum import Context
 from book_guard._paths import paths
-from book_guard._photo import open_photo
 from book_guard._quiz import grade
+from book_guard._reader import read
 from book_guard._sessions import build_sessions
-from book_guard._vision import read_photo
 
 if TYPE_CHECKING:
     from book_guard._books import Book
@@ -98,16 +98,12 @@ def _smart_cheat(photos: list[PhotoRecord], model: str) -> str:
     return str(answer["text"])
 
 
-def _vision_failures(active: Paths, session: Session, model: str) -> int:
-    """Re-read each evidence photo; count page numbers read wrong."""
+def _vision_failures(active: Paths, session: Session) -> int:
+    """Re-read each evidence photo locally; count page numbers read wrong."""
     failures = 0
     for record in session.evidence:
         path = next(active.processed.glob(f"{record.sha[:12]}-*"))
-        photo = open_photo(path)
-        if photo is None:
-            msg = f"{path} is not a readable photo"
-            raise SystemExit(msg)
-        seen = read_photo(photo.jpeg_b64, model=model).page_number
+        seen = read(path, Context(expected=record.page)).page_number
         ok = seen == record.page
         failures += not ok
         _out(f"vision  p.{record.page}: read {seen}  {'ok' if ok else 'WRONG'}")
@@ -159,7 +155,7 @@ def main() -> int:
     use_span = book is not None and "--no-span" not in sys.argv
     span = find_span(active, book.isbn, session) if book and use_span else None
     _out("book text:", span.reason if span else "not used", span.scores if span else "")
-    failures = _vision_failures(active, session, model)
+    failures = _vision_failures(active, session)
     failures += _grade_failures(book, session, span.text if span else "", model)
     _out(f"{failures} case(s) on the wrong side ({model})")
     return 1 if failures else 0

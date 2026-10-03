@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
+import 'package:book_guard_app/src/local_store.dart';
 import 'package:book_guard_app/src/login_store.dart';
+import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
 import 'package:book_guard_app/src/screens/settings_screen.dart';
 import 'package:design_system/design_system.dart';
@@ -16,7 +18,15 @@ class BookGuardApp extends StatefulWidget {
     required this.loginStore,
     super.key,
     this.apiFactory,
+    this.pageReader,
+    this.storeFactory,
   });
+
+  /// On-device page-number reading; null on the desktop.
+  final PageReader? pageReader;
+
+  /// Opens the device's store; replaced in tests.
+  final Future<LocalStore> Function()? storeFactory;
 
   /// Whether this is the desktop build served by the local wrapper.
   final bool desktop;
@@ -55,9 +65,21 @@ class _BookGuardAppState extends State<BookGuardApp> {
         );
       }
     }
+    final factory = widget.apiFactory;
+    final api = dav == null
+        ? null
+        : factory != null
+        ? factory(dav)
+        : GuardApi(
+            dav,
+            // Opened only once there is a share to talk to: the outbox,
+            // the photo journal and the last snapshot live here.
+            store: await (widget.storeFactory ?? createLocalStore)(),
+            host: widget.desktop ? 'desktop' : 'phone',
+          );
     if (!mounted) return;
     setState(() {
-      _api = dav == null ? null : (widget.apiFactory ?? GuardApi.new)(dav);
+      _api = api;
       _loading = false;
     });
   }
@@ -81,6 +103,7 @@ class _BookGuardAppState extends State<BookGuardApp> {
           : HomeScreen(
               api: api,
               desktop: widget.desktop,
+              reader: widget.pageReader,
               // The Navigator lives below MaterialApp, so HomeScreen pushes
               // this page with its own context.
               settingsPage: widget.desktop

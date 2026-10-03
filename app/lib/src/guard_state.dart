@@ -4,8 +4,9 @@ export 'package:book_guard_app/src/book_extras.dart';
 
 /// `Reading/state.json`, as book-guard on the PC writes it (schema 1).
 ///
-/// The app never derives pace or session state itself: the PC is the only
-/// authority, and everything shown comes from here.
+/// The PC is the only authority on pace and credit; while it cannot be
+/// reached the app overlays its own photos on the last snapshot
+/// (`local_session.dart`) so reading goes on.
 class GuardState {
   /// Creates a state.
   const new({
@@ -18,6 +19,7 @@ class GuardState {
     required this.openStart,
     required this.generatedAt,
     this.photos = const [],
+    this.claudeDownSince,
   });
 
   /// Parses the JSON document.
@@ -36,6 +38,7 @@ class GuardState {
       ],
       openStart: start is Map<String, dynamic> ? _int(start['page']) : null,
       generatedAt: DateTime.tryParse('${json['generated_at']}'),
+      claudeDownSince: DateTime.tryParse('${json['claude_down_since']}'),
       photos: [
         for (final p in json['photos'] as List? ?? const [])
           if (p is Map<String, dynamic>) PhotoInfo.fromJson(p),
@@ -69,6 +72,9 @@ class GuardState {
 
   /// The newest uploaded photos, newest first.
   final List<PhotoInfo> photos;
+
+  /// Since when the PC's Claude calls (the summary grader) fail, if they do.
+  final DateTime? claudeDownSince;
 
   /// Sessions waiting for their check-page photo.
   List<SessionInfo> get needCheck =>

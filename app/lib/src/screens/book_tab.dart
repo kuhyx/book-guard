@@ -122,11 +122,19 @@ class _BookTabState extends State<BookTab> {
     final file = await widget.photoSource(camera: !widget.desktop);
     if (file == null) return;
     setState(() => _note = 'Uploading the contents photo...');
-    final name = await widget.api.uploadPhoto(
+    final (name, sent) = await widget.api.uploadPhoto(
       'toc-${file.name}',
       await file.readAsBytes(),
     );
     if (!mounted) return;
+    if (!sent) {
+      setState(
+        () => _note =
+            'Saved on the phone - the PC reads the contents once it is '
+            'reachable.',
+      );
+      return;
+    }
     setState(() => _note = 'Uploaded - waiting for the PC to read it...');
     final read = await widget.api.waitForPhoto(name);
     if (!mounted) return;

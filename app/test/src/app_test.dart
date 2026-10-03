@@ -1,6 +1,7 @@
 import 'package:book_guard_app/src/app.dart';
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
+import 'package:book_guard_app/src/local_store.dart';
 import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
 import 'package:book_guard_app/src/screens/settings_screen.dart';
@@ -99,7 +100,11 @@ void main() {
       'dufs_password': 'p',
     });
     await tester.pumpWidget(
-      BookGuardApp(desktop: false, loginStore: LoginStore()),
+      BookGuardApp(
+        desktop: false,
+        loginStore: LoginStore(),
+        storeFactory: () async => MemoryStore(),
+      ),
     );
     addTearDown(() => tester.pumpWidget(const SizedBox()));
     await settle(tester, 20);

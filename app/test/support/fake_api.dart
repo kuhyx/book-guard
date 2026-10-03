@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/page_number.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,11 +72,60 @@ class FakeApi extends GuardApi {
   }
 
   @override
-  Future<String> uploadPhoto(String name, Uint8List bytes) async {
+  Future<(String, bool)> uploadPhoto(String name, Uint8List bytes) async {
     final error = uploadError;
     if (error != null) throw error;
     photos[name] = bytes;
+    return (name, !offline);
+  }
+
+  /// When true, the outbox cannot reach the PC.
+  bool offline = false;
+
+  /// What the next [collectAnswers] returns (then it is emptied).
+  List<LateAnswer> answers = [];
+
+  @override
+  Future<List<LateAnswer>> collectAnswers() async {
+    final found = answers;
+    answers = [];
+    return found;
+  }
+
+  /// What each queued photo's sidecar said, by name.
+  final Map<String, ({int? page, Box? box})> notes = {};
+
+  @override
+  Future<int> flush() async => offline ? 1 : 0;
+
+  @override
+  Future<String> queuePhoto(
+    String label,
+    String fileName,
+    Uint8List bytes, {
+    int? page,
+    Box? box,
+    DateTime? takenAt,
+  }) async {
+    final error = uploadError;
+    if (error != null) throw error;
+    final name = safeName('${label}_$fileName');
+    photos[name] = bytes;
+    notes[name] = (page: page, box: box);
     return name;
+  }
+
+  @override
+  Future<GuardResponse> sendQueued(
+    String type,
+    Map<String, Object?> body,
+    String what,
+  ) async {
+    if (offline) {
+      sent.add((type: type, body: body));
+      return const GuardResponse(ok: true, message: 'Saved on the phone');
+    }
+    return await send(type, body);
   }
 
   @override

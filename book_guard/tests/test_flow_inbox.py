@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    from book_guard._pagenum import Box, Context
     from book_guard._paths import Paths
 
 UPLOADED = T0 + timedelta(minutes=30)
@@ -46,8 +47,8 @@ def _photo(name: str, taken: datetime | None = T0) -> PhotoFile:
     return PhotoFile(sha=sha(name), taken_at=taken, jpeg_b64=name)
 
 
-def _page_reader(page: int = 12) -> Callable[[Path, str], Reading]:
-    return lambda _path, _b64: Reading(
+def _page_reader(page: int = 12) -> Callable[[Path, Context, Box | None], Reading]:
+    return lambda _path, _context, _box: Reading(
         kind=PAGE, page_number=page, isbn=None, text="words"
     )
 
@@ -114,7 +115,7 @@ def test_duplicate_is_filed_without_reading(
     _drop(bg_paths, "again.jpg")
     _fake_open(monkeypatch, {"again.jpg": _photo("a")})
 
-    def no_read(_path: Path, _b64: str) -> Reading:
+    def no_read(_path: Path, _context: Context, _box: Box | None) -> Reading:
         raise AssertionError
 
     result = _inbox.process_inbox(bg_paths, reader=no_read, now=NOW)
@@ -150,21 +151,22 @@ def test_rejections_are_recorded(
 def test_claude_down_stops_the_pass(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _drop(bg_paths, "1.jpg", mtime=UPLOADED.timestamp() - 2)
-    _drop(bg_paths, "2.jpg")
-    _fake_open(monkeypatch, {"1.jpg": _photo("1"), "2.jpg": _photo("2")})
+    """Only contents photos need Claude; an outage leaves them in the inbox."""
+    _drop(bg_paths, "toc-1.jpg", mtime=UPLOADED.timestamp() - 2)
+    _drop(bg_paths, "toc-2.jpg")
+    _fake_open(monkeypatch, {"toc-1.jpg": _photo("1"), "toc-2.jpg": _photo("2")})
     calls: list[str] = []
 
-    def down(_path: Path, b64: str) -> Reading:
+    def down(_path: Path, b64: str) -> tuple[Chapter, ...]:
         calls.append(b64)
         msg = "offline"
         raise ClaudeUnavailableError(msg)
 
-    result = _inbox.process_inbox(bg_paths, reader=down, now=NOW)
-    assert result.deferred == ["1.jpg"]
+    result = _inbox.process_inbox(bg_paths, toc_reader=down, now=NOW)
+    assert result.deferred == ["toc-1.jpg"]
     assert calls == ["1"]
-    assert (bg_paths.inbox / "1.jpg").exists()
-    assert (bg_paths.inbox / "2.jpg").exists()
+    assert (bg_paths.inbox / "toc-1.jpg").exists()
+    assert (bg_paths.inbox / "toc-2.jpg").exists()
     assert not bg_paths.photos.exists()
 
 
@@ -177,7 +179,7 @@ def test_isbn_collection(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> No
         "b": Reading(kind=ISBN, page_number=None, isbn=None, text=""),
     }
     result = _inbox.process_inbox(
-        bg_paths, reader=lambda _path, b64: readings[b64], now=NOW
+        bg_paths, reader=lambda path, _context, _box: readings[path.stem], now=NOW
     )
     assert result.new_isbns == ["9780140449136"]
     assert len(result.read) == 2

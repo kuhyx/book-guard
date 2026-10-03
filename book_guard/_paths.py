@@ -61,6 +61,31 @@ class Paths:
         return self.data_dir / "google_books_api_key"
 
     @property
+    def claude_down(self) -> Path:
+        """Present while Claude calls fail: when the outage began."""
+        return self.data_dir / "claude_down.json"
+
+    @property
+    def error_log(self) -> Path:
+        """Every failure, phone and PC, one JSON object per line."""
+        return self.reading_dir / "logs" / "errors.jsonl"
+
+    @property
+    def uploaded_reports(self) -> Path:
+        """Bug reports ("this should not have failed"), as uploaded."""
+        return self.reading_dir / "logs" / "reports"
+
+    @property
+    def reports(self) -> Path:
+        """Filed bug reports: each photo and what was made of it."""
+        return self.data_dir / "reports"
+
+    @property
+    def phone_logs(self) -> Path:
+        """The phone's error entries, one file each, until merged."""
+        return self.reading_dir / "logs" / "phone"
+
+    @property
     def inbox(self) -> Path:
         """Where the phone drops new photos (dufs-cloud upload)."""
         return self.reading_dir / "inbox"

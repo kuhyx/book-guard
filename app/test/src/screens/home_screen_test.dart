@@ -1,9 +1,14 @@
+import 'dart:convert';
+
+import 'package:book_guard_app/src/dav_client.dart';
+import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
@@ -112,5 +117,104 @@ void main() {
     api.fetchError = shareDown();
     await settle(tester);
     expect(find.byType(HomeScreen), findsNothing);
+  });
+
+  testWidgets('an unreachable PC is offline mode, on the last snapshot', (
+    tester,
+  ) async {
+    await api.store.write(
+      'state.json',
+      Uint8List.fromList(
+        utf8.encode(
+          jsonEncode({
+            'reason': 'on pace',
+            'generated_at': '2026-10-03T10:58:04Z',
+          }),
+        ),
+      ),
+    );
+    api
+      ..fetchError = const DavException('Reading/state.json', 0, 'unreachable')
+      ..offline = true;
+    await pump(tester);
+    expect(find.textContaining('Working offline'), findsOneWidget);
+    expect(find.textContaining('Showing the state from 3.10'), findsOneWidget);
+    expect(find.textContaining('1 item(s) wait on the phone'), findsOneWidget);
+    expect(find.text('on pace'), findsOneWidget);
+  });
+
+  testWidgets('offline with nothing cached or queued says so plainly', (
+    tester,
+  ) async {
+    api.fetchError = const DavException('Reading/state.json', 0);
+    await pump(tester);
+    expect(
+      find.text(
+        'Working offline - the PC cannot be reached. Photos, page numbers '
+        'and summaries all work offline.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('late answers are shown once they arrive', (tester) async {
+    api.answers = [
+      (
+        what: 'Summary for p. 51-103',
+        response: const GuardResponse(
+          ok: true,
+          message: 'Credited',
+          passed: true,
+        ),
+      ),
+      (
+        what: 'Re-read of a.jpg',
+        response: const GuardResponse(ok: false, message: 'Still no number'),
+      ),
+    ];
+    await pump(tester);
+    expect(
+      find.text(
+        'Summary for p. 51-103: Credited\nRe-read of a.jpg: Still no number',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('good late answers are a plain toast', (tester) async {
+    api.answers = [
+      (
+        what: 'Summary for p. 51-103',
+        response: const GuardResponse(
+          ok: true,
+          message: 'Credited',
+          passed: true,
+        ),
+      ),
+    ];
+    await pump(tester);
+    expect(find.text('Summary for p. 51-103: Credited'), findsOneWidget);
+  });
+
+  testWidgets('diagnostics go to the clipboard', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map<Object?, Object?>)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    await api.errors.log('photo', 'no page number found');
+    await pump(tester);
+    await tester.tap(find.byTooltip('Copy diagnostics'));
+    await settle(tester);
+    expect(copied, contains('no page number found'));
+    expect(
+      find.text('Diagnostics copied - paste them to Claude.'),
+      findsOneWidget,
+    );
   });
 }

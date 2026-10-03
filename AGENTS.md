@@ -13,14 +13,29 @@ Read README.md first. These are the invariants that are easy to break.
   (100% branch coverage is enforced). `book_guard/tests/conftest.py` makes
   every test hermetic -- extend it, never bypass it, when adding a path, a
   network call or a subprocess.
-- `scripts/grader_suite.py [MODEL]` is the adversarial check of the vision
-  reader and grader on a real model (needs the sandbox demo session). Re-run
-  it after touching `_quiz.py`, `_vision.py`, `_anchor.py` or the prompts.
+- `scripts/grader_suite.py [MODEL]` is the adversarial check of the local
+  page reader and the grader on a real model (needs the sandbox demo
+  session). Re-run it after touching `_quiz.py`, `_anchor.py` or the prompts.
+- `scripts/page_truth.py` runs the page reader on real labelled photos
+  (`~/data/book-guard_binaries/page_truth/manifest.json`) and exits 1 on a
+  wrong number. Re-run after touching `_ocr.py`, `_pagenum.py` or
+  `_reader.py`. The same manifest drives the app's on-device check:
+  `adb push` it to `/sdcard/Android/data/com.kuhy.book_guard_app/files/page_truth/`,
+  `touch .../run` (chmod 666), launch the app, read `page_truth {...}` lines
+  from logcat (the app's own files are not adb-readable).
 - Heavy commands run under `~/.claude/scripts/capped.sh`; indexing a book
   needs `CAP_MEM=4G`.
 
 ## Invariants
 
+- **No model reads page numbers.** The phone (ML Kit) and the PC
+  (Tesseract) do, upright by content, chosen by plausibility; ambiguous is
+  a rejection that asks for a box, never a guess. A page photo must never
+  wait on Claude.
+- **The app is offline-first.** Every upload goes through its outbox; it
+  must keep working (photos, page numbers, check page, summary queued) with
+  the PC and the network both gone. App data lives in its support folder
+  and survives `adb install -r` -- never uninstall or clear it.
 - **Haiku only.** Every Claude call defaults to `DEFAULT_MODEL = "haiku"`;
   another model only via an explicit per-run `--model`. Never a config value.
 - **Isolated Claude calls.** `_claude.ask` runs the CLI with

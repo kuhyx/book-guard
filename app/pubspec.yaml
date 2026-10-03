@@ -9,6 +9,9 @@ environment:
 # Exact pins, newest stable (dependency-freshness gate). The app talks to the
 # PC only through the dufs WebDAV share, so there is no sync library here.
 dependencies:
+  # sha256 of each photo, so the phone names the check page offline exactly
+  # as the PC will (book_guard/_sessions.py check_page_for).
+  crypto: 3.0.7
   design_system:
     git:
       url: https://github.com/kuhyx/utils
@@ -21,11 +24,20 @@ dependencies:
   # The dufs login on the phone. The desktop build never holds it: the local
   # wrapper injects it when proxying WebDAV.
   flutter_secure_storage: 11.2.0
+  # On-device page-number reading (Latin model bundled: works offline).
+  # Android only -- the desktop web build never imports it.
+  google_mlkit_text_recognition: 0.17.1
   http: 1.6.0
+  # Decodes the stored JPEG pixels *without* the EXIF turn, which is wrong
+  # when the phone points straight down at a book, so the page can be
+  # tried in all four orientations.
+  image: 4.10.1
   # Session photos from the camera. Called with no resize/quality options so
   # the camera's original bytes -- and their EXIF capture time -- are uploaded.
   image_picker: 1.2.3
   path: 1.9.1
+  # The offline outbox and the error log live in the app's own folders.
+  path_provider: 2.1.6
 
 dev_dependencies:
   flutter_launcher_icons: 0.14.4

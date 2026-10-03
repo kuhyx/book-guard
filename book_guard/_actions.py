@@ -14,6 +14,7 @@ from book_guard._app_handlers import HANDLERS
 from book_guard._attach import attach_dropped
 from book_guard._books import current, normalise_chapters, register
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
+from book_guard._errlog import merge_phone, merge_reports
 from book_guard._flock import exclusive
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
@@ -52,6 +53,8 @@ def process(
     Notifies only when this pass read something, so the 15-minute fallback
     timer stays quiet on an empty inbox.
     """
+    merge_phone(paths)
+    merge_reports(paths)
     with exclusive(paths):
         result = process_inbox(paths, now=now)
     # The .path unit fires as an upload *starts*, and events that land while

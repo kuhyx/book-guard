@@ -105,6 +105,20 @@ void main() {
     );
   });
 
+  testWidgets('offline, a contents photo waits on the phone', (tester) async {
+    api.offline = true;
+    await pump(tester, photo: XFile.fromData(_epub, path: '/DCIM/c.jpg'));
+    await tapVisible(tester, find.text('Photograph contents'));
+    await settle(tester);
+    expect(
+      find.text(
+        'Saved on the phone - the PC reads the contents once it is '
+        'reachable.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a cancelled contents pick uploads nothing', (tester) async {
     await pump(tester);
     await tapVisible(tester, find.text('Photograph contents'));

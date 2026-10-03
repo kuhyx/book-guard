@@ -28,14 +28,20 @@ def thumb_name(filed: str) -> str:
     return f"{filed[:_SHA_PREFIX]}.jpg"
 
 
-def make_thumb(filed: Path, thumbs: Path) -> None:
-    """Write ``filed``'s thumbnail unless it exists; failures are logged only."""
+def make_thumb(filed: Path, thumbs: Path, rotation: int = 0) -> None:
+    """Write ``filed``'s thumbnail unless it exists; failures are logged only.
+
+    ``rotation``: the reader's upright turn after EXIF, so the gallery shows
+    the page the way it was read.
+    """
     target = thumbs / thumb_name(filed.name)
     if target.exists():
         return
     try:
         with Image.open(filed) as image:
             small = ImageOps.exif_transpose(image).convert("RGB")
+        if rotation:
+            small = small.rotate(rotation, expand=True)
         small.thumbnail((THUMB_EDGE, THUMB_EDGE))
         thumbs.mkdir(parents=True, exist_ok=True)
         small.save(target, format="JPEG", quality=80)

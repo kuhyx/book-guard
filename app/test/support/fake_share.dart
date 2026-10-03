@@ -26,6 +26,9 @@ class FakeShare {
   /// When set, every call answers with this status instead.
   int? forceStatus;
 
+  /// When true, the share cannot be reached at all (no network, PC off).
+  bool down = false;
+
   /// The HTTP client to hand to [DavClient].
   late final MockClient client = MockClient(_handle);
 
@@ -49,6 +52,7 @@ class FakeShare {
 
   Future<http.Response> _handle(http.Request request) async {
     requests.add(request);
+    if (down) throw http.ClientException('Connection failed', request.url);
     final forced = forceStatus;
     if (forced != null) return http.Response('', forced);
     final path = request.url.pathSegments.join('/');

@@ -163,3 +163,12 @@ def test_session_files(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(_session_files, "write_json", refuse)
     _session_files.write_session_files(bg_paths, snap)  # logged, not raised
     assert ISBN13 not in target.read_text("utf-8")
+
+
+def test_thumbnail_is_turned_as_read(tmp_path: Path) -> None:
+    """The reader's upright turn applies to the gallery thumbnail too."""
+    photo = tmp_path / "abcdefabcdef-start_x.jpg"
+    Image.new("RGB", (400, 300), "white").save(photo)
+    _thumbs.make_thumb(photo, tmp_path / "thumbs", rotation=90)
+    with Image.open(tmp_path / "thumbs" / "abcdefabcdef.jpg") as small:
+        assert small.width < small.height

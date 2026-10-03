@@ -129,10 +129,7 @@ void main() {
     );
     await tapVisible(tester, find.text('Start reading'));
     await settle(tester);
-    expect(
-      find.text('Uploaded - waiting for the PC to read it...'),
-      findsOneWidget,
-    );
+    expect(find.text('Uploaded - waiting for the PC...'), findsOneWidget);
     final button = tester.widget<FilledButton>(
       find.ancestor(
         of: find.text('Start reading'),
