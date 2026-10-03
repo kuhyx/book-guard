@@ -10,10 +10,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _ledger
 from book_guard._anchor import find_span
 from book_guard._books import register
 from book_guard._claude import DEFAULT_MODEL
+from book_guard._constants import MAX_ATTEMPTS
 from book_guard._flock import exclusive
 from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book
@@ -67,13 +67,23 @@ def register_isbn(
 def quiz_one(
     paths: Paths, view: SessionView, summary: str, *, model: str = DEFAULT_MODEL
 ) -> Verdict:
-    """Grade one summary and record the verdict. Raises if Claude is down."""
+    """Grade one summary and record the verdict. Raises if Claude is down.
+
+    A first failure leaves one rewrite, and the feedback says so; the second
+    verdict is final.
+    """
     span = find_span(paths, view.book.isbn if view.book else "", view.session)
     _logger.info("grading %s: book text %s", view.session.session_id, span.reason)
     verdict = grade(view.book, view.session, summary, model=model, span=span.text)
     with exclusive(paths):
-        if _ledger.load(paths.ledger, paths.key_file).has(view.session.session_id):
-            return Verdict(passed=False, feedback="This session was already graded.")
-        record_verdict(paths, view.book, view.session, verdict, summary)
+        entry = record_verdict(paths, view.book, view.session, verdict, summary)
+    if entry is None:
+        return Verdict(passed=False, feedback="This session was already graded.")
     write_next_file(paths, snapshot(paths))
-    return verdict
+    if verdict.passed or int(entry.detail["attempt"]) >= MAX_ATTEMPTS:
+        return verdict
+    return Verdict(
+        passed=False,
+        feedback=f"{verdict.feedback} You may rewrite this summary once; "
+        "the second verdict is final.",
+    )

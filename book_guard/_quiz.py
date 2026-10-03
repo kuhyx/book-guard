@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard import _ledger
 from book_guard._claude import DEFAULT_MODEL, ask
-from book_guard._constants import BONUS_MIN_MINUTES, BONUS_MIN_PAGES
+from book_guard._constants import BONUS_MIN_MINUTES, BONUS_MIN_PAGES, MAX_ATTEMPTS
 from book_guard._ledger import CREDIT, REJECT, Entry
 
 if TYPE_CHECKING:
@@ -161,18 +161,37 @@ def bonus_eligible(session: Session) -> bool:
     return session.pages >= BONUS_MIN_PAGES and session.minutes >= BONUS_MIN_MINUTES
 
 
+def attempts_left(verdicts: list[Entry]) -> int:
+    """Summaries a session may still have graded, given its verdict rows."""
+    if any(e.kind == CREDIT for e in verdicts):
+        return 0
+    return max(0, MAX_ATTEMPTS - len(verdicts))
+
+
 def record_verdict(
     paths: Paths, book: Book | None, session: Session, verdict: Verdict, summary: str
-) -> Entry:
+) -> Entry | None:
     """Write the credit (pass) or reject (fail) row for ``session``.
+
+    The first verdict's id is the session id; a rewrite's is ``<id>#2``.
+    Returns ``None`` (and writes nothing) once no attempt is left. The caller
+    holds the ledger lock, so the attempt count cannot race.
 
     The row's ``day`` is the local day the reading *ended*, and
     ``detail.ended_at`` carries the exact time -- the bonus belongs to the
     evening the pages were read, even when the quiz is taken next morning.
     """
+    earlier = (
+        _ledger.load(paths.ledger, paths.key_file)
+        .verdicts()
+        .get(session.session_id, [])
+    )
+    if not attempts_left(earlier):
+        return None
+    attempt = len(earlier) + 1
     ended = session.ended_at
     entry = Entry(
-        entry_id=session.session_id,
+        entry_id=session.session_id + (f"#{attempt}" if attempt > 1 else ""),
         kind=CREDIT if verdict.passed else REJECT,
         day=ended.astimezone().date().isoformat(),
         amount=session.pages if verdict.passed else 0,
@@ -189,6 +208,7 @@ def record_verdict(
             "bonus": "1" if verdict.passed and bonus_eligible(session) else "0",
             "feedback": verdict.feedback[:1500],
             "summary": summary.strip()[:1000],
+            "attempt": str(attempt),
         },
     )
     _ledger.append(paths.ledger, paths.key_file, entry)

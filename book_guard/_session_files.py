@@ -15,13 +15,10 @@ import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
 
-from book_guard import _ledger
 from book_guard._atomic_json import write_json
-from book_guard._ledger import CREDIT, REJECT
 from book_guard._thumbs import thumb_name
 
 if TYPE_CHECKING:
-    from book_guard._ledger import Entry
     from book_guard._paths import Paths
     from book_guard._photos import PhotoRecord
     from book_guard._state import SessionView, Snapshot
@@ -48,9 +45,10 @@ def _photo(role: str, record: PhotoRecord | None) -> dict[str, Any] | None:
     }
 
 
-def detail(view: SessionView, verdict: Entry | None) -> dict[str, Any]:
-    """Everything the history screen shows for one session."""
+def detail(view: SessionView) -> dict[str, Any]:
+    """Everything the history screen shows for one session (newest verdict)."""
     s = view.session
+    verdict = view.last_verdict
     photos = [
         _photo("start", s.start),
         _photo("end", s.end),
@@ -75,11 +73,9 @@ def detail(view: SessionView, verdict: Entry | None) -> dict[str, Any]:
 
 def write_session_files(paths: Paths, snap: Snapshot) -> None:
     """Refresh ``Reading/sessions/``; failures are logged, never raised."""
-    ledger = _ledger.load(paths.ledger, paths.key_file)
-    verdicts = {e.entry_id: e for e in ledger.entries if e.kind in {CREDIT, REJECT}}
     for view in snap.sessions:
         target = paths.sessions / file_name(view.session.session_id)
-        doc = detail(view, verdicts.get(view.session.session_id))
+        doc = detail(view)
         try:
             if target.exists() and json.loads(target.read_text("utf-8")) == doc:
                 continue

@@ -192,6 +192,7 @@ def test_record_verdict_credit_row(bg_paths: Paths) -> None:
     entry = _quiz.record_verdict(
         bg_paths, make_book(), big, Verdict(True, "f" * 2000), " sum "
     )
+    assert entry is not None
     assert (entry.kind, entry.amount, entry.day) == (
         CREDIT,
         30,
@@ -209,6 +210,8 @@ def test_record_verdict_credit_row(bg_paths: Paths) -> None:
 def test_record_verdict_reject_row(bg_paths: Paths) -> None:
     session = only_session(quiz_pair())
     entry = _quiz.record_verdict(bg_paths, None, session, Verdict(False, "no"), "s")
+    assert entry is not None
+    assert entry.detail["attempt"] == "1"
     assert (entry.kind, entry.amount) == (REJECT, 0)
     assert entry.detail["bonus"] == "0"
     assert entry.detail["isbn"] == entry.detail["title"] == ""

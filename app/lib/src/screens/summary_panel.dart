@@ -11,6 +11,9 @@ import 'package:flutter/material.dart';
 /// The summary for [session]: typed text kept as a draft, locked while the
 /// grader has it, and still "with the grader" after leaving the tab -- the
 /// request is already queued, and the verdict arrives as a message.
+///
+/// A first failure leaves one rewrite: the box unlocks with the text kept
+/// and the grader's feedback above it. The second verdict is final.
 class SummaryPanel extends StatefulWidget {
   /// Creates the panel.
   const new({
@@ -58,7 +61,10 @@ class _SummaryPanelState extends State<SummaryPanel> {
     final sent = await widget.api.gradingSince(id);
     if (!mounted) return;
     setState(() => _sentAt = sent);
-    if (_text.text.isEmpty) _text.text = draft;
+    // The rewrite starts from the failed text when no draft survived.
+    if (_text.text.isEmpty) {
+      _text.text = draft.isEmpty ? widget.session.retry?.summary ?? '' : draft;
+    }
   }
 
   @override
@@ -92,13 +98,20 @@ class _SummaryPanelState extends State<SummaryPanel> {
       });
       return;
     }
-    if (response.passed != null) await widget.api.doneGrading(session.id);
+    final passed = response.passed;
+    final rewriteLeft = passed == false && session.retry == null;
+    if (rewriteLeft) {
+      await widget.api.cancelGrading(session.id); // the draft is the rewrite
+    } else if (passed != null) {
+      await widget.api.doneGrading(session.id);
+    }
     // The home screen refreshes even if this tab is gone by now.
     unawaited(widget.onChanged());
     if (!mounted) return;
     setState(() {
       _verdict = response.message;
-      _passed = response.passed;
+      _passed = passed;
+      if (rewriteLeft) _sentAt = null;
     });
     if (response.passed ?? false) _text.clear();
   }
@@ -107,9 +120,20 @@ class _SummaryPanelState extends State<SummaryPanel> {
   Widget build(BuildContext context) {
     final sentAt = _sentAt;
     final verdict = _verdict;
+    final retry = widget.session.retry;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (retry != null && verdict == null) ...[
+          VerdictText(retry.feedback, passed: false),
+          const Padding(
+            padding: EdgeInsets.only(top: AppSpacing.sm),
+            child: Text(
+              'One more try: rewrite it with that in mind. '
+              'The second verdict is final.',
+            ),
+          ),
+        ],
         SummarySection(
           session: widget.session,
           controller: _text,

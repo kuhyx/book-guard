@@ -86,7 +86,7 @@ class SessionTimes extends StatelessWidget {
     final start = session.startedAt;
     final end = session.endedAt;
     if (start == null || end == null) return const SizedBox.shrink();
-    final graded = session.status == 'credited' || session.status == 'failed';
+    final graded = session.graded;
     return Row(
       children: [
         Expanded(

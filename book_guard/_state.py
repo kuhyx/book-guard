@@ -16,8 +16,9 @@ import freedays
 from book_guard import _ledger, _photos
 from book_guard._books import Book, book_at, current
 from book_guard._constants import ESCAPES_PER_MONTH, GATE_START_DATE
-from book_guard._ledger import CREDIT, ESCAPE, REJECT
+from book_guard._ledger import CREDIT, ESCAPE
 from book_guard._pace import Pace, compute_pace
+from book_guard._quiz import attempts_left
 from book_guard._session_times import SessionTimes, apply_times, load_times
 from book_guard._sessions import (
     NEEDS_CHECK,
@@ -30,7 +31,7 @@ from book_guard._sessions import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from book_guard._ledger import Ledger
+    from book_guard._ledger import Entry, Ledger
     from book_guard._paths import Paths
     from book_guard._photos import PhotoRecord
 
@@ -40,11 +41,21 @@ FAILED = "failed-quiz"
 
 @dataclass(frozen=True)
 class SessionView:
-    """A session and its final status (ledger verdict wins over protocol)."""
+    """A session and its final status (ledger verdict wins over protocol).
+
+    A failed summary with a rewrite left keeps the protocol's status
+    (``needs-quiz``): every surface that asks for a summary asks again.
+    """
 
     session: Session
     book: Book | None
     status: str
+    verdicts: tuple[Entry, ...] = ()
+
+    @property
+    def last_verdict(self) -> Entry | None:
+        """The newest credit/reject row, if the summary was graded at all."""
+        return self.verdicts[-1] if self.verdicts else None
 
 
 @dataclass(frozen=True)
@@ -70,15 +81,18 @@ class Snapshot:
 def _session_views(
     ledger: Ledger, records: dict[str, PhotoRecord], times: SessionTimes
 ) -> list[SessionView]:
-    verdicts = {
-        e.entry_id: e.kind for e in ledger.entries if e.kind in {CREDIT, REJECT}
-    }
+    verdicts = ledger.verdicts()
     views = []
     for session in build_sessions(_photos.usable_pages(records)):
         apply_times(session, times)
-        kind = verdicts.get(session.session_id)
-        status = {CREDIT: CREDITED, REJECT: FAILED}.get(kind or "", session.state)
-        views.append(SessionView(session, book_at(ledger, session.end.taken), status))
+        found = verdicts.get(session.session_id, [])
+        status = session.state
+        if any(e.kind == CREDIT for e in found):
+            status = CREDITED
+        elif found and not attempts_left(found):
+            status = FAILED
+        book = book_at(ledger, session.end.taken)
+        views.append(SessionView(session, book, status, tuple(found)))
     return views
 
 

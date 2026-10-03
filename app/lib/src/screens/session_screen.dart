@@ -70,7 +70,7 @@ class _Detail extends StatelessWidget {
         Text('${doc['book'] ?? ''}'),
         Text(
           '${session.pages} pages in ${session.minutes} min - '
-          '${sessionStatusText[session.status] ?? session.status}',
+          '${statusText(session)}',
         ),
         SessionTimes(api: api, session: session, onChanged: () async {}),
         const SectionHeader('Photos'),

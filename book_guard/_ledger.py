@@ -87,6 +87,18 @@ class Ledger:
         """Every verified entry of one kind, oldest first."""
         return [e for e in self.entries if e.kind == kind]
 
+    def verdicts(self) -> dict[str, list[Entry]]:
+        """Credit/reject rows by session id, oldest first.
+
+        A rewritten summary's row is ``<session>#2``, so it groups with the
+        first verdict instead of colliding with it (``append`` keeps ids unique).
+        """
+        found: dict[str, list[Entry]] = {}
+        for entry in self.entries:
+            if entry.kind in {CREDIT, REJECT}:
+                found.setdefault(entry.entry_id.split("#")[0], []).append(entry)
+        return found
+
 
 def key_usable(key_file: Path) -> bool:
     """Whether signing is possible at all -- the gate refuses to run without."""

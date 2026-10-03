@@ -100,9 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
       state = _state ?? await api.cachedState();
     }
     for (final s in state?.sessions ?? const <SessionInfo>[]) {
-      if (s.status == 'credited' || s.status == 'failed-quiz') {
-        await api.doneGrading(s.id);
-      }
+      await api.settleGrading(s);
     }
     final journal = await api.journal.load();
     if (!mounted) return;

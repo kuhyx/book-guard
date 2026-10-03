@@ -26,6 +26,8 @@ def session_line(view: SessionView) -> str:
     s = view.session
     when = s.started_at.astimezone().strftime("%a %d.%m %H:%M")
     action = _STATUS_TEXT.get(view.status, view.status).format(check=s.check_page)
+    if view.status == NEEDS_QUIZ and view.verdicts:
+        action = "summary failed: rewrite it once more (book-guard quiz)"
     span = f"p. {s.start.page}-{s.end.page} ({s.pages} p, {s.minutes} min)"
     return f"{span} {when} -- {action}"
 
@@ -38,7 +40,8 @@ def todo_lines(snap: Snapshot) -> list[str]:
         for v in snap.with_status(NEEDS_CHECK)
     ]
     lines += [
-        f"WRITE A SUMMARY at the PC for p. {v.session.start.page}-{v.session.end.page}"
+        f"{'REWRITE THE' if v.verdicts else 'WRITE A'} SUMMARY at the PC for "
+        f"p. {v.session.start.page}-{v.session.end.page}"
         for v in snap.with_status(NEEDS_QUIZ)
     ]
     if snap.open_start is not None:

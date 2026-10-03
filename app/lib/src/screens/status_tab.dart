@@ -13,6 +13,11 @@ const sessionStatusText = {
   'too-fast': 'not counted: under 50 s per page',
 };
 
+/// [session]'s status in words; a failed summary with a rewrite left says so.
+String statusText(SessionInfo session) => session.retry != null
+    ? 'summary failed: one rewrite left'
+    : sessionStatusText[session.status] ?? session.status;
+
 /// Pace, what to do next, and recent sessions.
 class StatusTab extends StatelessWidget {
   /// Creates the tab.
@@ -126,9 +131,7 @@ class StatusTab extends StatelessWidget {
                 'p. ${session.startPage}-${session.endPage} '
                 '(${session.pages} p, ${session.minutes} min)',
               ),
-              subtitle: Text(
-                sessionStatusText[session.status] ?? session.status,
-              ),
+              subtitle: Text(statusText(session)),
               trailing: api == null || session.detail.isEmpty
                   ? null
                   : const Icon(Icons.chevron_right),

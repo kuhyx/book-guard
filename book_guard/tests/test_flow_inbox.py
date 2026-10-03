@@ -128,9 +128,9 @@ def test_duplicate_is_filed_without_reading(
     [
         (None, "no EXIF capture time", ""),
         (
-            UPLOADED - timedelta(hours=25),
-            "uploaded more than 24h after it was taken",
-            (UPLOADED - timedelta(hours=25)).isoformat(),
+            UPLOADED - timedelta(days=7, minutes=1),
+            "uploaded more than 7 days after it was taken",
+            (UPLOADED - timedelta(days=7, minutes=1)).isoformat(),
         ),
     ],
 )
@@ -146,6 +146,16 @@ def test_rejections_are_recorded(
     (record,) = _inbox.process_inbox(bg_paths, now=NOW).read
     assert (record.status, record.reason, record.kind) == (REJECTED, reason, "other")
     assert record.taken_at == taken_at
+
+
+def test_a_week_old_photo_still_counts(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The phone queues offline: six days in the outbox is not a rejection."""
+    _drop(bg_paths, "late.jpg")
+    _fake_open(monkeypatch, {"late.jpg": _photo("late", UPLOADED - timedelta(days=6))})
+    (record,) = _inbox.process_inbox(bg_paths, reader=_page_reader(), now=NOW).read
+    assert record.status != REJECTED
 
 
 def test_claude_down_stops_the_pass(

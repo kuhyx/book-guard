@@ -42,7 +42,9 @@ text between the start and end anchors -- not a handful of retrieved
 snippets. Without a file, it grades on the photos and its own knowledge.
 
 A passed session is a signed `credit` row in
-`~/.local/share/book_guard/ledger.json`; a failed quiz is final.
+`~/.local/share/book_guard/ledger.json`. A failed summary may be rewritten
+**once**, with the grader's feedback shown and the old text prefilled; the
+second verdict is final (a `reject` row `<session>`, then `<session>#2`).
 
 ## The rules
 
@@ -53,6 +55,8 @@ A passed session is a signed `credit` row in
 | Debt | 0 if a book was finished that month, else `target - pages read` |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up |
 | Escape | 2 per month; forgives the day, credits no pages |
+| Summary | one rewrite after a fail; the second verdict is final |
+| Upload | within 7 days of the EXIF capture time (the phone queues offline) |
 | Starts | 2026-10-01 |
 
 **Bonuses** (read from the ledger by the consumers, fail closed): a credited

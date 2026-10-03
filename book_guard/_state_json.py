@@ -15,6 +15,7 @@ from book_guard._bookindex import index_path
 from book_guard._errlog import claude_down_since
 from book_guard._render import todo_lines
 from book_guard._session_files import file_name
+from book_guard._sessions import NEEDS_QUIZ
 from book_guard._thumbs import thumb_name
 
 if TYPE_CHECKING:
@@ -41,6 +42,19 @@ def _session(view: SessionView) -> dict[str, Any]:
         "status": view.status,
         "book": view.book.title if view.book else "",
         "detail": f"sessions/{file_name(s.session_id)}",
+        "retry": _retry(view),
+    }
+
+
+def _retry(view: SessionView) -> dict[str, str] | None:
+    """A failed summary that may be rewritten once: what the grader said."""
+    last = view.last_verdict
+    if last is None or view.status != NEEDS_QUIZ:
+        return None
+    return {
+        "feedback": last.detail.get("feedback", ""),
+        "summary": last.detail.get("summary", ""),
+        "graded_at": last.created_at,
     }
 
 

@@ -37,7 +37,7 @@ def set_times(paths: Paths, request: dict[str, Any]) -> Response:
         if view is None:
             return Response(ok=False, message="No such session.")
         session = view.session
-        if view.status in {"credited", "failed"}:
+        if view.verdicts:  # graded once: its times are the ones it was graded on
             return Response(ok=False, message="This session was already graded.")
         first, last = session.start.taken, session.end.taken
         start = start or session.started_at

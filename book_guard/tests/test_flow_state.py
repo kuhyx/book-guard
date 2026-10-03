@@ -45,6 +45,7 @@ def _seed_three_sessions(paths: Paths) -> list[str]:
     ids = [only_session(p).session_id for p in (credited, failed, waiting)]
     add_entry(paths, ids[0], CREDIT, "2026-10-05", 1)
     add_entry(paths, ids[1], REJECT, "2026-10-05")
+    add_entry(paths, f"{ids[1]}#2", REJECT, "2026-10-05")  # the rewrite failed too
     return ids
 
 

@@ -138,7 +138,7 @@ def _record(
     if photo.taken_at is None:
         return _rejected(photo, path, uploaded, "no EXIF capture time"), 0
     if uploaded - photo.taken_at > MAX_UPLOAD_DELAY:
-        reason = "uploaded more than 24h after it was taken"
+        reason = "uploaded more than 7 days after it was taken"
         return _rejected(photo, path, uploaded, reason), 0
     records, ledger = known
     note = read_sidecar(path)

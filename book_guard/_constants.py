@@ -27,9 +27,15 @@ MAX_SESSION: Final = timedelta(hours=6)
 """A start photo older than this cannot open a session with a later end
 photo: a stale start would make any end photo look like hours of reading."""
 
-MAX_UPLOAD_DELAY: Final = timedelta(hours=24)
-"""A photo uploaded more than a day after it was taken is not evidence of
-the session it claims to be from."""
+MAX_UPLOAD_DELAY: Final = timedelta(days=7)
+"""A photo uploaded more than a week after it was taken is not evidence of
+the session it claims to be from. A week, not a day: the app is offline-first
+and queues photos while the PC is off, and the EXIF capture time -- not the
+upload -- is the session clock."""
+
+MAX_ATTEMPTS: Final = 2
+"""Summaries graded per session: a failed one may be rewritten once, with the
+grader's feedback in hand; the second verdict is final."""
 
 BONUS_MIN_PAGES: Final = 20
 BONUS_MIN_MINUTES: Final = 20
