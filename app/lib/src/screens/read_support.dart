@@ -104,7 +104,11 @@ class SummarySection extends StatelessWidget {
     super.key,
     this.grader,
     this.times,
+    this.enabled = true,
   });
+
+  /// False while the grader has it: the text is locked.
+  final bool enabled;
 
   /// When it was read, with "Correct the times".
   final Widget? times;
@@ -143,6 +147,7 @@ class SummarySection extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         TextField(
           controller: controller,
+          enabled: enabled,
           minLines: 5,
           maxLines: 10,
           decoration: const InputDecoration(border: OutlineInputBorder()),

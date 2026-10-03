@@ -155,8 +155,9 @@ def test_build_prompt_with_book_and_span() -> None:
     session = only_session(quiz_pair(text="It was a dark night."))
     prompt = _quiz.build_prompt(make_book(), session, f"  {SUMMARY}  ", span="SPAN")
     assert prompt.startswith(f"Book: War -- Tol (ISBN {ISBN13}).")
-    assert "pages 10-11 (1 pages) in 5 minutes" in prompt
-    assert "--- page 10 ---\nIt was a dark night." in prompt
+    assert "read pages 10-10 (1 pages)" in prompt
+    assert "--- page 10 (where they started) ---\nIt was a dark night." in prompt
+    assert "Pace and time are checked elsewhere" in prompt
     assert "\nSPAN\n" in prompt
     assert "consistent with the book's text above" in prompt
     assert f"\n{SUMMARY}\n---\n" in prompt
@@ -165,7 +166,10 @@ def test_build_prompt_with_book_and_span() -> None:
 def test_build_prompt_without_book_or_span() -> None:
     prompt = _quiz.build_prompt(None, only_session(quiz_pair()), SUMMARY)
     assert prompt.startswith("Book: an unregistered book (ISBN unknown).")
-    assert "--- page 11 ---\n(no legible text)" in prompt
+    assert (
+        "--- page 11 (where they STOPPED -- not read, do not expect it) ---\n(no legible text)"
+        in prompt
+    )
     assert "the book's own text" not in prompt
     assert "if you know this book" in prompt
 
@@ -209,3 +213,23 @@ def test_record_verdict_reject_row(bg_paths: Paths) -> None:
     assert entry.detail["bonus"] == "0"
     assert entry.detail["isbn"] == entry.detail["title"] == ""
     assert entry.detail["check_page"] == ""
+
+
+@pytest.mark.parametrize(
+    ("votes", "passed"),
+    [([False, True, True], True), ([True, False, False], False)],
+)
+def test_the_majority_of_three_calls_decides(
+    monkeypatch: pytest.MonkeyPatch, votes: list[bool], passed: bool
+) -> None:
+    """One noisy Haiku answer neither passes nor fails a summary alone."""
+    answers = iter(votes)
+
+    def ask(_system: str, _prompt: str, *, model: str) -> dict[str, object]:
+        del model
+        vote = next(answers)
+        return {"passed": vote, "feedback": f"vote {vote}"}
+
+    monkeypatch.setattr(_quiz, "ask", ask)
+    verdict = _quiz.grade(make_book(), only_session(quiz_pair()), SUMMARY)
+    assert (verdict.passed, verdict.feedback) == (passed, f"vote {passed}")

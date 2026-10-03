@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -151,6 +152,11 @@ _RETRY_NOTE: Final = (
 )
 
 
+THINKING_TOKENS: Final = "1024"
+"""Measured 2026-10-03: uncapped, Haiku spent 8,222 thinking tokens (75 s)
+on a one-sentence grading verdict; at 1024 the same call took 11 s."""
+
+
 def _ask_once(system: str, message: str, model: str) -> dict[str, object]:
     try:
         done = subprocess.run(
@@ -159,6 +165,7 @@ def _ask_once(system: str, message: str, model: str) -> dict[str, object]:
             capture_output=True,
             text=True,
             cwd="/",
+            env={**os.environ, "MAX_THINKING_TOKENS": THINKING_TOKENS},
             timeout=CLAUDE_TIMEOUT_SECONDS,
             check=False,
         )

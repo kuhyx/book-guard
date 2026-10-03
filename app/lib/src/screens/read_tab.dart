@@ -7,7 +7,7 @@ import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
-import 'package:book_guard_app/src/screens/session_times.dart';
+import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -61,17 +61,8 @@ class ReadTab extends StatefulWidget {
 }
 
 class _ReadTabState extends State<ReadTab> {
-  final _summary = TextEditingController();
   bool _busy = false;
-  String? _verdict;
   String? _photoNote;
-  bool? _passed;
-
-  @override
-  void dispose() {
-    _summary.dispose();
-    super.dispose();
-  }
 
   int? get _openStart {
     final local = widget.local;
@@ -158,33 +149,10 @@ class _ReadTabState extends State<ReadTab> {
     if (mounted) setState(() => _photoNote = text);
   }
 
-  Future<void> _submit(SessionInfo session) => _run('summary', () async {
-    setState(() {
-      _verdict = 'Grading - this takes up to a minute...';
-      _passed = null;
-    });
-    final response = await widget.api.sendQueued('summary', {
-      'session_id': session.id,
-      'summary': _summary.text.trim(),
-    }, 'Summary for p. ${session.startPage}-${session.endPage}');
-    if (!mounted) return;
-    setState(() {
-      _verdict = response.message;
-      _passed = response.passed;
-    });
-    // Passed, or queued on the phone: either way the text is safe.
-    if (response.passed ?? response.ok) _summary.clear();
-  });
-
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final (checks, quiz, reading, verdict) = (
-      _checks,
-      _quiz,
-      _openStart,
-      _verdict,
-    );
+    final (checks, quiz, reading) = (_checks, _quiz, _openStart);
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
@@ -217,18 +185,13 @@ class _ReadTabState extends State<ReadTab> {
           Text(note),
         ],
         if (quiz.isNotEmpty)
-          SummarySection(
+          SummaryPanel(
+            key: ValueKey(quiz.first.id),
+            api: widget.api,
             session: quiz.first,
-            controller: _summary,
             grader: graderNote(state),
-            times: SessionTimes(
-              api: widget.api,
-              session: quiz.first,
-              onChanged: widget.onChanged,
-            ),
-            onSubmit: _busy ? null : () => _submit(quiz.first),
+            onChanged: widget.onChanged,
           ),
-        if (verdict != null) VerdictText(verdict, passed: _passed),
         FailedPhotos(
           api: widget.api,
           state: state,

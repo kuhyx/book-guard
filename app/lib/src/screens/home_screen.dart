@@ -8,6 +8,7 @@ import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
+import 'package:book_guard_app/src/summary_store.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -97,6 +98,11 @@ class _HomeScreenState extends State<HomeScreen> {
     } on Exception catch (e) {
       error = e;
       state = _state ?? await api.cachedState();
+    }
+    for (final s in state?.sessions ?? const <SessionInfo>[]) {
+      if (s.status == 'credited' || s.status == 'failed-quiz') {
+        await api.doneGrading(s.id);
+      }
     }
     final journal = await api.journal.load();
     if (!mounted) return;

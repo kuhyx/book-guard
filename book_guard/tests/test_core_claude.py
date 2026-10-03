@@ -61,6 +61,9 @@ def test_ask_success_with_fence_and_images(monkeypatch: pytest.MonkeyPatch) -> N
     )
     assert _claude.ask("sys", "prompt", ["IMG1", "IMG2"], model="opus") == {"a": 1}
     command, kwargs = fake.calls[0]
+    env = kwargs["env"]
+    assert isinstance(env, dict)
+    assert env["MAX_THINKING_TOKENS"] == _claude.THINKING_TOKENS
     assert command[0] == str(_claude.CLAUDE_BIN)
     assert command[command.index("--model") + 1] == "opus"
     assert command[command.index("--system-prompt") + 1] == "sys"

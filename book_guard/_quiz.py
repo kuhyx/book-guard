@@ -10,6 +10,7 @@ three photos"; every other rule (pace, time per page, upload age) is code.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -24,6 +25,13 @@ if TYPE_CHECKING:
     from book_guard._sessions import Session
 
 MIN_SUMMARY_CHARS: Final = 150
+GRADER_VOTES: Final = 3
+"""Independent grading calls per summary; the majority decides."""
+_ROLE: Final = {
+    "start": " (where they started)",
+    "check": " (a check page in the middle)",
+    "stop": " (where they STOPPED -- not read, do not expect it)",
+}
 
 _SYSTEM: Final = (
     "You check whether a person really read a stretch of a printed book, "
@@ -45,17 +53,25 @@ def build_prompt(
 ) -> str:
     """The grading prompt: identity, photographed evidence, then the summary."""
     title = book.label if book else "an unregistered book"
+    last_read = int(session.end.page or 0) - 1
     lines = [
         f"Book: {title} (ISBN {book.isbn if book else 'unknown'}).",
         (
-            f"The reader says they read pages {session.start.page}-"
-            f"{session.end.page} ({session.pages} pages) in {session.minutes} minutes."
+            f"The reader read pages {session.start.page}-{last_read}"
+            f" ({session.pages} pages). They photographed the page they started"
+            " on, a check page in between, and the page where they STOPPED --"
+            " the stop page was not read."
         ),
-        "Transcribed text of the pages they photographed during the session:",
+        "Transcribed text of those photos:",
     ]
     lines.extend(
-        f"--- page {p.page} ---\n{p.text or '(no legible text)'}"
-        for p in session.evidence
+        f"--- page {p.page}{_ROLE[role]} ---\n{p.text or '(no legible text)'}"
+        for role, p in (
+            ("start", session.start),
+            ("check", session.check),
+            ("stop", session.end),
+        )
+        if p is not None
     )
     if span:
         lines += [
@@ -70,6 +86,20 @@ def build_prompt(
         "--- the reader's summary of what they read ---",
         summary.strip(),
         "---",
+        (
+            "Judge only whether the summary shows the reader knows what happens"
+            " in the pages they read. Pace and time are checked elsewhere: never"
+            " judge them. A summary of dozens of pages leaves out most details:"
+            " never fail it for omitting any one page or event, and never for"
+            " content of the stop page. Details that are not in the photos are"
+            " expected -- they come from the pages in between -- and count FOR"
+            " the reader unless they contradict the book."
+        ),
+        (
+            "The deciding question: does the summary describe things from the"
+            " pages BETWEEN the photos? One built only from what the photos show"
+            " -- however fluent -- FAILS; so does one leaning on the stop page."
+        ),
         "PASS if the summary is specific and consistent with "
         + (
             "the book's text above"
@@ -113,8 +143,17 @@ def grade(
             feedback=f"Write at least {MIN_SUMMARY_CHARS} characters (3-5 sentences).",
         )
     prompt = build_prompt(book, session, summary, span=span)
-    answer = ask(_SYSTEM, prompt, model=model)
-    return Verdict(answer.get("passed") is True, str(answer.get("feedback") or ""))
+    # A majority of independent calls, run side by side: one Haiku answer is
+    # noisy (2026-10-03: the same summary passed twice and failed once).
+    with ThreadPoolExecutor(max_workers=GRADER_VOTES) as pool:
+        answers = list(
+            pool.map(lambda _: ask(_SYSTEM, prompt, model=model), range(GRADER_VOTES))
+        )
+    votes = [
+        Verdict(a.get("passed") is True, str(a.get("feedback") or "")) for a in answers
+    ]
+    passed = sum(v.passed for v in votes) * 2 > len(votes)
+    return next(v for v in votes if v.passed == passed)
 
 
 def bonus_eligible(session: Session) -> bool:
