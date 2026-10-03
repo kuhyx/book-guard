@@ -20,6 +20,7 @@ from book_guard._books import book_at
 from book_guard._claude import ask
 from book_guard._pagenum import Context
 from book_guard._paths import paths
+from book_guard._prompt import Context as GradeContext
 from book_guard._quiz import grade
 from book_guard._reader import read
 from book_guard._sessions import build_sessions
@@ -47,6 +48,22 @@ VAGUE = (
     "tension between the people and things happen that move the plot forward. "
     "Some characters talk about what to do next and there is a bit of adventure."
 )
+CHECKLIST = (
+    "what Jim does when the crew is let ashore",
+    "what happens between Silver and the sailor Tom",
+)
+REWRITE_GENUINE = (
+    VAGUE + " When the crew is let ashore, Jim hides in one of the boats and "
+    "runs off alone into the woods. There he watches Silver try to talk the "
+    "honest sailor Tom into joining the mutiny, and when Tom refuses, Silver "
+    "kills him."
+)
+REWRITE_ECHO = (
+    VAGUE + " I also read what Jim does when the crew is let ashore and what "
+    "happens between Silver and the sailor Tom, which were important parts."
+)
+MUST_NAME_MISSING = {"vague", "photo-paraphrase"}
+"""A fail must say what to add (the rewrite's deal)."""
 WRONG_PART = (
     "Jim is a prisoner in the stockade and Silver protects him from the other "
     "pirates, who hand Silver the black spot. On the treasure hunt they find a "
@@ -125,16 +142,27 @@ def _grade_failures(
         ("wrong-part", WRONG_PART, False),
         ("smart-photo-cheat", _smart_cheat(session.evidence, model), False),
         ("polish", POLISH, True),
+        ("rewrite-genuine", REWRITE_GENUINE, True),
+        ("rewrite-echo", REWRITE_ECHO, False),
     ]
     failures = 0
     for name, summary, want in cases:
-        verdict = grade(book, session, summary, model=model, span=span_text)
-        ok = verdict.passed == want
+        checklist = CHECKLIST if name.startswith("rewrite-") else ()
+        context = GradeContext(span=span_text, checklist=checklist)
+        verdict = grade(book, session, summary, model=model, context=context)
+        ok = verdict.passed == want and (
+            verdict.passed or bool(verdict.missing) or name not in MUST_NAME_MISSING
+        )
         failures += not ok
         _out(
             f"grade   {name:17} want {'pass' if want else 'fail'} got "
             f"{'pass' if verdict.passed else 'fail'}  {'ok' if ok else 'WRONG'}"
             f"  -- {verdict.feedback[:110]}"
+            + (
+                f"\n          missing: {'; '.join(verdict.missing)}"
+                if verdict.missing
+                else ""
+            )
         )
     return failures
 

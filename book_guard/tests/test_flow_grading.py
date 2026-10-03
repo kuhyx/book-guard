@@ -11,6 +11,7 @@ from book_guard import _grading, _ledger, _quiz
 from book_guard._http import UnavailableError
 from book_guard._ledger import CREDIT, REJECT
 from book_guard._openlibrary import BookInfo
+from book_guard._prompt import Context, build_prompt
 from book_guard._quiz import MIN_SUMMARY_CHARS, Verdict
 from book_guard._state import SessionView
 from book_guard.tests._flow_helpers import (
@@ -101,7 +102,7 @@ def test_quiz_one_records_and_guards_regrading(
         passed=True, feedback="Well read."
     )
     assert seen[0]["model"] == "sonnet"
-    assert seen[0]["span"] == ""  # no book file attached
+    assert seen[0]["context"] == Context()  # no book file, no checklist
     ledger = _ledger.load(bg_paths.ledger, bg_paths.key_file)
     assert ledger.has(view.session.session_id)
     assert bg_paths.next_file.exists()
@@ -131,6 +132,12 @@ def test_short_summary_fails_without_a_model_call(
         ({"passed": True, "feedback": "Good."}, Verdict(passed=True, feedback="Good.")),
         ({"passed": "true", "feedback": None}, Verdict(passed=False, feedback="")),
         ({}, Verdict(passed=False, feedback="")),
+        (
+            {"passed": False, "feedback": "x", "missing": [" a ", "", "b", "c", "d"]},
+            Verdict(passed=False, feedback="x", missing=("a", "b", "c")),
+        ),
+        ({"passed": False, "missing": "a"}, Verdict(passed=False, feedback="")),
+        ({"passed": True, "missing": ["a"]}, Verdict(passed=True, feedback="")),
     ],
 )
 def test_grade_parses_the_answer(
@@ -144,16 +151,17 @@ def test_grade_parses_the_answer(
 
     monkeypatch.setattr(_quiz, "ask", ask)
     session = only_session(quiz_pair())
-    assert _quiz.grade(make_book(), session, SUMMARY, model="opus", span="S") == (
-        expected
-    )
+    context = Context(span="S")
+    assert _quiz.grade(
+        make_book(), session, SUMMARY, model="opus", context=context
+    ) == (expected)
     assert calls[0][2] == "opus"
     assert "--- the book's own text" in calls[0][1]
 
 
 def test_build_prompt_with_book_and_span() -> None:
     session = only_session(quiz_pair(text="It was a dark night."))
-    prompt = _quiz.build_prompt(make_book(), session, f"  {SUMMARY}  ", span="SPAN")
+    prompt = build_prompt(make_book(), session, f"  {SUMMARY}  ", Context(span="SPAN"))
     assert prompt.startswith(f"Book: War -- Tol (ISBN {ISBN13}).")
     assert "read pages 10-10 (1 pages)" in prompt
     assert "--- page 10 (where they started) ---\nIt was a dark night." in prompt
@@ -164,7 +172,7 @@ def test_build_prompt_with_book_and_span() -> None:
 
 
 def test_build_prompt_without_book_or_span() -> None:
-    prompt = _quiz.build_prompt(None, only_session(quiz_pair()), SUMMARY)
+    prompt = build_prompt(None, only_session(quiz_pair()), SUMMARY)
     assert prompt.startswith("Book: an unregistered book (ISBN unknown).")
     assert (
         "--- page 11 (where they STOPPED -- not read, do not expect it) ---\n(no legible text)"

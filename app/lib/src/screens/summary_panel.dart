@@ -8,6 +8,13 @@ import 'package:book_guard_app/src/summary_store.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
+/// What [session] earns once its summary passes -- worked out here, so it
+/// shows offline too. The PC signs the credit when it sees the summary.
+String expectedCredit(SessionInfo session) =>
+    'Passing credits ${session.pages} pages'
+    '${session.bonusEligible ? ' and +1h gaming' : ''}. If the grader is '
+    'unreachable for an hour, it is credited without grading.';
+
 /// The summary for [session]: typed text kept as a draft, locked while the
 /// grader has it, and still "with the grader" after leaving the tab -- the
 /// request is already queued, and the verdict arrives as a message.
@@ -126,10 +133,18 @@ class _SummaryPanelState extends State<SummaryPanel> {
       children: [
         if (retry != null && verdict == null) ...[
           VerdictText(retry.feedback, passed: false),
+          if (retry.missing.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text(
+                'To be accepted, add:\n'
+                '${retry.missing.map((m) => '- $m').join('\n')}',
+              ),
+            ),
           const Padding(
             padding: EdgeInsets.only(top: AppSpacing.sm),
             child: Text(
-              'One more try: rewrite it with that in mind. '
+              'One more try: add that and it passes. '
               'The second verdict is final.',
             ),
           ),
@@ -160,6 +175,11 @@ class _SummaryPanelState extends State<SummaryPanel> {
             ),
           ),
         if (verdict != null) VerdictText(verdict, passed: _passed),
+        if (_passed == null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Text(expectedCredit(widget.session)),
+          ),
       ],
     );
   }

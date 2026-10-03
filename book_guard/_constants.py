@@ -33,6 +33,11 @@ the session it claims to be from. A week, not a day: the app is offline-first
 and queues photos while the PC is off, and the EXIF capture time -- not the
 upload -- is the session clock."""
 
+GRADER_GRACE: Final = timedelta(hours=1)
+"""How long a summary waits on an unreachable grader (outage, usage cap)
+before it is credited ungraded -- short enough to keep the evening's bonus.
+Claude being down must never make the app useless."""
+
 MAX_ATTEMPTS: Final = 2
 """Summaries graded per session: a failed one may be rewritten once, with the
 grader's feedback in hand; the second verdict is final."""

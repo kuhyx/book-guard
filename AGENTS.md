@@ -45,8 +45,13 @@ Read README.md first. These are the invariants that are easy to break.
   `/etc/workout-locker/hmac.key`. screen-locker and steam-backlog-enforcer
   read `credit` rows with `detail.bonus == "1"`, dated by `detail.ended_at`.
   Changing that contract means changing both consumers in the same session.
-- **Nothing credits without the grader.** The MCP server and the app's
-  request files are read-only / route through `_grading.quiz_one`.
+- **Nothing credits without the grader** -- except a summary (150+ chars)
+  whose grading has failed for `GRADER_GRACE` (1 h, outage or usage cap):
+  `quiz_one` credits it with `detail.graded == "0"`. The MCP server and the
+  app's request files are read-only / route through `_grading.quiz_one`.
+- **A fail names what is missing** (1-3 topics, never the answers), and the
+  one rewrite is judged only on those (`_prompt.py`). Re-run
+  `scripts/grader_suite.py` after touching it.
 - **One writer at a time**: every read-modify-write of the ledger or the
   photo cache happens inside `_flock.exclusive`.
 - **EXIF capture time is the session clock**: DateTimeOriginal, falling back

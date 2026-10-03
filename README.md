@@ -42,9 +42,14 @@ text between the start and end anchors -- not a handful of retrieved
 snippets. Without a file, it grades on the photos and its own knowledge.
 
 A passed session is a signed `credit` row in
-`~/.local/share/book_guard/ledger.json`. A failed summary may be rewritten
-**once**, with the grader's feedback shown and the old text prefilled; the
-second verdict is final (a `reject` row `<session>`, then `<session>#2`).
+`~/.local/share/book_guard/ledger.json`. A failed summary is told what it
+is missing -- 1-3 topics from those pages, never the answers -- and may be
+rewritten **once**, with the old text prefilled: the rewrite is judged only
+on whether it now covers them. The second verdict is final (a `reject` row
+`<session>`, then `<session>#2`). If the grader cannot be reached for an hour
+(an outage, or Claude usage running out), a summary of 150+ characters is
+credited without grading (`detail.graded == "0"`), bonus included, so Claude
+never makes the app useless.
 
 ## The rules
 
@@ -55,7 +60,7 @@ second verdict is final (a `reject` row `<session>`, then `<session>#2`).
 | Debt | 0 if a book was finished that month, else `target - pages read` |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up |
 | Escape | 2 per month; forgives the day, credits no pages |
-| Summary | one rewrite after a fail; the second verdict is final |
+| Summary | a fail lists what to add; one rewrite, judged on that; ungraded credit after 1 h of grader outage |
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |
 | Starts | 2026-10-01 |
 

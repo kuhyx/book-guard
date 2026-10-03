@@ -5,7 +5,8 @@ The Flutter app (phone and desktop) talks to this PC only through the dufs
 share. It writes ``Reading/requests/<id>.json``; the next pass (the path unit
 fires on the write) handles it and writes ``Reading/responses/<id>.json``,
 which the app polls. Everything a request can do, the CLI can do too --
-there is no action here that bypasses the grader or mints a credit.
+there is no action here that bypasses the grader or mints a credit (a
+summary waiting out a grader outage is credited by ``quiz_one`` itself).
 
 Request types:
 

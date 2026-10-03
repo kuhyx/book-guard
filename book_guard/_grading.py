@@ -12,12 +12,14 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard._anchor import find_span
 from book_guard._books import register
-from book_guard._claude import DEFAULT_MODEL
+from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._constants import MAX_ATTEMPTS
 from book_guard._flock import exclusive
+from book_guard._grader_wait import stop, waited_out
 from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book
 from book_guard._openlibrary import BookInfo
+from book_guard._prompt import Context
 from book_guard._publish import write_next_file
 from book_guard._quiz import Verdict, grade, record_verdict
 from book_guard._state import snapshot
@@ -27,6 +29,11 @@ if TYPE_CHECKING:
     from book_guard._state import SessionView
 
 _logger: Final = logging.getLogger(__name__)
+
+UNGRADED: Final = (
+    "The grader was unreachable for over an hour, so this summary is credited"
+    " without grading."
+)
 
 
 def register_isbn(
@@ -64,26 +71,58 @@ def register_isbn(
     return True, f"Now reading: {book.label}{tail}"
 
 
+def _checklist(view: SessionView) -> tuple[str, ...]:
+    """What the failed first summary was told to add (the rewrite's deal)."""
+    last = view.last_verdict
+    raw = last.detail.get("missing", "") if last else ""
+    return tuple(line for line in raw.split("\n") if line)
+
+
+def _grade_or_wait(
+    paths: Paths, view: SessionView, summary: str, model: str
+) -> Verdict:
+    """Grade; past the outage grace, credit ungraded. Raises while waiting."""
+    sid = view.session.session_id
+    span = find_span(paths, view.book.isbn if view.book else "", view.session)
+    _logger.info("grading %s: book text %s", sid, span.reason)
+    context = Context(span=span.text, checklist=_checklist(view))
+    try:
+        verdict = grade(view.book, view.session, summary, model=model, context=context)
+    except ClaudeUnavailableError:
+        if not waited_out(paths, sid):
+            raise
+        _logger.warning("grader unreachable past the grace: %s credited ungraded", sid)
+        verdict = Verdict(passed=True, feedback=UNGRADED, ungraded=True)
+    stop(paths, sid)
+    return verdict
+
+
+def _told(verdict: Verdict, attempt: int) -> Verdict:
+    """The verdict as the reader hears it: what to add, and whether they may."""
+    if verdict.passed:
+        return verdict
+    parts = [verdict.feedback]
+    if verdict.missing:
+        parts.append(f"To be accepted, add: {'; '.join(verdict.missing)}.")
+    if attempt < MAX_ATTEMPTS:
+        parts.append("You may rewrite this summary once; the second verdict is final.")
+    return Verdict(passed=False, feedback=" ".join(parts), missing=verdict.missing)
+
+
 def quiz_one(
     paths: Paths, view: SessionView, summary: str, *, model: str = DEFAULT_MODEL
 ) -> Verdict:
-    """Grade one summary and record the verdict. Raises if Claude is down.
+    """Grade one summary and record the verdict.
 
-    A first failure leaves one rewrite, and the feedback says so; the second
-    verdict is final.
+    A fail names what is missing; a first one leaves one rewrite, judged on
+    exactly that. While the grader is unreachable this raises (the request
+    waits) -- for up to :data:`GRADER_GRACE`, then the summary is credited
+    ungraded.
     """
-    span = find_span(paths, view.book.isbn if view.book else "", view.session)
-    _logger.info("grading %s: book text %s", view.session.session_id, span.reason)
-    verdict = grade(view.book, view.session, summary, model=model, span=span.text)
+    verdict = _grade_or_wait(paths, view, summary, model)
     with exclusive(paths):
         entry = record_verdict(paths, view.book, view.session, verdict, summary)
     if entry is None:
         return Verdict(passed=False, feedback="This session was already graded.")
     write_next_file(paths, snapshot(paths))
-    if verdict.passed or int(entry.detail["attempt"]) >= MAX_ATTEMPTS:
-        return verdict
-    return Verdict(
-        passed=False,
-        feedback=f"{verdict.feedback} You may rewrite this summary once; "
-        "the second verdict is final.",
-    )
+    return _told(verdict, int(entry.detail["attempt"]))

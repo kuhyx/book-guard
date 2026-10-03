@@ -79,6 +79,9 @@ class SessionInfo {
   /// A failed summary that may be rewritten once, if this is one.
   final RetryInfo? retry;
 
+  /// Earns the day's +1h (book_guard `bonus_eligible`): 20+ pages, 20+ min.
+  bool get bonusEligible => pages >= 20 && minutes >= 20;
+
   /// Graded at least once: its times are the ones it was graded on.
   bool get graded =>
       status == 'credited' || status == 'failed-quiz' || retry != null;
@@ -87,13 +90,19 @@ class SessionInfo {
 /// The first, failed grading of a summary that may be rewritten once.
 class RetryInfo {
   /// Creates the retry.
-  const new({required this.feedback, required this.summary, this.gradedAt});
+  const new({
+    required this.feedback,
+    required this.summary,
+    this.missing = const [],
+    this.gradedAt,
+  });
 
   /// Parses `sessions[].retry`; null when there is no rewrite to offer.
   static RetryInfo? fromJson(Object? json) => json is Map<String, dynamic>
       ? RetryInfo(
           feedback: '${json['feedback'] ?? ''}',
           summary: '${json['summary'] ?? ''}',
+          missing: [for (final m in json['missing'] as List? ?? const []) '$m'],
           gradedAt: DateTime.tryParse('${json['graded_at']}'),
         )
       : null;
@@ -103,6 +112,9 @@ class RetryInfo {
 
   /// The summary that failed: the rewrite starts from it.
   final String summary;
+
+  /// What the rewrite must add to be accepted (topics, not answers).
+  final List<String> missing;
 
   /// When it was graded: a "with the grader" marker older than this is stale.
   final DateTime? gradedAt;

@@ -46,7 +46,7 @@ def _session(view: SessionView) -> dict[str, Any]:
     }
 
 
-def _retry(view: SessionView) -> dict[str, str] | None:
+def _retry(view: SessionView) -> dict[str, Any] | None:
     """A failed summary that may be rewritten once: what the grader said."""
     last = view.last_verdict
     if last is None or view.status != NEEDS_QUIZ:
@@ -54,6 +54,7 @@ def _retry(view: SessionView) -> dict[str, str] | None:
     return {
         "feedback": last.detail.get("feedback", ""),
         "summary": last.detail.get("summary", ""),
+        "missing": [m for m in last.detail.get("missing", "").split("\n") if m],
         "graded_at": last.created_at,
     }
 

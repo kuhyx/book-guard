@@ -24,6 +24,7 @@ SessionInfo _session({bool retry = false, String status = 'needs-quiz'}) =>
           ? {
               'feedback': 'Name two events.',
               'summary': 'Xi in the village',
+              'missing': ['what he did in the village', 'who he worked for'],
               'graded_at': _graded.toIso8601String(),
             }
           : null,
@@ -85,6 +86,13 @@ void main() {
     await pump(tester, _session(retry: true));
     expect(find.text('Name two events.'), findsOneWidget);
     expect(find.textContaining('One more try'), findsOneWidget);
+    expect(
+      find.text(
+        'To be accepted, add:\n- what he did in the village\n'
+        '- who he worked for',
+      ),
+      findsOneWidget,
+    );
     expect(field(tester).controller?.text, 'Xi in the village');
     expect(field(tester).enabled, isTrue);
   });
@@ -135,5 +143,34 @@ void main() {
     expect(_session(status: 'credited').graded, isTrue);
     expect(_session(status: 'failed-quiz').graded, isTrue);
     expect(statusText(_session(status: 'odd')), 'odd');
+  });
+
+  test('the credit is known offline, bonus and outage rule included', () {
+    final big = SessionInfo.fromJson(const {
+      'id': 's',
+      'pages': 53,
+      'minutes': 49,
+      'status': 'needs-quiz',
+    });
+    expect(
+      expectedCredit(big),
+      'Passing credits 53 pages and +1h gaming. If the grader is unreachable '
+      'for an hour, it is credited without grading.',
+    );
+    expect(expectedCredit(_session()), startsWith('Passing credits 0 pages. '));
+  });
+
+  testWidgets('a retry without a missing list shows no empty list', (
+    tester,
+  ) async {
+    final bare = SessionInfo.fromJson({
+      'id': _id,
+      'status': 'needs-quiz',
+      'retry': {'feedback': 'Thin.', 'summary': 's'},
+    });
+    expect(bare.retry?.missing, isEmpty);
+    await pump(tester, bare);
+    expect(find.textContaining('To be accepted'), findsNothing);
+    expect(find.textContaining('Passing credits'), findsOneWidget);
   });
 }

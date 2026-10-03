@@ -18,6 +18,7 @@ from book_guard import _ledger
 from book_guard._claude import DEFAULT_MODEL, ask
 from book_guard._constants import BONUS_MIN_MINUTES, BONUS_MIN_PAGES, MAX_ATTEMPTS
 from book_guard._ledger import CREDIT, REJECT, Entry
+from book_guard._prompt import MAX_MISSING, SYSTEM, Context, build_prompt
 
 if TYPE_CHECKING:
     from book_guard._books import Book
@@ -27,17 +28,6 @@ if TYPE_CHECKING:
 MIN_SUMMARY_CHARS: Final = 150
 GRADER_VOTES: Final = 3
 """Independent grading calls per summary; the majority decides."""
-_ROLE: Final = {
-    "start": " (where they started)",
-    "check": " (a check page in the middle)",
-    "stop": " (where they STOPPED -- not read, do not expect it)",
-}
-
-_SYSTEM: Final = (
-    "You check whether a person really read a stretch of a printed book, "
-    "from their own short summary. You are fair but not gullible. You "
-    "answer with one JSON object and nothing else."
-)
 
 
 @dataclass(frozen=True)
@@ -46,81 +36,10 @@ class Verdict:
 
     passed: bool
     feedback: str
-
-
-def build_prompt(
-    book: Book | None, session: Session, summary: str, *, span: str = ""
-) -> str:
-    """The grading prompt: identity, photographed evidence, then the summary."""
-    title = book.label if book else "an unregistered book"
-    last_read = int(session.end.page or 0) - 1
-    lines = [
-        f"Book: {title} (ISBN {book.isbn if book else 'unknown'}).",
-        (
-            f"The reader read pages {session.start.page}-{last_read}"
-            f" ({session.pages} pages). They photographed the page they started"
-            " on, a check page in between, and the page where they STOPPED --"
-            " the stop page was not read."
-        ),
-        "Transcribed text of those photos:",
-    ]
-    lines.extend(
-        f"--- page {p.page}{_ROLE[role]} ---\n{p.text or '(no legible text)'}"
-        for role, p in (
-            ("start", session.start),
-            ("check", session.check),
-            ("stop", session.end),
-        )
-        if p is not None
-    )
-    if span:
-        lines += [
-            (
-                "--- the book's own text for this stretch (from a digital edition,"
-                " located by matching the photos; it may be another language or"
-                " edition, so wording and page breaks can differ) ---"
-            ),
-            span,
-        ]
-    lines += [
-        "--- the reader's summary of what they read ---",
-        summary.strip(),
-        "---",
-        (
-            "Judge only whether the summary shows the reader knows what happens"
-            " in the pages they read. Pace and time are checked elsewhere: never"
-            " judge them. A summary of dozens of pages leaves out most details:"
-            " never fail it for omitting any one page or event, and never for"
-            " content of the stop page. Details that are not in the photos are"
-            " expected -- they come from the pages in between -- and count FOR"
-            " the reader unless they contradict the book."
-        ),
-        (
-            "The deciding question: does the summary describe things from the"
-            " pages BETWEEN the photos? One built only from what the photos show"
-            " -- however fluent -- FAILS; so does one leaning on the stop page."
-        ),
-        "PASS if the summary is specific and consistent with "
-        + (
-            "the book's text above"
-            if span
-            else "the photographed pages and (if "
-            "you know this book) with what these pages cover"
-        )
-        + ", and "
-        "shows knowledge of content between the photographed pages -- not just "
-        "a paraphrase of the transcribed text above. Minor inaccuracies, "
-        "imperfect recall and any language (e.g. Polish) are fine.",
-        (
-            "FAIL if it is generic, contradicts the pages, describes a different "
-            "part of the book, or only restates the transcribed text."
-        ),
-        (
-            'Answer ONLY with JSON: {"passed": true|false, "feedback": "<one or '
-            'two sentences addressed to the reader>"}'
-        ),
-    ]
-    return "\n".join(lines)
+    missing: tuple[str, ...] = ()
+    """On a fail: what to add for it to pass (topics, not answers)."""
+    ungraded: bool = False
+    """Credited without a grader: it was unreachable for an hour."""
 
 
 def grade(
@@ -129,7 +48,7 @@ def grade(
     summary: str,
     *,
     model: str = DEFAULT_MODEL,
-    span: str = "",
+    context: Context | None = None,
 ) -> Verdict:
     """Grade ``summary`` for ``session``.
 
@@ -142,18 +61,25 @@ def grade(
             passed=False,
             feedback=f"Write at least {MIN_SUMMARY_CHARS} characters (3-5 sentences).",
         )
-    prompt = build_prompt(book, session, summary, span=span)
+    prompt = build_prompt(book, session, summary, context)
     # A majority of independent calls, run side by side: one Haiku answer is
     # noisy (2026-10-03: the same summary passed twice and failed once).
     with ThreadPoolExecutor(max_workers=GRADER_VOTES) as pool:
         answers = list(
-            pool.map(lambda _: ask(_SYSTEM, prompt, model=model), range(GRADER_VOTES))
+            pool.map(lambda _: ask(SYSTEM, prompt, model=model), range(GRADER_VOTES))
         )
-    votes = [
-        Verdict(a.get("passed") is True, str(a.get("feedback") or "")) for a in answers
-    ]
+    votes = [_vote(a) for a in answers]
     passed = sum(v.passed for v in votes) * 2 > len(votes)
     return next(v for v in votes if v.passed == passed)
+
+
+def _vote(answer: dict[str, object]) -> Verdict:
+    """One grader answer; a pass carries no missing list."""
+    passed = answer.get("passed") is True
+    raw = answer.get("missing")
+    items = [str(m).strip() for m in raw] if isinstance(raw, list) else []
+    missing = () if passed else tuple(m for m in items if m)[:MAX_MISSING]
+    return Verdict(passed, str(answer.get("feedback") or ""), missing)
 
 
 def bonus_eligible(session: Session) -> bool:
@@ -209,6 +135,8 @@ def record_verdict(
             "feedback": verdict.feedback[:1500],
             "summary": summary.strip()[:1000],
             "attempt": str(attempt),
+            "missing": "\n".join(verdict.missing),
+            "graded": "0" if verdict.ungraded else "1",
         },
     )
     _ledger.append(paths.ledger, paths.key_file, entry)
