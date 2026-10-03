@@ -19,6 +19,7 @@ Tesseract misses on the whole page reads cleanly from a tight crop).
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 import re
 from typing import TYPE_CHECKING, Final
@@ -174,21 +175,44 @@ def upright_box(stored: Image.Image, box: Box, rotation: int) -> Box | None:
     return mask.getbbox()
 
 
-def read_box(upright_gray: Image.Image, box: Box) -> list[int]:
-    """The number Tesseract reads inside ``box`` of the upright page."""
+_BOX_VARIANTS: Final = (("7", "eng"), ("7", "pol"), ("8", "pol"), ("6", "pol"))
+"""psm x language. Measured 2026-10-03 on a real p. 85 crop: single settings
+read 85, 86, 8 or 856 -- no one of them is right every time."""
+_INK: Final = 128
+
+
+def _crop(upright_gray: Image.Image, box: Box) -> Image.Image:
+    """``box`` with a margin, contrast stretched."""
     left, top, right, bottom = box
     pad = int(max(right - left, bottom - top) * _BOX_PAD)
-    crop = upright_gray.crop(
-        (
-            max(0, left - pad),
-            max(0, top - pad),
-            min(upright_gray.width, right + pad),
-            min(upright_gray.height, bottom + pad),
-        )
+    return ImageOps.autocontrast(
+        upright_gray.crop(
+            (
+                max(0, left - pad),
+                max(0, top - pad),
+                min(upright_gray.width, right + pad),
+                min(upright_gray.height, bottom + pad),
+            )
+        ),
+        cutoff=1,
     )
+
+
+def read_box(upright_gray: Image.Image, box: Box) -> list[int]:
+    """Every number Tesseract reads inside ``box``, most often read first.
+
+    One reading is not evidence: the same crop of a printed "85" reads "86"
+    under some settings. The crop is read plain and thresholded under each
+    of :data:`_BOX_VARIANTS`; the caller decides what the spread means.
+    """
+    crop = _crop(upright_gray, box)
+    inked = crop.point(lambda v: 255 if v > _INK else 0)
     digits_only = ("-c", "tessedit_char_whitelist=0123456789")
-    tsv = tesseract(
-        ImageOps.autocontrast(crop, cutoff=1), "--psm", "7", *digits_only, "tsv"
-    )
-    joined = "".join(w.text for w in words(tsv) if w.conf >= _MIN_CONF)
-    return [int(joined)] if _NUMBER.fullmatch(joined) else []
+    seen: Counter[int] = Counter()
+    for image in (crop, inked):
+        for psm, lang in _BOX_VARIANTS:
+            tsv = tesseract(image, "-l", lang, "--psm", psm, *digits_only, "tsv")
+            joined = "".join(w.text for w in words(tsv) if w.conf >= _MIN_CONF)
+            if _NUMBER.fullmatch(joined):
+                seen[int(joined)] += 1
+    return [number for number, _count in seen.most_common()]

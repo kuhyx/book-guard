@@ -131,7 +131,7 @@ def record_verdict(
     ``detail.ended_at`` carries the exact time -- the bonus belongs to the
     evening the pages were read, even when the quiz is taken next morning.
     """
-    ended = session.end.taken
+    ended = session.ended_at
     entry = Entry(
         entry_id=session.session_id,
         kind=CREDIT if verdict.passed else REJECT,
@@ -145,7 +145,7 @@ def record_verdict(
             "check_page": str(session.check_page or ""),
             "pages": str(session.pages),
             "minutes": str(session.minutes),
-            "started_at": str(int(session.start.taken.timestamp())),
+            "started_at": str(int(session.started_at.timestamp())),
             "ended_at": str(int(ended.timestamp())),
             "bonus": "1" if verdict.passed and bonus_eligible(session) else "0",
             "feedback": verdict.feedback[:1500],

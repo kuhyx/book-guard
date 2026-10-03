@@ -103,7 +103,11 @@ class SummarySection extends StatelessWidget {
     required this.onSubmit,
     super.key,
     this.grader,
+    this.times,
   });
+
+  /// When it was read, with "Correct the times".
+  final Widget? times;
 
   /// The session to summarise.
   final SessionInfo session;
@@ -124,6 +128,7 @@ class SummarySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader('Summary for p. ${session.startPage}-${session.endPage}'),
+        ?times,
         const Text(
           '3-5 sentences in your own words (Polish or English) about what '
           'happened in these pages.',

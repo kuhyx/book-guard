@@ -18,6 +18,7 @@ from book_guard._books import Book, book_at, current
 from book_guard._constants import ESCAPES_PER_MONTH, GATE_START_DATE
 from book_guard._ledger import CREDIT, ESCAPE, REJECT
 from book_guard._pace import Pace, compute_pace
+from book_guard._session_times import SessionTimes, apply_times, load_times
 from book_guard._sessions import (
     NEEDS_CHECK,
     NEEDS_QUIZ,
@@ -67,13 +68,14 @@ class Snapshot:
 
 
 def _session_views(
-    ledger: Ledger, records: dict[str, PhotoRecord]
+    ledger: Ledger, records: dict[str, PhotoRecord], times: SessionTimes
 ) -> list[SessionView]:
     verdicts = {
         e.entry_id: e.kind for e in ledger.entries if e.kind in {CREDIT, REJECT}
     }
     views = []
     for session in build_sessions(_photos.usable_pages(records)):
+        apply_times(session, times)
         kind = verdicts.get(session.session_id)
         status = {CREDIT: CREDITED, REJECT: FAILED}.get(kind or "", session.state)
         views.append(SessionView(session, book_at(ledger, session.end.taken), status))
@@ -118,7 +120,7 @@ def snapshot(
     return Snapshot(
         today=day,
         book=current(ledger),
-        sessions=_session_views(ledger, records),
+        sessions=_session_views(ledger, records, load_times(paths.session_times)),
         open_start=open_start(_photos.usable_pages(records)),
         pace=pace,
         free_today=free,

@@ -66,6 +66,11 @@ class Paths:
         return self.data_dir / "claude_down.json"
 
     @property
+    def session_times(self) -> Path:
+        """Start/end times the reader narrowed, by session id."""
+        return self.data_dir / "session_times.json"
+
+    @property
     def error_log(self) -> Path:
         """Every failure, phone and PC, one JSON object per line."""
         return self.reading_dir / "logs" / "errors.jsonl"

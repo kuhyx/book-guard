@@ -114,3 +114,18 @@ def test_a_box_the_phone_read_differently_is_not_trusted(
     # Agreeing readers: the box decides.
     _reader_with(monkeypatch, page=_page(), found=[3], boxed=[103])
     assert _reader.read(path, context, (10, 10, 20, 20)).page_number == 103
+
+
+def test_box_readings_are_evidence_not_a_verdict(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A real p. 85 crop read 86, 85 and 856 under different settings."""
+    path = _jpeg(tmp_path)
+    box = (10, 10, 20, 20)
+    _reader_with(monkeypatch, page=_page(), found=[], boxed=[86, 85, 856])
+    # The phone read 85 and the PC read it too: 85.
+    assert _reader.read(path, Context(expected=85, hint=85), box).page_number == 85
+    # No phone reading, but a check photo: the page asked for is among them.
+    assert _reader.read(path, Context(expected=85), box).page_number == 85
+    # No phone reading, not a check: the most frequent reading.
+    assert _reader.read(path, Context(near=80), box).page_number == 86

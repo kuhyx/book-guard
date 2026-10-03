@@ -24,7 +24,7 @@ _STATUS_TEXT: Final = {
 def session_line(view: SessionView) -> str:
     """``p. 40-65 (25 p, 31 min) Sat 21:04 -- photograph page 52``."""
     s = view.session
-    when = s.start.taken.astimezone().strftime("%a %d.%m %H:%M")
+    when = s.started_at.astimezone().strftime("%a %d.%m %H:%M")
     action = _STATUS_TEXT.get(view.status, view.status).format(check=s.check_page)
     span = f"p. {s.start.page}-{s.end.page} ({s.pages} p, {s.minutes} min)"
     return f"{span} {when} -- {action}"

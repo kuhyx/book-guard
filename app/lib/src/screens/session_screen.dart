@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -71,6 +72,7 @@ class _Detail extends StatelessWidget {
           '${session.pages} pages in ${session.minutes} min - '
           '${sessionStatusText[session.status] ?? session.status}',
         ),
+        SessionTimes(api: api, session: session, onChanged: () async {}),
         const SectionHeader('Photos'),
         Wrap(
           spacing: AppSpacing.sm,

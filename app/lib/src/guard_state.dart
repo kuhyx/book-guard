@@ -4,9 +4,8 @@ export 'package:book_guard_app/src/book_extras.dart';
 
 /// `Reading/state.json`, as book-guard on the PC writes it (schema 1).
 ///
-/// The PC is the only authority on pace and credit; while it cannot be
-/// reached the app overlays its own photos on the last snapshot
-/// (`local_session.dart`) so reading goes on.
+/// The PC is the only authority on pace and credit; offline, the app overlays
+/// its own photos on the last snapshot (`local_session.dart`).
 class GuardState {
   /// Creates a state.
   const new({
@@ -192,6 +191,9 @@ class SessionInfo {
     required this.status,
     required this.startedAt,
     this.detail = '',
+    this.endedAt,
+    this.photoStart,
+    this.photoEnd,
   });
 
   /// Parses one `sessions[]` entry.
@@ -205,6 +207,9 @@ class SessionInfo {
     status: '${json['status'] ?? ''}',
     startedAt: DateTime.tryParse('${json['started_at']}'),
     detail: '${json['detail'] ?? ''}',
+    endedAt: DateTime.tryParse('${json['ended_at']}'),
+    photoStart: DateTime.tryParse('${json['photo_start']}'),
+    photoEnd: DateTime.tryParse('${json['photo_end']}'),
   );
 
   /// The session's detail file, relative to `Reading/`.
@@ -231,6 +236,15 @@ class SessionInfo {
   /// `needs-check-photo`, `needs-quiz`, `credited`, `failed-quiz`, `too-fast`.
   final String status;
 
-  /// When the start photo was taken.
+  /// When reading began (the start photo, or a later time set by hand).
   final DateTime? startedAt;
+
+  /// When reading ended (the end photo, or an earlier time set by hand).
+  final DateTime? endedAt;
+
+  /// The start photo's time: the earliest a start may be set to.
+  final DateTime? photoStart;
+
+  /// The end photo's time: the latest an end may be set to.
+  final DateTime? photoEnd;
 }

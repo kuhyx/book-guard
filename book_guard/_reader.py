@@ -31,6 +31,8 @@ from book_guard._vision import ISBN, OTHER, PAGE, Reading, normalise_isbn
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from book_guard._ocr import Scan
+
 _logger: Final = logging.getLogger(__name__)
 
 MIN_LOCAL_TEXT: Final = 200
@@ -48,6 +50,25 @@ def _printed_isbn(text: str) -> str | None:
     return None
 
 
+def _box_numbers(path: Path, page: Scan, box: Box, context: Context) -> list[int]:
+    """What the PC makes of the boxed number -- [] when it settles nothing."""
+    with Image.open(path) as stored:
+        turned = upright_box(stored, box, page.rotation)
+    found = read_box(page.image, turned) if turned else []
+    if context.hint is not None:
+        # The phone's number counts only if the PC read it too; a box the two
+        # read differently decides nothing (a "108" misread for 103 on a stop
+        # is extra credit).
+        if context.hint not in found:
+            _logger.warning(
+                "%s: box reads %s, the phone read %s", path.name, found, context.hint
+            )
+        return [context.hint] if context.hint in found else []
+    if context.expected is None:
+        return found[:1]  # no second opinion: the most frequent reading
+    return found
+
+
 def read(path: Path, context: Context, box: Box | None = None) -> Reading:
     """Read one photo.
 
@@ -61,18 +82,7 @@ def read(path: Path, context: Context, box: Box | None = None) -> Reading:
     page = scan(path)
     if page is None:
         return Reading(OTHER, None, None, "", reason="the PC could not read the photo")
-    found: list[int] = []
-    if box is not None:
-        with Image.open(path) as stored:
-            turned = upright_box(stored, box, page.rotation)
-        found = read_box(page.image, turned) if turned else []
-        if found and context.hint is not None and found != [context.hint]:
-            # The two readers disagree on the same box: trust neither alone
-            # (a misread "108" for 103 on a stop is extra credit).
-            _logger.warning(
-                "%s: box reads %s, the phone read %s", path.name, found, context.hint
-            )
-            found = []
+    found = _box_numbers(path, page, box, context) if box is not None else []
     boxed = bool(found)
     if not boxed:  # no box, nothing legible, or disputed: the whole page decides
         found = candidates(page)

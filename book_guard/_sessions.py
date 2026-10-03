@@ -30,6 +30,8 @@ from typing import TYPE_CHECKING, Final
 from book_guard._constants import MAX_SESSION, MIN_SECONDS_PER_PAGE
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from book_guard._photos import PhotoRecord
 
 TOO_FAST: Final = "too-fast"
@@ -45,6 +47,20 @@ class Session:
     end: PhotoRecord
     check_page: int | None
     check: PhotoRecord | None = None
+    started: datetime | None = None
+    """A later start the reader set (``_session_times``); never earlier."""
+    ended: datetime | None = None
+    """An earlier end the reader set; never later."""
+
+    @property
+    def started_at(self) -> datetime:
+        """When reading began: the start photo, or the reader's later time."""
+        return self.started or self.start.taken
+
+    @property
+    def ended_at(self) -> datetime:
+        """When reading ended: the end photo, or the reader's earlier time."""
+        return self.ended or self.end.taken
 
     @property
     def session_id(self) -> str:
@@ -58,8 +74,8 @@ class Session:
 
     @property
     def seconds(self) -> float:
-        """Capture-time span between the start and end photos."""
-        return (self.end.taken - self.start.taken).total_seconds()
+        """Time read: the photos' span, narrowed by any time the reader set."""
+        return (self.ended_at - self.started_at).total_seconds()
 
     @property
     def minutes(self) -> int:

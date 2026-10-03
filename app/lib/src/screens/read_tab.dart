@@ -7,6 +7,7 @@ import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
+import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -220,6 +221,11 @@ class _ReadTabState extends State<ReadTab> {
             session: quiz.first,
             controller: _summary,
             grader: graderNote(state),
+            times: SessionTimes(
+              api: widget.api,
+              session: quiz.first,
+              onChanged: widget.onChanged,
+            ),
             onSubmit: _busy ? null : () => _submit(quiz.first),
           ),
         if (verdict != null) VerdictText(verdict, passed: _passed),
