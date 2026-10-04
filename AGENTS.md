@@ -66,3 +66,16 @@ Read README.md first. These are the invariants that are easy to break.
   `bin/book_guard_desktop.dart` on :8773, which proxies `/dav` to dufs with
   the `bookguard` login. Never add a GTK `linux/` target.
 - systemd user units at the repo root; `install.sh` installs them.
+
+## Commands
+
+Python gate at the root (`book_guard/`, venv from `scripts/setup_dev.sh`) plus
+the Flutter client in `app/`. The gate runs as a live systemd daemon from this
+tree: never restart it from a test run.
+
+- run: `BOOK_GUARD_ROOT=.demo .venv/bin/python -m book_guard --help` | sandbox CLI; the daemon is the systemd units (`install.sh`)
+- test: `.venv/bin/python -m pytest -q && (cd app && flutter test -j 1 --reporter=compact)`
+- test-changed: `scripts/test_changed.sh`
+- lint: `ruff check . && (cd app && flutter analyze --fatal-infos)`
+- coverage: `.venv/bin/python -m pytest -q --cov-report=lcov:coverage.lcov`
+- coverage-gaps: `coverage-gaps coverage.lcov`
