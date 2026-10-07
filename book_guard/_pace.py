@@ -14,6 +14,10 @@ Nothing here is stored. Every run re-derives, from the credits alone:
   for pages they meant to read tonight, and a declared free day moves the
   line instead of silently creating a deficit. Pages read past the line come
   off later workdays first, then later Fri-Mon days (:mod:`book_guard._plan`).
+* **debt share** = the pages behind the line split evenly over the month's
+  remaining counted days, today included -- recomputed every day, so a
+  deficit is never asked for in one sitting; what is still short at month
+  end carries into next month and is spread evenly over its counted days.
 """
 
 from __future__ import annotations
@@ -25,7 +29,12 @@ import math
 from typing import TYPE_CHECKING
 
 from book_guard._books import all_books
-from book_guard._constants import OFFDAY_PAGES, PACE_START_DATE, WORKDAY_PAGES
+from book_guard._constants import (
+    DAILY_PASS_PAGES,
+    OFFDAY_PAGES,
+    PACE_START_DATE,
+    WORKDAY_PAGES,
+)
 from book_guard._ledger import CREDIT
 from book_guard._plan import MonthInput, MonthPlan, is_workday, plan_month
 
@@ -46,11 +55,30 @@ class Pace:
     required: int
     finished_books: int
     carried_credit: int = 0
+    pages_today: int = 0
+    days_left: int = 0
+    """Counted (non-free) days left in the month, today included."""
 
     @property
     def behind(self) -> int:
         """Pages short of the line right now (0 when on pace)."""
         return max(0, self.required - self.pages)
+
+    @property
+    def debt_per_day(self) -> int:
+        """Extra pages a day that clear :attr:`behind` by month end.
+
+        0 when on pace or when no counted day is left: then the debt simply
+        carries into next month.
+        """
+        if not self.days_left:
+            return 0
+        return math.ceil(self.behind / self.days_left)
+
+    @property
+    def passed_today(self) -> bool:
+        """Today's credited pages reach :data:`DAILY_PASS_PAGES`."""
+        return self.pages_today >= DAILY_PASS_PAGES
 
 
 def month_start(day: date) -> date:
@@ -148,4 +176,6 @@ def compute_pace(ledger: Ledger, today: date, is_free: Callable[[date], bool]) -
         required=math.ceil(plan.line_before(today)),
         finished_books=finished,
         carried_credit=math.floor(credit),
+        pages_today=pages_on.get(today, 0),
+        days_left=sum(1 for d in _counted(current, is_free) if d >= today),
     )

@@ -142,7 +142,7 @@ class BookGuardLock:
 
     def _render(self) -> None:
         snap = self._snap
-        self._vars.status.set("\n".join(status_lines(snap, recent=4)[:4]))
+        self._vars.status.set("\n".join(status_lines(snap, recent=4)[:5]))
         self._vars.todo.set(
             "\n".join(todo_lines(snap)) or "Go read, then upload photos."
         )

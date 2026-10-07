@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from book_guard._constants import DAILY_PASS_PAGES
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, FAILED
 
@@ -72,8 +73,20 @@ def status_lines(snap: Snapshot, *, recent: int = 6) -> list[str]:
             f"{f'carried credit {p.carried_credit}; ' if p.carried_credit else ''}"
             f"books finished {p.finished_books})"
         ),
-        f"Escapes left this month: {snap.escapes_left}",
+        (
+            f"Today: {p.pages_today}/{DAILY_PASS_PAGES} pages "
+            f"({'passed' if p.passed_today else 'not yet'}: "
+            f"{DAILY_PASS_PAGES} pages a day open the lock even when behind)"
+        ),
     ]
+    if p.behind:
+        lines.append(
+            f"Debt: {p.behind} pages = {p.debt_per_day}/day over the "
+            f"{p.days_left} counted days left this month"
+            if p.days_left
+            else f"Debt: {p.behind} pages, carried into next month"
+        )
+    lines.append(f"Escapes left this month: {snap.escapes_left}")
     todo = todo_lines(snap)
     if todo:
         lines += ["", "Next:", *(f"  * {t}" for t in todo)]

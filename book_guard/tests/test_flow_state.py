@@ -75,8 +75,32 @@ def test_escaped_today(bg_paths: Paths) -> None:
 
 def test_behind_locks(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
-    assert (snap.locked, snap.reason) == (True, "420 pages behind the pace line")
+    assert (snap.locked, snap.reason) == (
+        True,
+        "420 pages behind the pace line; 20 more pages read today open it",
+    )
     assert snap.escapes_left == 2
+
+
+def test_twenty_pages_today_open_the_lock_while_behind(bg_paths: Paths) -> None:
+    add_credit(bg_paths, LOCKED_DAY.isoformat(), 12)
+    add_credit(bg_paths, LOCKED_DAY.isoformat(), 8)
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+    assert (snap.locked, snap.reason) == (
+        False,
+        "20 pages read today (still 400 behind the pace line)",
+    )
+
+
+def test_nineteen_pages_today_stay_locked(bg_paths: Paths) -> None:
+    add_credit(bg_paths, LOCKED_DAY.isoformat(), 19)
+    # Yesterday's reading is not today's: it moves the line, not the pass.
+    add_credit(bg_paths, (LOCKED_DAY - timedelta(days=1)).isoformat(), 30)
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+    assert (snap.locked, snap.reason) == (
+        True,
+        "371 pages behind the pace line; 1 more page read today open it",
+    )
 
 
 def test_on_pace(bg_paths: Paths) -> None:

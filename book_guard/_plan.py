@@ -82,7 +82,8 @@ class MonthInput:
         days: Every day of the month, in order.
         counted: The days the target spreads over (paced, not free).
         weights: Each counted day's base quota.
-        target: Base quotas plus carried debt; split in proportion to weights.
+        target: Base quotas plus carried debt; the base split by weight, the
+            debt evenly over the counted days.
         credit: Surplus carried in from last month, spent from day one.
         pages_on: Pages credited on each day (free days included).
     """
@@ -100,9 +101,10 @@ def _opening_plan(month: MonthInput) -> MonthPlan:
     total = sum(month.weights[d] for d in month.counted)
     if not total:
         return MonthPlan({}, leftover=month.credit, unspread=Fraction(month.target))
-    quotas = {
-        d: Fraction(month.target * month.weights[d], total) for d in month.counted
-    }
+    # The base quotas keep their Tue-Thu/Fri-Mon weights; carried debt is
+    # split evenly, one equal share per counted day, like an in-month debt.
+    debt = Fraction(month.target - total, len(month.counted))
+    quotas = {d: month.weights[d] + debt for d in month.counted}
     taken = spread_cut(quotas, month.counted, month.credit)
     return MonthPlan(quotas, leftover=month.credit - taken)
 
