@@ -10,7 +10,7 @@ import pytest
 
 from book_guard._render import session_line, status_lines, todo_lines
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
-from book_guard._state import CREDITED, FAILED, SessionView
+from book_guard._state import CREDITED, SessionView
 from book_guard.tests._flow_helpers import (
     T0,
     check_pair,
@@ -33,7 +33,6 @@ CHECK = only_session(check_pair())
         (NEEDS_QUIZ, "write the summary at the PC (book-guard quiz)"),
         (TOO_FAST, "not counted: under 50 s per page"),
         (CREDITED, "credited"),
-        (FAILED, "not counted: summary failed"),
         ("mystery", "mystery"),
     ],
 )

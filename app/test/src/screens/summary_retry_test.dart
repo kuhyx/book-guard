@@ -51,7 +51,7 @@ void main() {
   Future<void> submitFailing(WidgetTester tester) async {
     api.onSend = (_) async => const GuardResponse(
       ok: true,
-      message: 'Too thin. You may rewrite this summary once.',
+      message: 'Too thin. Rewrite the summary and send it again.',
       passed: false,
     );
     await tester.enterText(find.byType(TextField), 'x' * 160);
@@ -64,20 +64,44 @@ void main() {
   ) async {
     await pump(tester, _session());
     await submitFailing(tester);
-    expect(find.textContaining('You may rewrite'), findsOneWidget);
+    expect(find.textContaining('Rewrite the summary'), findsOneWidget);
     expect(field(tester).enabled, isTrue);
     expect(field(tester).controller?.text, 'x' * 160);
     expect(await api.loadDraft(_id), 'x' * 160);
     expect(await api.gradingSince(_id), isNull);
+    // The credit is still owed after a fail: the rewrite earns the same.
+    expect(find.textContaining('Passing credits'), findsOneWidget);
   });
 
-  testWidgets('the rewrite failing is final: locked, draft forgotten', (
+  testWidgets('a rewrite failing again unlocks the box once more', (
     tester,
   ) async {
     await pump(tester, _session(retry: true));
     await submitFailing(tester);
-    expect(field(tester).enabled, isFalse);
+    expect(field(tester).enabled, isTrue);
+    expect(field(tester).controller?.text, 'x' * 160);
+    expect(await api.loadDraft(_id), 'x' * 160);
+    expect(await api.gradingSince(_id), isNull);
+    expect(find.textContaining('Passing credits'), findsOneWidget);
+    // And again: there is no limit.
+    await tester.tap(find.text('Submit summary'));
+    await settle(tester);
+    expect(field(tester).enabled, isTrue);
+    expect(await api.loadDraft(_id), 'x' * 160);
+  });
+
+  testWidgets('a passing rewrite is final: draft forgotten, no credit hint', (
+    tester,
+  ) async {
+    await pump(tester, _session(retry: true));
+    api.onSend = (_) async =>
+        const GuardResponse(ok: true, message: 'Well read.', passed: true);
+    await tester.enterText(find.byType(TextField), 'x' * 160);
+    await tester.tap(find.text('Submit summary'));
+    await settle(tester);
     expect(await api.loadDraft(_id), '');
+    expect(await api.gradingSince(_id), isNull);
+    expect(find.textContaining('Passing credits'), findsNothing);
   });
 
   testWidgets('the rewrite shows the feedback and starts from the old text', (
@@ -85,7 +109,7 @@ void main() {
   ) async {
     await pump(tester, _session(retry: true));
     expect(find.text('Name two events.'), findsOneWidget);
-    expect(find.textContaining('One more try'), findsOneWidget);
+    expect(find.textContaining('no limit on rewrites'), findsOneWidget);
     expect(
       find.text(
         'To be accepted, add:\n- what he did in the village\n'
@@ -132,11 +156,8 @@ void main() {
     },
   );
 
-  test('a failed summary with a rewrite left is graded and says so', () {
-    expect(
-      statusText(_session(retry: true)),
-      'summary failed: one rewrite left',
-    );
+  test('a failed summary awaiting its rewrite is graded and says so', () {
+    expect(statusText(_session(retry: true)), 'summary failed: rewrite it');
     expect(statusText(_session()), 'write the summary');
     expect(_session(retry: true).graded, isTrue);
     expect(_session().graded, isFalse);

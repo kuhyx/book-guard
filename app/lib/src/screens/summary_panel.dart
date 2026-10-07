@@ -19,8 +19,8 @@ String expectedCredit(SessionInfo session) =>
 /// grader has it, and still "with the grader" after leaving the tab -- the
 /// request is already queued, and the verdict arrives as a message.
 ///
-/// A first failure leaves one rewrite: the box unlocks with the text kept
-/// and the grader's feedback above it. The second verdict is final.
+/// A failure unlocks the box with the text kept and the grader's feedback
+/// above it: rewrite and send again, as many times as it takes.
 class SummaryPanel extends StatefulWidget {
   /// Creates the panel.
   const new({
@@ -106,8 +106,8 @@ class _SummaryPanelState extends State<SummaryPanel> {
       return;
     }
     final passed = response.passed;
-    final rewriteLeft = passed == false && session.retry == null;
-    if (rewriteLeft) {
+    final failed = passed == false;
+    if (failed) {
       await widget.api.cancelGrading(session.id); // the draft is the rewrite
     } else if (passed != null) {
       await widget.api.doneGrading(session.id);
@@ -118,7 +118,7 @@ class _SummaryPanelState extends State<SummaryPanel> {
     setState(() {
       _verdict = response.message;
       _passed = passed;
-      if (rewriteLeft) _sentAt = null;
+      if (failed) _sentAt = null;
     });
     if (response.passed ?? false) _text.clear();
   }
@@ -144,8 +144,7 @@ class _SummaryPanelState extends State<SummaryPanel> {
           const Padding(
             padding: EdgeInsets.only(top: AppSpacing.sm),
             child: Text(
-              'One more try: add that and it passes. '
-              'The second verdict is final.',
+              'Add that and send it again - there is no limit on rewrites.',
             ),
           ),
         ],
@@ -175,7 +174,8 @@ class _SummaryPanelState extends State<SummaryPanel> {
             ),
           ),
         if (verdict != null) VerdictText(verdict, passed: _passed),
-        if (_passed == null)
+        // Still owed after a fail too: the rewrite earns the same.
+        if (_passed != true)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text(expectedCredit(widget.session)),

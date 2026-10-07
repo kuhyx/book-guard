@@ -100,3 +100,38 @@ def test_box_still_unreadable(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) 
     assert response.message == "Still no page number: no page number found"
     (record,) = _photos.load(bg_paths.photos).values()
     assert (record.status, record.reason) == (REJECTED, "no page number found")
+
+
+def test_the_phones_page_in_a_box_request_is_the_hint(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    name = _rejected(bg_paths)
+    hints: list[int | None] = []
+
+    def read(_path: Path, context: Context, _box: Box | None) -> Reading:
+        hints.append(context.hint)
+        return Reading(PAGE, 51, None, "words")
+
+    monkeypatch.setattr(_reread, "read", read)
+    request: dict[str, object] = {"photo": name, "box": _BOX, "page": 51}
+    assert _reread.box_photo(bg_paths, request).message == "Read as p. 51."
+    assert hints == [51]
+
+
+@pytest.mark.parametrize("page", [None, True, "51", 51.0])
+def test_a_box_request_without_a_proper_page_has_no_hint(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, page: object
+) -> None:
+    name = _rejected(bg_paths)
+    hints: list[int | None] = []
+
+    def read(_path: Path, context: Context, _box: Box | None) -> Reading:
+        hints.append(context.hint)
+        return Reading(OTHER, None, None, "", reason="no page number found")
+
+    monkeypatch.setattr(_reread, "read", read)
+    request: dict[str, object] = {"photo": name, "box": _BOX}
+    if page is not None:
+        request["page"] = page
+    _reread.box_photo(bg_paths, request)
+    assert hints == [None]

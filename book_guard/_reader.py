@@ -1,10 +1,14 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """What a photo shows, read entirely on this PC -- no model, no network.
 
-1. A barcode zbar can decode is an ISBN photo.
+0. A page number the phone read (ML Kit, sidecar note) is the page: the PC
+   only transcribes the text for the grader. No re-read, no plausibility
+   check, no "unclear" -- the reader already saw and confirmed it.
+1. Otherwise a barcode zbar can decode is an ISBN photo.
 2. Otherwise Tesseract turns the page upright by its content and reads it;
    :mod:`book_guard._pagenum` picks the printed page number from what the
-   photo was taken for.
+   photo was taken for. This is the fallback for photos with no phone
+   reading (the desktop web app has no OCR).
 3. A page whose number cannot be pinned down carries the reason, so the
    app can ask for the number to be boxed instead of the photo vanishing.
 """
@@ -55,27 +59,41 @@ def _box_numbers(path: Path, page: Scan, box: Box, context: Context) -> list[int
     with Image.open(path) as stored:
         turned = upright_box(stored, box, page.rotation)
     found = read_box(page.image, turned) if turned else []
-    if context.hint is not None:
-        # The phone's number counts only if the PC read it too; a box the two
-        # read differently decides nothing (a "108" misread for 103 on a stop
-        # is extra credit).
-        if context.hint not in found:
-            _logger.warning(
-                "%s: box reads %s, the phone read %s", path.name, found, context.hint
-            )
-        return [context.hint] if context.hint in found else []
     if context.expected is None:
         return found[:1]  # no second opinion: the most frequent reading
     return found
 
 
+def _phone_page(path: Path, page_number: int) -> Reading:
+    """The phone's number, taken as is; the PC adds only the transcription.
+
+    The text still matters -- it is the grader's evidence and what anchors
+    the photo in an attached book file -- but nothing here can overrule
+    the number.
+    """
+    page = scan(path)
+    if page is None:
+        _logger.warning("%s: no text; phone's p. %s kept", path.name, page_number)
+        return Reading(PAGE, page_number, None, "")
+    return Reading(PAGE, page_number, None, page.text, rotation=page.rotation)
+
+
 def read(path: Path, context: Context, box: Box | None = None) -> Reading:
     """Read one photo.
 
-    ``box`` is where the page number is, in the stored file's pixels (before
-    EXIF) -- drawn on the phone or found by its OCR. The PC reads that box
-    itself; if nothing is legible there, the whole page decides as usual.
+    ``context.hint`` is the page number the phone read: when there is one,
+    it is the page (:func:`_phone_page`). Otherwise ``box`` is where the
+    page number is, in the stored file's pixels (before EXIF) -- drawn on
+    the phone. The PC reads that box itself; if nothing is legible there,
+    the whole page decides as usual.
     """
+    if context.hint is not None:
+        return _phone_page(path, context.hint)
+    return _pc_reading(path, context, box)
+
+
+def _pc_reading(path: Path, context: Context, box: Box | None) -> Reading:
+    """The fallback: no number from the phone, so the PC finds one itself."""
     isbn = barcode_isbn(path)
     if isbn is not None:
         return Reading(kind=ISBN, page_number=None, isbn=isbn, text="")

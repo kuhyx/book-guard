@@ -38,10 +38,6 @@ GRADER_GRACE: Final = timedelta(hours=1)
 before it is credited ungraded -- short enough to keep the evening's bonus.
 Claude being down must never make the app useless."""
 
-MAX_ATTEMPTS: Final = 2
-"""Summaries graded per session: a failed one may be rewritten once, with the
-grader's feedback in hand; the second verdict is final."""
-
 BONUS_MIN_PAGES: Final = 20
 BONUS_MIN_MINUTES: Final = 20
 """One credited session at least this big earns the day's reading hour in

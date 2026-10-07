@@ -16,9 +16,9 @@ import freedays
 from book_guard import _ledger, _photos
 from book_guard._books import Book, book_at, current
 from book_guard._constants import ESCAPES_PER_MONTH, GATE_START_DATE
-from book_guard._ledger import CREDIT, ESCAPE
+from book_guard._ledger import ESCAPE
 from book_guard._pace import Pace, compute_pace
-from book_guard._quiz import attempts_left
+from book_guard._quiz import credited
 from book_guard._session_times import SessionTimes, apply_times, load_times
 from book_guard._sessions import (
     NEEDS_CHECK,
@@ -36,15 +36,15 @@ if TYPE_CHECKING:
     from book_guard._photos import PhotoRecord
 
 CREDITED = "credited"
-FAILED = "failed-quiz"
 
 
 @dataclass(frozen=True)
 class SessionView:
-    """A session and its final status (ledger verdict wins over protocol).
+    """A session and its status (a ledger credit wins over the protocol).
 
-    A failed summary with a rewrite left keeps the protocol's status
-    (``needs-quiz``): every surface that asks for a summary asks again.
+    A failed summary keeps the protocol's status (``needs-quiz``) until a
+    rewrite passes: every surface that asks for a summary asks again, as
+    many times as it takes.
     """
 
     session: Session
@@ -87,10 +87,8 @@ def _session_views(
         apply_times(session, times)
         found = verdicts.get(session.session_id, [])
         status = session.state
-        if any(e.kind == CREDIT for e in found):
+        if credited(found):
             status = CREDITED
-        elif found and not attempts_left(found):
-            status = FAILED
         book = book_at(ledger, session.end.taken)
         views.append(SessionView(session, book, status, tuple(found)))
     return views

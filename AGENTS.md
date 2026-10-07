@@ -28,10 +28,13 @@ Read README.md first. These are the invariants that are easy to break.
 
 ## Invariants
 
-- **No model reads page numbers.** The phone (ML Kit) and the PC
-  (Tesseract) do, upright by content, chosen by plausibility; ambiguous is
-  a rejection that asks for a box, never a guess. A page photo must never
-  wait on Claude.
+- **No model reads page numbers, and the phone's number is trusted.** The
+  phone (ML Kit) reads it upright by content and the reader confirms or
+  boxes it there; the PC takes that number as is -- no Tesseract re-read,
+  no plausibility check, no "unclear". Tesseract is only the fallback for a
+  photo that arrives with no number (desktop web upload, "Send anyway"):
+  chosen by plausibility, ambiguous is a rejection that asks for a box,
+  never a guess. A page photo must never wait on Claude.
 - **The app is offline-first.** Every upload goes through its outbox; it
   must keep working (photos, page numbers, check page, summary queued) with
   the PC and the network both gone. App data lives in its support folder
@@ -49,8 +52,11 @@ Read README.md first. These are the invariants that are easy to break.
   whose grading has failed for `GRADER_GRACE` (1 h, outage or usage cap):
   `quiz_one` credits it with `detail.graded == "0"`. The MCP server and the
   app's request files are read-only / route through `_grading.quiz_one`.
-- **A fail names what is missing** (1-3 topics, never the answers), and the
-  one rewrite is judged only on those (`_prompt.py`). Re-run
+- **A fail names what is missing** (1-3 topics, never the answers); a
+  failed summary can be rewritten any number of times (`<sid>#2`, `#3`, ...
+  until a credit row), each judged generously and only on those topics
+  (`_prompt.py`). The grader never fails on what it cannot verify against
+  the text it was given (often just three photographed pages). Re-run
   `scripts/grader_suite.py` after touching it.
 - **One writer at a time**: every read-modify-write of the ledger or the
   photo cache happens inside `_flock.exclusive`.

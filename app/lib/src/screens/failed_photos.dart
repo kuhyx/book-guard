@@ -110,9 +110,11 @@ class _FailedPhotosState extends State<FailedPhotos> {
     );
     final box = result?.box;
     if (box == null || !mounted) return;
+    // The number the phone read in the box is the page; the PC takes it.
     final response = await widget.api.sendQueued('box', {
       'photo': failed.entry.name,
       'box': [box.left, box.top, box.right, box.bottom],
+      'page': ?result?.page,
     }, 'Re-read of ${failed.entry.name}');
     if (!mounted) return;
     response.ok

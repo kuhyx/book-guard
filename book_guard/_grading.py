@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Final
 from book_guard._anchor import find_span
 from book_guard._books import register
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
-from book_guard._constants import MAX_ATTEMPTS
 from book_guard._flock import exclusive
 from book_guard._grader_wait import stop, waited_out
 from book_guard._http import UnavailableError
@@ -72,7 +71,7 @@ def register_isbn(
 
 
 def _checklist(view: SessionView) -> tuple[str, ...]:
-    """What the failed first summary was told to add (the rewrite's deal)."""
+    """What the last failed summary was told to add (the rewrite's deal)."""
     last = view.last_verdict
     raw = last.detail.get("missing", "") if last else ""
     return tuple(line for line in raw.split("\n") if line)
@@ -97,15 +96,14 @@ def _grade_or_wait(
     return verdict
 
 
-def _told(verdict: Verdict, attempt: int) -> Verdict:
-    """The verdict as the reader hears it: what to add, and whether they may."""
+def _told(verdict: Verdict) -> Verdict:
+    """The verdict as the reader hears it: what to add, and that they may."""
     if verdict.passed:
         return verdict
     parts = [verdict.feedback]
     if verdict.missing:
         parts.append(f"To be accepted, add: {'; '.join(verdict.missing)}.")
-    if attempt < MAX_ATTEMPTS:
-        parts.append("You may rewrite this summary once; the second verdict is final.")
+    parts.append("Rewrite the summary and send it again.")
     return Verdict(passed=False, feedback=" ".join(parts), missing=verdict.missing)
 
 
@@ -114,15 +112,15 @@ def quiz_one(
 ) -> Verdict:
     """Grade one summary and record the verdict.
 
-    A fail names what is missing; a first one leaves one rewrite, judged on
-    exactly that. While the grader is unreachable this raises (the request
-    waits) -- for up to :data:`GRADER_GRACE`, then the summary is credited
-    ungraded.
+    A fail names what is missing; the rewrite -- there is no limit on how
+    many -- is judged on exactly that. While the grader is unreachable this
+    raises (the request waits) -- for up to :data:`GRADER_GRACE`, then the
+    summary is credited ungraded.
     """
     verdict = _grade_or_wait(paths, view, summary, model)
     with exclusive(paths):
         entry = record_verdict(paths, view.book, view.session, verdict, summary)
     if entry is None:
-        return Verdict(passed=False, feedback="This session was already graded.")
+        return Verdict(passed=False, feedback="This session was already credited.")
     write_next_file(paths, snapshot(paths))
-    return _told(verdict, int(entry.detail["attempt"]))
+    return _told(verdict)

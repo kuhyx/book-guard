@@ -103,17 +103,43 @@ def test_reader_box_is_read_first(
     assert _reader.read(path, Context(near=51), (500, 500, 600, 600)).page_number == 51
 
 
-def test_a_box_the_phone_read_differently_is_not_trusted(
+def test_the_phones_page_is_final_and_the_pc_only_transcribes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A misread "108" in a stop photo's box must not beat the phone's 103."""
+    """No barcode, candidates, box or plausibility check can overrule it."""
+    path = _jpeg(tmp_path)
+    _reader_with(
+        monkeypatch,
+        page=_page(rotation=90),
+        found=[3, 51],
+        boxed=[108],
+        isbn="9788368380002",
+    )
+    context = Context(after=51, last_page=60, hint=103)  # 103 is "implausible"
+    reading = _reader.read(path, context, (10, 10, 20, 20))
+    assert reading == Reading(PAGE, 103, None, "t" * 300, rotation=90)
+    # Even a page with next to no text is a page when the phone read a number.
+    _reader_with(monkeypatch, page=_page("blur"), found=[])
+    assert _reader.read(path, Context(hint=7)) == Reading(PAGE, 7, None, "blur")
+
+
+def test_the_phones_page_survives_a_photo_the_pc_cannot_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    _reader_with(monkeypatch, page=None, found=[])
+    reading = _reader.read(_jpeg(tmp_path), Context(hint=42))
+    assert reading == Reading(PAGE, 42, None, "")
+    assert "phone's p. 42 kept" in caplog.text
+
+
+def test_without_the_phones_page_the_pc_reads_it_itself(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fallback (desktop web upload, "Send anyway"): plausibility decides."""
     path = _jpeg(tmp_path)
     _reader_with(monkeypatch, page=_page(), found=[3, 103], boxed=[108])
-    context = Context(after=51, hint=103)
-    assert _reader.read(path, context, (10, 10, 20, 20)).page_number == 103
-    # Agreeing readers: the box decides.
-    _reader_with(monkeypatch, page=_page(), found=[3], boxed=[103])
-    assert _reader.read(path, context, (10, 10, 20, 20)).page_number == 103
+    assert _reader.read(path, Context(after=51)).page_number == 103
+    assert _reader.read(path, Context(after=51), (10, 10, 20, 20)).page_number == 108
 
 
 def test_box_readings_are_evidence_not_a_verdict(
@@ -123,9 +149,7 @@ def test_box_readings_are_evidence_not_a_verdict(
     path = _jpeg(tmp_path)
     box = (10, 10, 20, 20)
     _reader_with(monkeypatch, page=_page(), found=[], boxed=[86, 85, 856])
-    # The phone read 85 and the PC read it too: 85.
-    assert _reader.read(path, Context(expected=85, hint=85), box).page_number == 85
-    # No phone reading, but a check photo: the page asked for is among them.
+    # A check photo: the page asked for is among them.
     assert _reader.read(path, Context(expected=85), box).page_number == 85
-    # No phone reading, not a check: the most frequent reading.
+    # Not a check photo: the most frequent reading.
     assert _reader.read(path, Context(near=80), box).page_number == 86

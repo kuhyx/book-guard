@@ -24,11 +24,14 @@ around the right one; it is never typed. Everything (photo, its sidecar
 note with the number's box, summaries, error entries) waits in an outbox
 on the phone and goes to `~/data/cloud/Reading/` over dufs whenever the PC
 answers; offline, the app names the check page and the session exactly as
-the PC will. The `.path` unit reads each photo within seconds: Tesseract
-turns it upright, transcribes it and re-reads the boxed number, zbar reads
-ISBN barcodes. Which number is the page is decided by what the photo was
-for (check page asked for, past the open start, nearest the last end) --
-two candidates left is "unclear", never a guess. Claude (**Haiku**, unless
+the PC will. **The phone's number is the page**: the `.path` unit takes it
+as is within seconds, and Tesseract only turns the photo upright and
+transcribes it for the grader. A photo that arrives with no number (the
+desktop web app, or "Send anyway") falls back to the PC: Tesseract reads
+the boxed number or the whole page, zbar reads ISBN barcodes, and which
+number is the page is decided by what the photo was for (check page asked
+for, past the open start, nearest the last end) -- two candidates left is
+"unclear", never a guess. Claude (**Haiku**, unless
 `--model` is given for one run) only grades summaries and reads contents
 pages; while it is down they wait, and the app says since when.
 The EXIF capture times are
@@ -39,14 +42,18 @@ is attached (any format: epub, mobi, azw3, fb2, pdf, djvu, docx, ...). The
 photographed pages are located in it with multilingual embeddings, so a
 Polish paper copy anchors in an English epub, and Haiku gets the continuous
 text between the start and end anchors -- not a handful of retrieved
-snippets. Without a file, it grades on the photos and its own knowledge.
+snippets. Without a file, it grades on the three photos alone. Either way,
+whatever it cannot check against the text it was given is never a reason
+to fail -- only a clear contradiction, or a summary with no sign of the
+reading (generic, a restatement of the photos, another book).
 
 A passed session is a signed `credit` row in
 `~/.local/share/book_guard/ledger.json`. A failed summary is told what it
 is missing -- 1-3 topics from those pages, never the answers -- and may be
-rewritten **once**, with the old text prefilled: the rewrite is judged only
-on whether it now covers them. The second verdict is final (a `reject` row
-`<session>`, then `<session>#2`). If the grader cannot be reached for an hour
+rewritten and resent **as often as it takes**, with the old text prefilled:
+each rewrite is judged, generously, only on whether it now covers them
+(`reject` rows `<session>`, `<session>#2`, `#3`, ... until a `credit` row
+ends it). If the grader cannot be reached for an hour
 (an outage, or Claude usage running out), a summary of 150+ characters is
 credited without grading (`detail.graded == "0"`), bonus included, so Claude
 never makes the app useless.
@@ -60,7 +67,7 @@ never makes the app useless.
 | Debt | 0 if a book was finished that month, else `target - pages read` |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up |
 | Escape | 2 per month; forgives the day, credits no pages |
-| Summary | a fail lists what to add; one rewrite, judged on that; ungraded credit after 1 h of grader outage |
+| Summary | a fail lists what to add; rewrite as often as needed, judged on that; ungraded credit after 1 h of grader outage |
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |
 | Starts | 2026-10-01 |
 

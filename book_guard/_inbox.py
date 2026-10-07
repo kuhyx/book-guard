@@ -14,8 +14,9 @@ Three outcomes per file, and only the first two move it out of the inbox:
   photo while Claude was unreachable. Left where it is, nothing recorded,
   retried next trigger.
 
-Page photos never wait for Claude: they are read on this PC
-(:mod:`book_guard._reader`), with the phone's sidecar note, if any.
+Page photos never wait for Claude: a page number the phone read (its
+sidecar note) is taken as is, and only a photo without one has its number
+read on this PC (:mod:`book_guard._reader`).
 """
 
 from __future__ import annotations

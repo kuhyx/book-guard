@@ -129,6 +129,8 @@ void main() {
     expect(sent.type, 'box');
     expect(sent.body['photo'], 'check19_a.jpg');
     expect(sent.body['box'], isA<List<int>>());
+    // The number the phone read in the box is sent: the PC takes it as is.
+    expect(sent.body['page'], 19);
     expect(find.text('Read as p. 19.'), findsOneWidget);
   });
 

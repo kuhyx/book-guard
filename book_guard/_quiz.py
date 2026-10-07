@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard import _ledger
 from book_guard._claude import DEFAULT_MODEL, ask
-from book_guard._constants import BONUS_MIN_MINUTES, BONUS_MIN_PAGES, MAX_ATTEMPTS
+from book_guard._constants import BONUS_MIN_MINUTES, BONUS_MIN_PAGES
 from book_guard._ledger import CREDIT, REJECT, Entry
 from book_guard._prompt import MAX_MISSING, SYSTEM, Context, build_prompt
 
@@ -87,11 +87,9 @@ def bonus_eligible(session: Session) -> bool:
     return session.pages >= BONUS_MIN_PAGES and session.minutes >= BONUS_MIN_MINUTES
 
 
-def attempts_left(verdicts: list[Entry]) -> int:
-    """Summaries a session may still have graded, given its verdict rows."""
-    if any(e.kind == CREDIT for e in verdicts):
-        return 0
-    return max(0, MAX_ATTEMPTS - len(verdicts))
+def credited(verdicts: list[Entry]) -> bool:
+    """Whether a session is done: a credit row ends its grading for good."""
+    return any(e.kind == CREDIT for e in verdicts)
 
 
 def record_verdict(
@@ -99,9 +97,11 @@ def record_verdict(
 ) -> Entry | None:
     """Write the credit (pass) or reject (fail) row for ``session``.
 
-    The first verdict's id is the session id; a rewrite's is ``<id>#2``.
-    Returns ``None`` (and writes nothing) once no attempt is left. The caller
-    holds the ledger lock, so the attempt count cannot race.
+    The first verdict's id is the session id; rewrites are ``<id>#2``,
+    ``<id>#3``, ... -- a failed summary may be rewritten any number of times.
+    Returns ``None`` (and writes nothing) only when the session is already
+    credited: two summaries graded side by side must not both credit its
+    pages. The caller holds the ledger lock, so that check cannot race.
 
     The row's ``day`` is the local day the reading *ended*, and
     ``detail.ended_at`` carries the exact time -- the bonus belongs to the
@@ -112,7 +112,7 @@ def record_verdict(
         .verdicts()
         .get(session.session_id, [])
     )
-    if not attempts_left(earlier):
+    if credited(earlier):
         return None
     attempt = len(earlier) + 1
     ended = session.ended_at

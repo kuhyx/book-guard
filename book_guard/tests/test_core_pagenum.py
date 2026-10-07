@@ -54,7 +54,13 @@ def test_candidates_are_lone_numbers_near_an_edge() -> None:
         ([51], Context(), Choice(51)),
         ([3, 51], Context(near=51), Choice(51)),
         ([3, 51], Context(near=27), Choice(None, "page number unclear (3 or 51)")),
-        ([3, 51], Context(near=51, hint=3), Choice(3)),
+        # The phone's number is no tie-breaker here: it never reaches this code.
+        ([3, 51], Context(near=51, hint=3), Choice(51)),
+        (
+            [3, 51],
+            Context(near=27, hint=3),
+            Choice(None, "page number unclear (3 or 51)"),
+        ),
         ([3], Context(near=51), Choice(None, "page 3 is far from p. 51, the last one")),
         ([45], Context(near=51), Choice(45)),
     ],

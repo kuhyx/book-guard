@@ -12,7 +12,7 @@ from book_guard import _publish
 from book_guard._bookindex import index_path
 from book_guard._ledger import CREDIT, REJECT
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ
-from book_guard._state import CREDITED, FAILED, awaiting_check, awaiting_quiz, snapshot
+from book_guard._state import CREDITED, awaiting_check, awaiting_quiz, snapshot
 from book_guard._state_json import SCHEMA, to_json
 from book_guard.tests._flow_helpers import (
     ISBN13,
@@ -45,7 +45,9 @@ def _seed_three_sessions(paths: Paths) -> list[str]:
     ids = [only_session(p).session_id for p in (credited, failed, waiting)]
     add_entry(paths, ids[0], CREDIT, "2026-10-05", 1)
     add_entry(paths, ids[1], REJECT, "2026-10-05")
-    add_entry(paths, f"{ids[1]}#2", REJECT, "2026-10-05")  # the rewrite failed too
+    add_entry(
+        paths, f"{ids[1]}#2", REJECT, "2026-10-05"
+    )  # its rewrite failed too: still open
     return ids
 
 
@@ -94,10 +96,10 @@ def test_escapes_left_never_negative(bg_paths: Paths) -> None:
 def test_session_views_take_ledger_verdicts(bg_paths: Paths) -> None:
     ids = _seed_three_sessions(bg_paths)
     snap = snapshot(bg_paths, today=LOCKED_DAY)
-    assert [v.status for v in snap.sessions] == [CREDITED, FAILED, NEEDS_CHECK]
+    assert [v.status for v in snap.sessions] == [CREDITED, NEEDS_QUIZ, NEEDS_CHECK]
     assert [v.session.session_id for v in snap.sessions] == ids
     assert awaiting_check(snap) == [snap.sessions[2]]
-    assert awaiting_quiz(snap) == []
+    assert awaiting_quiz(snap) == [snap.sessions[1]]  # a failed summary is asked again
     assert snap.open_start is not None
     assert snap.open_start.page == 50
 

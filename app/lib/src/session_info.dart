@@ -61,7 +61,8 @@ class SessionInfo {
   /// Minutes read.
   final int minutes;
 
-  /// `needs-check-photo`, `needs-quiz`, `credited`, `failed-quiz`, `too-fast`.
+  /// `needs-check-photo`, `needs-quiz`, `credited`, `too-fast` (and
+  /// `failed-quiz` from a PC before summaries could be rewritten freely).
   final String status;
 
   /// When reading began (the start photo, or a later time set by hand).
@@ -76,7 +77,7 @@ class SessionInfo {
   /// The end photo's time: the latest an end may be set to.
   final DateTime? photoEnd;
 
-  /// A failed summary that may be rewritten once, if this is one.
+  /// The last failed grading, when a rewrite is awaited.
   final RetryInfo? retry;
 
   /// Earns the day's +1h (book_guard `bonus_eligible`): 20+ pages, 20+ min.
@@ -87,7 +88,8 @@ class SessionInfo {
       status == 'credited' || status == 'failed-quiz' || retry != null;
 }
 
-/// The first, failed grading of a summary that may be rewritten once.
+/// The last, failed grading of a summary; it may be rewritten and sent
+/// again as often as it takes.
 class RetryInfo {
   /// Creates the retry.
   const new({

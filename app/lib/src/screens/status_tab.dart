@@ -13,9 +13,10 @@ const sessionStatusText = {
   'too-fast': 'not counted: under 50 s per page',
 };
 
-/// [session]'s status in words; a failed summary with a rewrite left says so.
+/// [session]'s status in words; a failed summary waiting for its rewrite
+/// says so.
 String statusText(SessionInfo session) => session.retry != null
-    ? 'summary failed: one rewrite left'
+    ? 'summary failed: rewrite it'
     : sessionStatusText[session.status] ?? session.status;
 
 /// Pace, what to do next, and recent sessions.

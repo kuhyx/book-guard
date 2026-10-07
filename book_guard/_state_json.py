@@ -47,7 +47,7 @@ def _session(view: SessionView) -> dict[str, Any]:
 
 
 def _retry(view: SessionView) -> dict[str, Any] | None:
-    """A failed summary that may be rewritten once: what the grader said."""
+    """A failed summary waiting for its rewrite: what the grader said last."""
     last = view.last_verdict
     if last is None or view.status != NEEDS_QUIZ:
         return None

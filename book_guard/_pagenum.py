@@ -1,6 +1,9 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """The printed page number: found by position, chosen by plausibility, never guessed.
 
+The PC's own reading, for photos that arrive with no number from the phone
+(the phone's number is taken as is, see :mod:`book_guard._reader`).
+
 A page number is a line holding nothing but 1-4 digits in the top or bottom
 fifth of the upright page. A chapter-opening page has two such lines (the
 chapter numeral and the page number), so position alone cannot choose --
@@ -69,7 +72,9 @@ class Context:
     last_page: int | None = None
     """The book's last page, when known."""
     hint: int | None = None
-    """What the phone read -- a tie-breaker among the PC's own candidates."""
+    """What the phone read. When set it IS the page: ``_reader.read`` takes
+    it without consulting anything below -- these rules are the fallback
+    for photos the phone did not read."""
 
 
 @dataclass(frozen=True)
@@ -130,8 +135,6 @@ def _among(options: list[int], context: Context, *, boxed: bool) -> Choice:
                 None, f"page {options[0]} is far from p. {context.near}, the last one"
             )
         return Choice(options[0])
-    if context.hint in options:
-        return Choice(context.hint)
     near = context.near
     if near is not None and context.after is None:
         ranked = sorted(options, key=lambda n: abs(n - near))

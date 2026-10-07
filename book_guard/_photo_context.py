@@ -6,10 +6,11 @@ The app names every upload after its button -- ``start_``, ``stop_``,
 
     {"page": 51, "box": [left, top, right, bottom]}
 
-``page`` is what the phone's own OCR read: a tie-breaker among the PC's
-candidates, never taken on its own. ``box`` is where the number is, in the
-stored file's pixels (before EXIF), from the phone's OCR or drawn by hand:
-the PC reads that box itself.
+``page`` is what the phone's own OCR read (and the reader confirmed): it is
+the page, taken as is -- the PC does not re-read or second-guess it. ``box``
+is where the number is, in the stored file's pixels (before EXIF), from the
+phone's OCR or drawn by hand: with no ``page``, the PC reads that box
+itself.
 """
 
 from __future__ import annotations

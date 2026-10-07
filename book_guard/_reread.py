@@ -3,9 +3,10 @@
 
 For a photo the PC could not pin a page number on ("no page number found",
 "page number unclear (51 or 3)"). The reader boxes the number on the phone;
-the PC reads only that box -- itself, the phone's word is not taken. Only a
-photo that was *not* read as a page can be re-read: an accepted page may
-already be part of a credited session.
+the number the phone read in that box (``page``) is the page, taken as is.
+Only a request without one has the PC read the box itself. Only a photo
+that was *not* read as a page can be re-read: an accepted page may already
+be part of a credited session.
 """
 
 from __future__ import annotations
@@ -43,7 +44,11 @@ def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
             return Response(ok=False, message=f"{name} is no longer on the PC.")
         others = {sha: r for sha, r in records.items() if sha != record.sha}
         ledger = _ledger.load(paths.ledger, paths.key_file)
-        reading = read(filed, context_for(name, record.taken, others, ledger), box)
+        context = context_for(name, record.taken, others, ledger)
+        phone = request.get("page")
+        if isinstance(phone, int) and not isinstance(phone, bool):
+            context = replace(context, hint=phone)
+        reading = read(filed, context, box)
         records[record.sha] = replace(
             record,
             kind=reading.kind,

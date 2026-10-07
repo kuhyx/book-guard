@@ -108,7 +108,7 @@ def test_quiz_one_records_and_guards_regrading(
     assert bg_paths.next_file.exists()
 
     again = _grading.quiz_one(bg_paths, view, SUMMARY)
-    assert again == Verdict(passed=False, feedback="This session was already graded.")
+    assert again == Verdict(passed=False, feedback="This session was already credited.")
     assert len(ledger.of_kind(CREDIT)) == 1
 
 
@@ -167,7 +167,9 @@ def test_build_prompt_with_book_and_span() -> None:
     assert "--- page 10 (where they started) ---\nIt was a dark night." in prompt
     assert "Pace and time are checked elsewhere" in prompt
     assert "\nSPAN\n" in prompt
-    assert "consistent with the book's text above" in prompt
+    assert "STEP 1, the photo test" in prompt
+    assert "Use the book's text to see what lies between" in prompt
+    assert "nothing in it matches the book's text above" in prompt
     assert f"\n{SUMMARY}\n---\n" in prompt
 
 
@@ -179,7 +181,8 @@ def test_build_prompt_without_book_or_span() -> None:
         in prompt
     )
     assert "the book's own text" not in prompt
-    assert "if you know this book" in prompt
+    assert "is plainly about another book or subject" in prompt
+    assert "Use the book's text to see" not in prompt
 
 
 @pytest.mark.parametrize(

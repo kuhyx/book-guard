@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
-from book_guard._state import CREDITED, FAILED
+from book_guard._state import CREDITED
 
 if TYPE_CHECKING:
     from book_guard._state import SessionView, Snapshot
@@ -17,7 +17,6 @@ _STATUS_TEXT: Final = {
     NEEDS_QUIZ: "write the summary at the PC (book-guard quiz)",
     TOO_FAST: "not counted: under 50 s per page",
     CREDITED: "credited",
-    FAILED: "not counted: summary failed",
 }
 
 
@@ -27,7 +26,7 @@ def session_line(view: SessionView) -> str:
     when = s.started_at.astimezone().strftime("%a %d.%m %H:%M")
     action = _STATUS_TEXT.get(view.status, view.status).format(check=s.check_page)
     if view.status == NEEDS_QUIZ and view.verdicts:
-        action = "summary failed: rewrite it once more (book-guard quiz)"
+        action = "summary failed: rewrite it (book-guard quiz)"
     span = f"p. {s.start.page}-{s.end.page} ({s.pages} p, {s.minutes} min)"
     return f"{span} {when} -- {action}"
 

@@ -45,10 +45,27 @@ def test_a_rewrite_is_judged_on_the_checklist_only() -> None:
     assert "This is a REWRITE" in prompt
     assert "\n- what he did in the village\n- who he worked for\n" in prompt
     assert "Do not add requirements beyond this list" in prompt
-    assert "The deciding question" not in prompt
+    assert "Judge it generously" in prompt
+    assert "never fail for anything you cannot verify" in prompt
+    assert "is NOT covered when the rewrite only names it" in prompt
+    assert "STEP 1" not in prompt
     fresh = build_prompt(None, session, SUMMARY)
     assert 'list in "missing" 1-3 things' in fresh
     assert "never the answer itself" in fresh
+    assert "STEP 1, the photo test" in fresh
+    assert "REWRITE" not in fresh
+
+
+def test_what_the_grader_cannot_check_is_never_a_reason_to_fail() -> None:
+    session = only_session(quiz_pair())
+    plain = build_prompt(None, session, SUMMARY)
+    assert "ONLY 2 photographed pages, not the 1 pages the reader read" in plain
+    assert "is NEVER a reason to fail" in plain
+    assert "Your own memory of the book is not evidence" in plain
+    with_text = build_prompt(None, session, SUMMARY, Context(span="BOOK TEXT"))
+    assert "may be another edition or language" in with_text
+    assert "ONLY 2 photographed" not in with_text
+    assert "is NEVER a reason to fail" in with_text
 
 
 def test_a_fail_names_what_to_add_and_the_rewrite_gets_it(
@@ -68,7 +85,7 @@ def test_a_fail_names_what_to_add_and_the_rewrite_gets_it(
     first = _grading.quiz_one(bg_paths, _view(bg_paths), SUMMARY)
     assert first.feedback == (
         "Too thin. To be accepted, add: what he did in the village; who he "
-        "worked for. You may rewrite this summary once; the second verdict is final."
+        "worked for. Rewrite the summary and send it again."
     )
     assert seen[0].checklist == ()
     retry = to_json(bg_paths, snapshot(bg_paths))["sessions"][0]["retry"]
@@ -80,16 +97,20 @@ def test_a_fail_names_what_to_add_and_the_rewrite_gets_it(
     assert _view(bg_paths).status == CREDITED
 
 
-def test_a_final_fail_still_says_what_was_missing(
+def test_every_fail_says_what_was_missing(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seed_photos(bg_paths, *quiz_pair())
     monkeypatch.setattr(
         _grading, "grade", lambda *_a, **_k: Verdict(False, "No.", MISSING[:1])
     )
-    _grading.quiz_one(bg_paths, _view(bg_paths), SUMMARY)
-    final = _grading.quiz_one(bg_paths, _view(bg_paths), SUMMARY)
-    assert final.feedback == "No. To be accepted, add: what he did in the village."
+    expected = (
+        "No. To be accepted, add: what he did in the village."
+        " Rewrite the summary and send it again."
+    )
+    for _ in range(3):
+        again = _grading.quiz_one(bg_paths, _view(bg_paths), SUMMARY)
+        assert again.feedback == expected
 
 
 def _down(*_args: object, **_kwargs: object) -> Verdict:

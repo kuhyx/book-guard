@@ -35,9 +35,9 @@ extension SummaryStore on GuardApi {
       store.delete('grading/$sessionId');
 
   /// Squares [session]'s draft and marker with the PC's verdict, which may
-  /// have arrived while the tab was gone: a final one forgets both; a first
-  /// failure unlocks the box for the rewrite and keeps the text. A marker
-  /// newer than that failure is the rewrite itself, still with the grader.
+  /// have arrived while the tab was gone: a credit forgets both; a failure
+  /// unlocks the box for the rewrite and keeps the text. A marker newer
+  /// than that failure is the rewrite itself, still with the grader.
   Future<void> settleGrading(SessionInfo session) async {
     if (session.status == 'credited' || session.status == 'failed-quiz') {
       await doneGrading(session.id);
