@@ -24,6 +24,7 @@ from book_guard.tests._flow_helpers import (
 
 WHEN = T0.astimezone().strftime("%a %d.%m %H:%M")
 CHECK = only_session(check_pair())
+TODAY = "Today: 0/20 pages (not yet: 20 pages a day open the lock even when behind)"
 
 
 @pytest.mark.parametrize(
@@ -72,18 +73,20 @@ def test_status_lines_locked_with_everything() -> None:
     views = [SessionView(CHECK, None, NEEDS_CHECK)] * 8
     snap = make_snap(book=make_book(), sessions=views, locked=True)
     lines = status_lines(snap, recent=3)
-    assert lines[:4] == [
+    assert lines[:6] == [
         "LOCKED: 12 pages behind",
         "Book: War -- Tol, last page 300",
         (
             "October 2026: 12/300 pages (pace line today: 40; carried debt 5; "
             "books finished 1)"
         ),
+        TODAY,
+        "Debt: 28 pages, carried into next month",
         "Escapes left this month: 2",
     ]
-    assert lines[4:6] == ["", "Next:"]
+    assert lines[6:8] == ["", "Next:"]
     assert lines.count("Recent sessions:") == 1
-    assert len(lines) == 4 + 2 + 8 + 2 + 3
+    assert len(lines) == 6 + 2 + 8 + 2 + 3
 
 
 def test_status_lines_quiet() -> None:
@@ -95,8 +98,25 @@ def test_status_lines_quiet() -> None:
             "October 2026: 12/300 pages (pace line today: 40; carried debt 5; "
             "books finished 1)"
         ),
+        TODAY,
+        "Debt: 28 pages, carried into next month",
         "Escapes left this month: 2",
     ]
+
+
+def test_status_lines_show_the_daily_pass_and_debt_share() -> None:
+    pace = dataclasses.replace(make_snap().pace, pages_today=20, days_left=5)
+    lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
+    assert lines[3:5] == [
+        "Today: 20/20 pages (passed: 20 pages a day open the lock even when behind)",
+        "Debt: 28 pages = 6/day over the 5 counted days left this month",
+    ]
+
+
+def test_status_lines_on_pace_show_no_debt() -> None:
+    pace = dataclasses.replace(make_snap().pace, pages=40)
+    lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
+    assert lines[3:5] == [TODAY, "Escapes left this month: 2"]
 
 
 def test_status_lines_without_a_book() -> None:

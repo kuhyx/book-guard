@@ -135,6 +135,10 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
             "carried_debt": pace.carried_debt,
             "carried_credit": pace.carried_credit,
             "finished_books": pace.finished_books,
+            "pages_today": pace.pages_today,
+            "passed_today": pace.passed_today,
+            "days_left": pace.days_left,
+            "debt_per_day": pace.debt_per_day,
         },
         "open_start": None
         if start is None

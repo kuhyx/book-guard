@@ -15,7 +15,7 @@ import freedays
 
 from book_guard import _ledger, _photos
 from book_guard._books import Book, book_at, current
-from book_guard._constants import ESCAPES_PER_MONTH, GATE_START_DATE
+from book_guard._constants import DAILY_PASS_PAGES, ESCAPES_PER_MONTH, GATE_START_DATE
 from book_guard._ledger import ESCAPE
 from book_guard._pace import Pace, compute_pace
 from book_guard._quiz import credited
@@ -101,11 +101,22 @@ def _verdict(today: date, pace: Pace, *, free: bool, escaped: bool) -> tuple[boo
         # Reading caught up: that is the reason it is open, whatever else
         # happened today (an escape used this morning no longer matters).
         return False, "on pace"
+    if pace.passed_today:
+        # Reading anything beats reading nothing: a 20-page day opens the
+        # lock while the debt stays, spread over the days left.
+        return False, (
+            f"{pace.pages_today} pages read today "
+            f"(still {pace.behind} behind the pace line)"
+        )
     if free:
         return False, "today is a free day"
     if escaped:
         return False, "today's lock was skipped with the escape hatch"
-    return True, f"{pace.behind} pages behind the pace line"
+    short = DAILY_PASS_PAGES - pace.pages_today
+    return True, (
+        f"{pace.behind} pages behind the pace line; {short} more "
+        f"{'page' if short == 1 else 'pages'} read today open it"
+    )
 
 
 def snapshot(

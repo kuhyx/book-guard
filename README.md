@@ -64,8 +64,8 @@ never makes the app useless.
 |---|---|
 | Monthly target | 20 pages per Tue-Thu + 40 per Fri-Mon (220/week) over non-free days, plus debt carried from last month |
 | Pace line | `ceil(target * elapsed / counted)`, days weighted by their quota; today's share is due tomorrow |
-| Debt | 0 if a book was finished that month, else `target - pages read` |
-| Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up |
+| Debt | pages behind the line, shown as an even share over the month's counted days left (today included), recomputed daily; at month end 0 if a book was finished, else carried and spread evenly over next month |
+| Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up, or until 20 pages are credited that day (by the day the reading ended; clears the lock only, no bonus) |
 | Escape | 2 per month; forgives the day, credits no pages |
 | Summary | a fail lists what to add; rewrite as often as needed, judged on that; ungraded credit after 1 h of grader outage |
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |

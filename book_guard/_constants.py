@@ -20,6 +20,13 @@ OFFDAY_PAGES: Final = 40
 on Fri-Mon -- 220 a week, the long weekend doing the heavy lifting while
 workdays keep the book moving."""
 
+DAILY_PASS_PAGES: Final = 20
+"""Pages credited on one day (summed across sessions, by the day the reading
+ended) that open the lock for the rest of that day even while behind the
+pace line: reading anything beats reading nothing. It clears the lock only --
+it earns no bonus; the debt stays and is spread over the month's remaining
+counted days."""
+
 MIN_SECONDS_PER_PAGE: Final = 50
 """A session faster than this is page-flipping, not reading."""
 
