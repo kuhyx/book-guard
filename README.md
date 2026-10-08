@@ -72,9 +72,12 @@ never makes the app useless.
 | Starts | 2026-10-01 |
 
 **Bonuses** (read from the ledger by the consumers, fail closed): a credited
-session of 20+ pages and 20+ minutes earns **+1h** of shutdown time in
+session of 15+ pages and 15+ minutes -- or 10+ and 10+ when the reader is on
+the pace line once it is counted -- earns **+1h** of shutdown time in
 screen-locker and **+1h** of gaming in steam-backlog-enforcer, once per day,
-dated by when the reading ended. To pay for it, from 2026-10-01 the shutdown
+dated by when the reading ended. A session that qualifies only under a newer
+rule gets a zero-page bonus row from `book_guard regrant` (signed rows are never
+edited; it is idempotent and `--dry-run` previews it). To pay for it, from 2026-10-01 the shutdown
 base is 19:00 (cap 23:00) and the gaming base 4h (cap 8h).
 
 ## Use

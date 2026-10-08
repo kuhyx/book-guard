@@ -47,6 +47,9 @@ Read README.md first. These are the invariants that are easy to break.
 - **The ledger is the only value-carrying state**, HMAC-signed with the shared
   `/etc/workout-locker/hmac.key`. screen-locker and steam-backlog-enforcer
   read `credit` rows with `detail.bonus == "1"`, dated by `detail.ended_at`.
+  The rule (`_bonus.py`): 15 pages + 15 min, or 10 + 10 when on pace once the
+  session is counted -- judged at credit time. Consumers cannot judge pace, so
+  a rule change reaches old rows only via `regrant` (zero-page `bonus:<id>` row).
   Changing that contract means changing both consumers in the same session.
 - **Nothing credits without the grader** -- except a summary (150+ chars)
   whose grading has failed for `GRADER_GRACE` (1 h, outage or usage cap):

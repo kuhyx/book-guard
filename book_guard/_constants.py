@@ -45,10 +45,15 @@ GRADER_GRACE: Final = timedelta(hours=1)
 before it is credited ungraded -- short enough to keep the evening's bonus.
 Claude being down must never make the app useless."""
 
-BONUS_MIN_PAGES: Final = 20
-BONUS_MIN_MINUTES: Final = 20
+BONUS_MIN_PAGES: Final = 15
+BONUS_MIN_MINUTES: Final = 15
 """One credited session at least this big earns the day's reading hour in
 screen-locker (shutdown) and steam-backlog-enforcer (gaming)."""
+
+PACE_BONUS_MIN_PAGES: Final = 10
+PACE_BONUS_MIN_MINUTES: Final = 10
+"""The smaller bar for a reader who is on the pace line once the session is
+counted: being ahead earns the same hour, but a few flipped pages still do not."""
 
 ESCAPES_PER_MONTH: Final = 2
 """Escape-hatch uses allowed per calendar month. An escape forgives the day's

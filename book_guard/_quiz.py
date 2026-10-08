@@ -11,12 +11,12 @@ three photos"; every other rule (pace, time per page, upload age) is code.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Final
 
 from book_guard import _ledger
+from book_guard._bonus import earns, qualifies
 from book_guard._claude import DEFAULT_MODEL, ask
-from book_guard._constants import BONUS_MIN_MINUTES, BONUS_MIN_PAGES
 from book_guard._ledger import CREDIT, REJECT, Entry
 from book_guard._prompt import MAX_MISSING, SYSTEM, Context, build_prompt
 
@@ -82,9 +82,13 @@ def _vote(answer: dict[str, object]) -> Verdict:
     return Verdict(passed, str(answer.get("feedback") or ""), missing)
 
 
-def bonus_eligible(session: Session) -> bool:
-    """Whether this session earns the day's reading hour."""
-    return session.pages >= BONUS_MIN_PAGES and session.minutes >= BONUS_MIN_MINUTES
+def bonus_eligible(session: Session, *, on_pace: bool = False) -> bool:
+    """Whether this session earns the day's reading hour by size alone.
+
+    ``on_pace`` is the smaller bar for a reader on the pace line; the pace
+    itself is judged in :func:`record_verdict`, where the ledger is at hand.
+    """
+    return qualifies(session.pages, session.minutes, on_pace=on_pace)
 
 
 def credited(verdicts: list[Entry]) -> bool:
@@ -107,11 +111,8 @@ def record_verdict(
     ``detail.ended_at`` carries the exact time -- the bonus belongs to the
     evening the pages were read, even when the quiz is taken next morning.
     """
-    earlier = (
-        _ledger.load(paths.ledger, paths.key_file)
-        .verdicts()
-        .get(session.session_id, [])
-    )
+    ledger = _ledger.load(paths.ledger, paths.key_file)
+    earlier = ledger.verdicts().get(session.session_id, [])
     if credited(earlier):
         return None
     attempt = len(earlier) + 1
@@ -131,7 +132,7 @@ def record_verdict(
             "minutes": str(session.minutes),
             "started_at": str(int(session.started_at.timestamp())),
             "ended_at": str(int(ended.timestamp())),
-            "bonus": "1" if verdict.passed and bonus_eligible(session) else "0",
+            "bonus": "0",
             "feedback": verdict.feedback[:1500],
             "summary": summary.strip()[:1000],
             "attempt": str(attempt),
@@ -139,5 +140,7 @@ def record_verdict(
             "graded": "0" if verdict.ungraded else "1",
         },
     )
+    if verdict.passed and earns(session.pages, session.minutes, ledger, entry):
+        entry = replace(entry, detail={**entry.detail, "bonus": "1"})
     _ledger.append(paths.ledger, paths.key_file, entry)
     return entry

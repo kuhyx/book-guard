@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Final, TextIO
 
 from book_guard._actions import next_quiz, process
 from book_guard._attach import attach
+from book_guard._bonus import regrant
 from book_guard._books import current, register
 from book_guard._booktext import BookTextError
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
@@ -120,6 +121,15 @@ def _cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_regrant(args: argparse.Namespace) -> int:
+    for grant in regrant(paths(), dry_run=args.dry_run):
+        _say(
+            f"{'would grant' if args.dry_run else 'granted'} {grant.day} "
+            f"bonus for {grant.detail['grant_of']}"
+        )
+    return 0
+
+
 def _read_summary() -> str:
     _say("Summary (3-5 sentences; finish with an empty line):")
     lines: list[str] = []
@@ -167,6 +177,7 @@ def _parser() -> argparse.ArgumentParser:
         ("process", "read new photos from the inbox", _cmd_process),
         ("status", "show pace, sessions and what to do next", _cmd_status),
         ("quiz", "write the summary for a finished session", _cmd_quiz),
+        ("regrant", "grant the day's bonus to credits that now earn it", _cmd_regrant),
         ("lock", "run the gate (locks only when behind pace)", _cmd_lock),
     ]
     subs = {}
@@ -195,6 +206,7 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_MODEL,
         help="grader for this run only (default: haiku)",
     )
+    subs["regrant"].add_argument("--dry-run", action="store_true")
     subs["lock"].add_argument("--production", action="store_true")
     subs["lock"].add_argument(
         "--today", type=date.fromisoformat, help="demo: pretend date"

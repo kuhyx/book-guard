@@ -34,7 +34,7 @@ dependencies:
   image: 4.10.1
   # Session photos from the camera. Called with no resize/quality options so
   # the camera's original bytes -- and their EXIF capture time -- are uploaded.
-  image_picker: 1.2.3
+  image_picker: 1.2.4
   path: 1.9.1
   # The offline outbox and the error log live in the app's own folders.
   path_provider: 2.1.6
