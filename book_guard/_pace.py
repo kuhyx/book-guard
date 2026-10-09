@@ -1,14 +1,21 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
-"""The pace line and the month-to-month debt. Pure: ledger in, numbers out.
+"""The pace line and the year-wide carry. Pure: ledger in, numbers out.
 
 Nothing here is stored. Every run re-derives, from the credits alone:
 
-* **target** for a month = the sum of its counted days' quotas
-  (:data:`WORKDAY_PAGES` Tue-Thu, :data:`OFFDAY_PAGES` Fri-Mon) + the debt
-  carried into it - the surplus credit carried into it;
-* **debt** carried out of a month = 0 if a book was finished in it, else
-  ``max(0, target - pages read)``; **credit** carried out = the surplus no
-  day of the month could absorb (see :mod:`book_guard._plan`);
+* **base** for a month = :data:`MONTHLY_PAGES` (before
+  :data:`MONTHLY_GOAL_START`: the sum of its counted days' quotas), split
+  over its counted days in the :data:`WORKDAY_PAGES` Tue-Thu :
+  :data:`OFFDAY_PAGES` Fri-Mon ratio;
+* **balance** = every past month's base minus the pages read in it: what is
+  owed (or, negative, read ahead) beyond the bases;
+* **carry** into a month = the balance split evenly over the months left in
+  the year, this one included, rounded away from zero -- so the earliest
+  months take the odd pages and none is lost. January takes all of
+  December's balance (no month of its year is left to share it);
+* **target** = base + carry, never below 0. A carried debt is spread evenly
+  over the counted days; a carried surplus comes off them like an in-month
+  surplus (see :mod:`book_guard._plan`);
 * **required by today** = the plan's line at the *start* of today -- today's
   share is due tomorrow, so an evening reader is never locked in the morning
   for pages they meant to read tonight, and a declared free day moves the
@@ -17,7 +24,7 @@ Nothing here is stored. Every run re-derives, from the credits alone:
 * **debt share** = the pages behind the line split evenly over the month's
   remaining counted days, today included -- recomputed every day, so a
   deficit is never asked for in one sitting; what is still short at month
-  end carries into next month and is spread evenly over its counted days.
+  end goes into the balance.
 """
 
 from __future__ import annotations
@@ -31,6 +38,8 @@ from typing import TYPE_CHECKING
 from book_guard._books import all_books
 from book_guard._constants import (
     DAILY_PASS_PAGES,
+    MONTHLY_GOAL_START,
+    MONTHLY_PAGES,
     OFFDAY_PAGES,
     PACE_START_DATE,
     WORKDAY_PAGES,
@@ -51,10 +60,12 @@ class Pace:
     month: date
     target: int
     carried_debt: int
+    """This month's share of the balance owed from earlier months."""
     pages: int
     required: int
     finished_books: int
     carried_credit: int = 0
+    """This month's share of the pages read ahead in earlier months."""
     pages_today: int = 0
     days_left: int = 0
     """Counted (non-free) days left in the month, today included."""
@@ -69,7 +80,7 @@ class Pace:
         """Extra pages a day that clear :attr:`behind` by month end.
 
         0 when on pace or when no counted day is left: then the debt simply
-        carries into next month.
+        goes into the balance spread over the months left.
         """
         if not self.days_left:
             return 0
@@ -128,54 +139,68 @@ def _quota(day: date) -> int:
     return WORKDAY_PAGES if is_workday(day) else OFFDAY_PAGES
 
 
+def _months_left(first: date) -> int:
+    """Months the balance is spread over, ``first``'s included.
+
+    January's is 1: December's balance has no month of its year left to share
+    it, so all of it lands on the new year's first month.
+    """
+    return 1 if first.month == 1 else 13 - first.month
+
+
+def _share(balance: int, months: int) -> int:
+    """``balance / months``, rounded away from zero: the odd pages go first."""
+    share = -(-abs(balance) // months)
+    return share if balance >= 0 else -share
+
+
 def _plan(
     ledger: Ledger,
     first: date,
     is_free: Callable[[date], bool],
-    carried: tuple[int, Fraction],
+    carry: int,
     until: date,
-) -> tuple[MonthPlan, dict[date, int], int]:
-    """The month's plan through ``until``, its daily pages, books finished."""
-    debt, credit = carried
+) -> tuple[MonthPlan, dict[date, int], int, int]:
+    """The month's plan through ``until``: plan, daily pages, books, base."""
     counted = _counted(first, is_free)
-    weights = {d: _quota(d) for d in counted}
+    quotas = {d: _quota(d) for d in counted}
+    total = sum(quotas.values())
+    base = MONTHLY_PAGES if first >= MONTHLY_GOAL_START else total
+    weights = {d: Fraction(q * base, total) for d, q in quotas.items()}
     pages_on, finished = _month_totals(ledger, first)
     month = MonthInput(
         days=_days(first),
         counted=counted,
         weights=weights,
-        target=sum(weights.values()) + debt,
-        credit=credit,
+        target=base + max(carry, 0),
+        credit=Fraction(max(-carry, 0)),
         pages_on=pages_on,
     )
     plan = plan_month(month, until)
-    return plan, pages_on, finished
+    return plan, pages_on, finished, base
 
 
 def compute_pace(ledger: Ledger, today: date, is_free: Callable[[date], bool]) -> Pace:
     """The pace position for ``today``'s month."""
     current = month_start(today)
     first = month_start(PACE_START_DATE)
-    debt, credit = 0, Fraction(0)
+    balance = 0
     while first < current:
         month_end = _next_month(first) - timedelta(days=1)
-        plan, pages_on, finished = _plan(
-            ledger, first, is_free, (debt, credit), month_end
-        )
-        short = plan.target - sum(pages_on.values())
-        debt = 0 if finished else max(0, math.ceil(short))
-        credit = plan.leftover
+        _, pages_on, _, base = _plan(ledger, first, is_free, 0, month_end)
+        balance += base - sum(pages_on.values())
         first = _next_month(first)
 
-    plan, pages_on, finished = _plan(ledger, current, is_free, (debt, credit), today)
+    carry = _share(balance, _months_left(current))
+    plan, pages_on, finished, _ = _plan(ledger, current, is_free, carry, today)
     return Pace(
         month=current,
         target=math.ceil(plan.target),
-        carried_debt=debt,
+        carried_debt=max(carry, 0),
         pages=sum(pages_on.values()),
         required=math.ceil(plan.line_before(today)),
         finished_books=finished,
-        carried_credit=math.floor(credit),
+        carried_credit=max(-carry, 0),
         pages_today=pages_on.get(today, 0),
         days_left=sum(1 for d in _counted(current, is_free) if d >= today),
     )

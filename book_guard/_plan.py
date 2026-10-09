@@ -9,7 +9,7 @@ was earned absorbs it (so the plan meets the pages exactly, and nothing is
 counted twice) and it comes off later days instead, evenly across the
 remaining workdays (``freedays.WORKDAYS``) until they are empty, then evenly
 across the remaining Fri-Mon days. What no remaining day can absorb is
-carried into next month and spent the same way from its first day.
+left over at month end (:mod:`book_guard._pace` carries it).
 """
 
 from __future__ import annotations
@@ -81,23 +81,23 @@ class MonthInput:
     Attributes:
         days: Every day of the month, in order.
         counted: The days the target spreads over (paced, not free).
-        weights: Each counted day's base quota.
-        target: Base quotas plus carried debt; the base split by weight, the
+        weights: Each counted day's share of the month's base.
+        target: The base plus carried debt; the base split by weight, the
             debt evenly over the counted days.
-        credit: Surplus carried in from last month, spent from day one.
+        credit: Surplus carried in from earlier months, spent from day one.
         pages_on: Pages credited on each day (free days included).
     """
 
     days: list[date]
     counted: list[date]
-    weights: Mapping[date, int]
+    weights: Mapping[date, Fraction]
     target: int
     credit: Fraction
     pages_on: Mapping[date, int]
 
 
 def _opening_plan(month: MonthInput) -> MonthPlan:
-    """Day one: the target split by weight, last month's credit spent."""
+    """Day one: the target split by weight, the carried credit spent."""
     total = sum(month.weights[d] for d in month.counted)
     if not total:
         return MonthPlan({}, leftover=month.credit, unspread=Fraction(month.target))

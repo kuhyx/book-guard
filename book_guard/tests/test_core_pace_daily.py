@@ -8,12 +8,13 @@ from fractions import Fraction
 import math
 
 from book_guard import _pace
-from book_guard._constants import DAILY_PASS_PAGES
+from book_guard._constants import DAILY_PASS_PAGES, MONTHLY_PAGES
 from book_guard._ledger import CREDIT, Entry, Ledger
 from book_guard.tests.test_core_pace import OCTOBER, _credit, _never
 
-# Nov 2026 has 12 Tue-Thu and 18 Fri-Mon days: 30 counted days.
+# Nov 2026 has 12 Tue-Thu and 18 Fri-Mon days: 30 counted days, 960 quota.
 NOVEMBER_DAYS = 30
+SCALE = Fraction(MONTHLY_PAGES, 12 * 20 + 18 * 40)
 
 
 def test_pages_today_sum_every_credited_session() -> None:
@@ -63,9 +64,11 @@ def test_on_pace_owes_nothing_a_day() -> None:
 
 def test_carried_debt_is_spread_evenly_not_by_weight() -> None:
     ledger = Ledger([_credit("2026-10-05", 100)])
-    share = Fraction(OCTOBER - 100, NOVEMBER_DAYS)
-    # Nov 1 is a Sunday (40), Nov 3 a Tuesday (20): each carries one share.
+    # November carries half of October's shortfall (December the rest).
+    share = Fraction((OCTOBER - 100) // 2, NOVEMBER_DAYS)
+    # The 1000 keeps the 40:20 weights; Nov 1 is a Sunday, Nov 3 a Tuesday,
+    # and each counted day carries one equal share of the debt.
     monday = _pace.compute_pace(ledger, date(2026, 11, 2), _never)
-    assert monday.required == math.ceil(40 + share)
+    assert monday.required == math.ceil(40 * SCALE + share)
     wednesday = _pace.compute_pace(ledger, date(2026, 11, 4), _never)
-    assert wednesday.required == math.ceil(40 + 40 + 20 + 3 * share)
+    assert wednesday.required == math.ceil((40 + 40 + 20) * SCALE + 3 * share)

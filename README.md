@@ -62,9 +62,10 @@ never makes the app useless.
 
 | | |
 |---|---|
-| Monthly target | 20 pages per Tue-Thu + 40 per Fri-Mon (220/week) over non-free days, plus debt carried from last month |
+| Monthly target | 1000 pages (from November 2026; October 2026 is 960), split 20:40 Tue-Thu:Fri-Mon over non-free days, plus this month's share of the year's balance |
+| Year balance | each month's 1000 minus pages read, summed: spread evenly over the months left in the year (this one included, odd pages first), a surplus lowering targets and a shortfall raising them, never below 0; December's balance lands whole on January |
 | Pace line | `ceil(target * elapsed / counted)`, days weighted by their quota; today's share is due tomorrow |
-| Debt | pages behind the line, shown as an even share over the month's counted days left (today included), recomputed daily; at month end 0 if a book was finished, else carried and spread evenly over next month |
+| Debt | pages behind the line, shown as an even share over the month's counted days left (today included), recomputed daily; at month end it goes into the year balance |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up, or until 20 pages are credited that day (by the day the reading ended; clears the lock only, no bonus) |
 | Escape | 2 per month; forgives the day, credits no pages |
 | Summary | a fail lists what to add; rewrite as often as needed, judged on that; ungraded credit after 1 h of grader outage |

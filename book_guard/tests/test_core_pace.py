@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
-"""_pace (debt, free days, finished books) and _books (registrations)."""
+"""_pace (year balance, free days, finished books) and _books (registrations)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,12 @@ from typing import TYPE_CHECKING
 import pytest
 
 from book_guard import _books, _ledger, _pace
-from book_guard._constants import GATE_START_DATE, OFFDAY_PAGES, WORKDAY_PAGES
+from book_guard._constants import (
+    GATE_START_DATE,
+    MONTHLY_PAGES,
+    OFFDAY_PAGES,
+    WORKDAY_PAGES,
+)
 from book_guard._ledger import BOOK, CREDIT, ESCAPE, Entry, Ledger
 from book_guard._openlibrary import BookInfo
 
@@ -17,11 +22,9 @@ if TYPE_CHECKING:
     from book_guard._paths import Paths
 
 
-# Quota sums: Oct 2026 from the 2nd has 12 Tue-Thu and 18 Fri-Mon days,
-# Nov 12/18, Dec 15/16.
+# October 2026 (from the 2nd: 12 Tue-Thu and 18 Fri-Mon days) is the last
+# month whose base is its quota sum; every later month's is MONTHLY_PAGES.
 OCTOBER = 12 * WORKDAY_PAGES + 18 * OFFDAY_PAGES
-NOVEMBER = 12 * WORKDAY_PAGES + 18 * OFFDAY_PAGES
-DECEMBER = 15 * WORKDAY_PAGES + 16 * OFFDAY_PAGES
 
 
 def _never(_day: date) -> bool:
@@ -82,25 +85,30 @@ def test_required_is_prorated_over_elapsed_days() -> None:
 
 def test_debt_carries_across_months() -> None:
     ledger = Ledger([_credit("2026-10-05", 100), _credit("2026-11-02", 700)])
+    # 860 short, split over November and December.
     november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
-    assert november.carried_debt == OCTOBER - 100
-    assert november.target == OCTOBER - 100 + NOVEMBER
+    assert november.carried_debt == 430
+    assert november.target == MONTHLY_PAGES + 430
+    # December is the year's last month: all 860 + 300 short in November.
+    december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
+    assert december.carried_debt == 860 + MONTHLY_PAGES - 700
+    # January takes December's whole balance.
     january = _pace.compute_pace(Ledger(), date(2027, 1, 15), _never)
-    assert january.carried_debt == OCTOBER + NOVEMBER + DECEMBER
+    assert january.carried_debt == OCTOBER + 2 * MONTHLY_PAGES
 
 
 def test_surplus_carries_across_months() -> None:
-    # 2000 pages by Oct 5 overpay October by 1040 and November by 80.
+    # 2000 pages by Oct 5 read October's 960 and 1040 ahead.
     ledger = Ledger([_credit("2026-10-05", 2000)])
     november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
-    assert (november.carried_credit, november.target) == (2000 - OCTOBER, 0)
+    assert (november.carried_credit, november.target) == (520, MONTHLY_PAGES - 520)
     december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
     assert december.carried_debt == 0
-    assert december.carried_credit == 2000 - OCTOBER - NOVEMBER
-    assert december.target == DECEMBER - december.carried_credit
+    assert december.carried_credit == 2000 - OCTOBER - MONTHLY_PAGES
+    assert december.target == MONTHLY_PAGES - december.carried_credit
 
 
-def test_finished_book_clears_debt() -> None:
+def test_finished_book_clears_no_debt() -> None:
     ledger = Ledger(
         [
             _book("111", "250", "2026-10-01T08:00:00+00:00"),
@@ -116,8 +124,9 @@ def test_finished_book_clears_debt() -> None:
     october = _pace.compute_pace(ledger, date(2026, 10, 20), _never)
     assert october.finished_books == 1
     assert october.pages == 40
+    # Only pages count: finishing a book forgives none of the shortfall.
     november = _pace.compute_pace(ledger, date(2026, 11, 3), _never)
-    assert november.carried_debt == 0
+    assert november.carried_debt == (OCTOBER - 40) // 2
 
 
 def test_free_days_move_the_line() -> None:
@@ -140,9 +149,10 @@ def test_debt_survives_a_fully_free_month() -> None:
         return day.month == 11
 
     november = _pace.compute_pace(Ledger(), date(2026, 11, 20), november_free)
-    assert (november.target, november.required) == (OCTOBER, 0)
+    owed = MONTHLY_PAGES + OCTOBER // 2
+    assert (november.target, november.required) == (owed, 0)
     december = _pace.compute_pace(Ledger(), date(2026, 12, 1), november_free)
-    assert december.carried_debt == OCTOBER
+    assert december.carried_debt == OCTOBER + MONTHLY_PAGES
 
 
 def test_surplus_lightens_workdays_not_tomorrow() -> None:

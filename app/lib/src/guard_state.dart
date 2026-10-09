@@ -164,7 +164,7 @@ class Pace {
   /// `YYYY-MM`.
   final String month;
 
-  /// Pages due this month (300 + carried debt).
+  /// Pages due this month (1000 + this month's share of the year balance).
   final int target;
 
   /// Pages credited this month.
@@ -176,6 +176,6 @@ class Pace {
   /// Pages short of the line.
   final int behind;
 
-  /// Debt carried in from last month.
+  /// This month's share of pages owed from earlier months.
   final int carriedDebt;
 }
