@@ -25,10 +25,9 @@ this 20:40 ratio."""
 MONTHLY_PAGES: Final = 1000
 """Each month's goal from :data:`MONTHLY_GOAL_START`, before the year's carry."""
 
-MONTHLY_GOAL_START: Final = date(2026, 11, 1)
-"""The first month at :data:`MONTHLY_PAGES`. October 2026 keeps its quota sum
-(960), so switching mid-month never put the reader behind overnight; its
-balance is the first carry, spread over November and December."""
+MONTHLY_GOAL_START: Final = date(2026, 10, 1)
+"""The first month at :data:`MONTHLY_PAGES`: October 2026 itself, switched on
+2026-10-10 at the reader's request (the line rose by 8 pages that day)."""
 
 DAILY_PASS_PAGES: Final = 20
 """Pages credited on one day (summed across sessions, by the day the reading

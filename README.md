@@ -62,7 +62,7 @@ never makes the app useless.
 
 | | |
 |---|---|
-| Monthly target | 1000 pages (from November 2026; October 2026 is 960), split 20:40 Tue-Thu:Fri-Mon over non-free days, plus this month's share of the year's balance |
+| Monthly target | 1000 pages, split 20:40 Tue-Thu:Fri-Mon over non-free days, plus this month's share of the year's balance |
 | Year balance | each month's 1000 minus pages read, summed: spread evenly over the months left in the year (this one included, odd pages first), a surplus lowering targets and a shortfall raising them, never below 0; December's balance lands whole on January |
 | Pace line | `ceil(target * elapsed / counted)`, days weighted by their quota; today's share is due tomorrow |
 | Debt | pages behind the line, shown as an even share over the month's counted days left (today included), recomputed daily; at month end it goes into the year balance |

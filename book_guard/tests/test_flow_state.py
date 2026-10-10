@@ -79,7 +79,7 @@ def test_behind_locks(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (
         True,
-        "420 pages behind the pace line; 20 more pages read today open it",
+        "438 pages behind the pace line; 20 more pages read today open it",
     )
     assert snap.escapes_left == 2
 
@@ -90,7 +90,7 @@ def test_twenty_pages_today_open_the_lock_while_behind(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (
         False,
-        "20 pages read today (still 400 behind the pace line)",
+        "20 pages read today (still 418 behind the pace line)",
     )
 
 
@@ -101,12 +101,12 @@ def test_nineteen_pages_today_stay_locked(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (
         True,
-        "371 pages behind the pace line; 1 more page read today open it",
+        "389 pages behind the pace line; 1 more page read today open it",
     )
 
 
 def test_on_pace(bg_paths: Paths) -> None:
-    add_credit(bg_paths, "2026-10-14", 420)
+    add_credit(bg_paths, "2026-10-14", 438)
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (False, "on pace")
 
@@ -147,7 +147,7 @@ def test_to_json_full(bg_paths: Paths) -> None:
         "chapter": None,
     }
     assert doc["pace"]["month"] == "2026-10"
-    assert doc["pace"]["behind"] == 419
+    assert doc["pace"]["behind"] == 437
     assert doc["open_start"]["page"] == 50
     first = doc["sessions"][0]
     assert (first["status"], first["book"], first["check_page"]) == (
@@ -179,7 +179,7 @@ def test_publish_writes_both_files(bg_paths: Paths) -> None:
     _publish.write_next_file(bg_paths, snap)
     body = bg_paths.next_file.read_text(encoding="utf-8")
     assert body.startswith("book-guard -- open this after uploading photos.\n\n")
-    assert "LOCKED: 420 pages behind the pace line" in body
+    assert "LOCKED: 438 pages behind the pace line" in body
     assert body.endswith("Page numbers must be visible.\n")
     state = json.loads(bg_paths.state_file.read_text(encoding="utf-8"))
     assert state["locked"] is True
@@ -204,6 +204,6 @@ def test_caught_up_after_an_escape_says_on_pace(bg_paths: Paths) -> None:
     assert snapshot(bg_paths, today=LOCKED_DAY).reason == (
         "today's lock was skipped with the escape hatch"
     )
-    add_credit(bg_paths, "2026-10-14", 420)
+    add_credit(bg_paths, "2026-10-14", 438)
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason, snap.escaped_today) == (False, "on pace", True)

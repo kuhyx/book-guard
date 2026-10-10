@@ -70,7 +70,7 @@ def test_demo_lock_arms_without_waiting(
         "window.grab_input",
     ]
     assert [ms for ms, _cb in _root(gate).scheduled] == [POLL_INTERVAL_MS, 500]
-    assert gate._vars.status.get().startswith("LOCKED: 420 pages behind")
+    assert gate._vars.status.get().startswith("LOCKED: 438 pages behind")
     assert gate._vars.todo.get().startswith("No book registered")
     assert gate._vars.quiz_title.get() == "No session is waiting for a summary."
     gate.run()

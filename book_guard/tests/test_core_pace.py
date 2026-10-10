@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+from fractions import Fraction
+import math
 from typing import TYPE_CHECKING
 
 import pytest
@@ -22,9 +24,16 @@ if TYPE_CHECKING:
     from book_guard._paths import Paths
 
 
-# October 2026 (from the 2nd: 12 Tue-Thu and 18 Fri-Mon days) is the last
-# month whose base is its quota sum; every later month's is MONTHLY_PAGES.
-OCTOBER = 12 * WORKDAY_PAGES + 18 * OFFDAY_PAGES
+# October 2026 is the first month at MONTHLY_PAGES. Its counted days (from
+# the 2nd: 12 Tue-Thu, 18 Fri-Mon) weigh 960 in quotas, so a quota-weighted
+# day carries 1000/960 of its 20 or 40 pages.
+OCTOBER = MONTHLY_PAGES
+SCALE = Fraction(MONTHLY_PAGES, 12 * WORKDAY_PAGES + 18 * OFFDAY_PAGES)
+
+
+def _line(quota_pages: int, *, scale: Fraction = SCALE) -> int:
+    """The pace line after days whose quotas sum to ``quota_pages``."""
+    return math.ceil(quota_pages * scale)
 
 
 def _never(_day: date) -> bool:
@@ -69,8 +78,8 @@ def test_before_gate_start_nothing_is_owed() -> None:
 def test_first_day_of_gate_requires_nothing() -> None:
     pace = _pace.compute_pace(Ledger(), GATE_START_DATE, _never)
     assert pace.required == 0
-    # Oct 1 predates the quotas: the line on Oct 3 is Friday's 40 alone.
-    assert _pace.compute_pace(Ledger(), date(2026, 10, 3), _never).required == 40
+    # Oct 1 predates the quotas: the line on Oct 3 is Friday's share alone.
+    assert _pace.compute_pace(Ledger(), date(2026, 10, 3), _never).required == _line(40)
 
 
 def test_required_is_prorated_over_elapsed_days() -> None:
@@ -79,32 +88,32 @@ def test_required_is_prorated_over_elapsed_days() -> None:
     assert pace.target == OCTOBER
     assert pace.pages == 40
     # Oct 2-10: Fri Sat Sun Mon (4x40) Tue Wed Thu (3x20) Fri Sat (2x40)
-    assert pace.required == 4 * 40 + 3 * 20 + 2 * 40
+    assert pace.required == _line(4 * 40 + 3 * 20 + 2 * 40)
     assert pace.behind == pace.required - 40
 
 
 def test_debt_carries_across_months() -> None:
     ledger = Ledger([_credit("2026-10-05", 100), _credit("2026-11-02", 700)])
-    # 860 short, split over November and December.
+    # 900 short, split over November and December.
     november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
-    assert november.carried_debt == 430
-    assert november.target == MONTHLY_PAGES + 430
-    # December is the year's last month: all 860 + 300 short in November.
+    assert november.carried_debt == 450
+    assert november.target == MONTHLY_PAGES + 450
+    # December is the year's last month: all 900 + 300 short in November.
     december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
-    assert december.carried_debt == 860 + MONTHLY_PAGES - 700
+    assert december.carried_debt == 900 + MONTHLY_PAGES - 700
     # January takes December's whole balance.
     january = _pace.compute_pace(Ledger(), date(2027, 1, 15), _never)
     assert january.carried_debt == OCTOBER + 2 * MONTHLY_PAGES
 
 
 def test_surplus_carries_across_months() -> None:
-    # 2000 pages by Oct 5 read October's 960 and 1040 ahead.
-    ledger = Ledger([_credit("2026-10-05", 2000)])
+    # 2500 pages by Oct 5 read October's 1000 and 1500 ahead.
+    ledger = Ledger([_credit("2026-10-05", 2500)])
     november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
-    assert (november.carried_credit, november.target) == (520, MONTHLY_PAGES - 520)
+    assert (november.carried_credit, november.target) == (750, MONTHLY_PAGES - 750)
     december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
     assert december.carried_debt == 0
-    assert december.carried_credit == 2000 - OCTOBER - MONTHLY_PAGES
+    assert december.carried_credit == 2500 - OCTOBER - MONTHLY_PAGES
     assert december.target == MONTHLY_PAGES - december.carried_credit
 
 
@@ -134,9 +143,11 @@ def test_free_days_move_the_line() -> None:
     pace = _pace.compute_pace(Ledger(), date(2026, 10, 11), free.__contains__)
     assert pace.required == 0
     later = _pace.compute_pace(Ledger(), date(2026, 10, 16), free.__contains__)
+    # The month keeps its 1000; Oct 11-31 (660 in quotas) carry all of it.
     # Oct 11-15 counted: Sun Mon (2x40) Tue Wed Thu (3x20)
-    assert later.required == 2 * 40 + 3 * 20
-    assert later.target == OCTOBER - (4 * 40 + 3 * 20 + 2 * 40)
+    rest = Fraction(MONTHLY_PAGES, 960 - (4 * 40 + 3 * 20 + 2 * 40))
+    assert later.required == _line(2 * 40 + 3 * 20, scale=rest)
+    assert later.target == OCTOBER
 
 
 def test_all_days_free() -> None:
@@ -159,21 +170,25 @@ def test_surplus_lightens_workdays_not_tomorrow() -> None:
     ledger = Ledger([_credit("2026-10-02", 44)])
     saturday = _pace.compute_pace(ledger, date(2026, 10, 3), _never)
     assert (saturday.required, saturday.behind) == (44, 0)
-    # Saturday's 40 is still owed in full: the 4 extra went to the workdays.
+    # Saturday's share is still owed in full: the extra went to the workdays.
     sunday = _pace.compute_pace(ledger, date(2026, 10, 4), _never)
-    assert sunday.required == 44 + 40
-    # Tuesday lost 4/12 of a page: 44 + 3x40 + 19.67 rounds up to 184.
+    assert sunday.required == math.ceil(44 + 40 * SCALE)
+    # Tuesday lost a twelfth of the extra.
+    extra = 44 - 40 * SCALE
     wednesday = _pace.compute_pace(ledger, date(2026, 10, 7), _never)
-    assert wednesday.required == 184
+    assert wednesday.required == math.ceil(
+        44 + 3 * 40 * SCALE + 20 * SCALE - extra / 12
+    )
     assert wednesday.target == OCTOBER
 
 
 def test_surplus_past_the_workdays_lightens_fri_to_mon() -> None:
-    # 260 extra: the 12 remaining workdays absorb 240, then 20 is split over
-    # the 17 remaining Fri-Mon days.
+    # The 12 remaining workdays absorb all they hold, then the rest is split
+    # over the 17 remaining Fri-Mon days.
     ledger = Ledger([_credit("2026-10-02", 300)])
+    left = 300 - 40 * SCALE - 12 * 20 * SCALE
     wednesday = _pace.compute_pace(ledger, date(2026, 10, 7), _never)
-    assert wednesday.required == 417  # 300 + 3 * (40 - 20/17), Tue at 0
+    assert wednesday.required == math.ceil(300 + 3 * (40 * SCALE - left / 17))
     assert wednesday.target == OCTOBER
 
 
