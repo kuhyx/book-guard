@@ -80,9 +80,6 @@ class SessionInfo {
   /// The last failed grading, when a rewrite is awaited.
   final RetryInfo? retry;
 
-  /// Earns the day's +1h (book_guard `bonus_eligible`): 20+ pages, 20+ min.
-  bool get bonusEligible => pages >= 20 && minutes >= 20;
-
   /// Graded at least once: its times are the ones it was graded on.
   bool get graded =>
       status == 'credited' || status == 'failed-quiz' || retry != null;

@@ -5,36 +5,42 @@ Nothing here is stored. Every run re-derives, from the credits alone:
 
 * **base** for a month = :data:`MONTHLY_PAGES` (before
   :data:`MONTHLY_GOAL_START`: the sum of its counted days' quotas), split
-  over its counted days in the :data:`WORKDAY_PAGES` Tue-Thu :
-  :data:`OFFDAY_PAGES` Fri-Mon ratio;
+  over its counted days -- before :data:`QUOTA_SWITCH_DATE` 20:40
+  Tue-Thu:Fri-Mon, from it 15:30:50 Tue-Thu:Mon,Fri:Sat,Sun with weekends
+  capped at 60 (:mod:`book_guard._quotas`);
 * **balance** = every past month's base minus the pages read in it: what is
   owed (or, negative, read ahead) beyond the bases;
 * **carry** into a month = the balance split evenly over the months left in
   the year, this one included, rounded away from zero -- so the earliest
   months take the odd pages and none is lost. January takes all of
   December's balance (no month of its year is left to share it);
-* **target** = base + carry, never below 0. A carried debt is spread evenly
-  over the counted days; a carried surplus comes off them like an in-month
-  surplus (see :mod:`book_guard._plan`);
+* **target** = base + carry, never below 0. From the switch the whole target
+  is split by weight; before it, a carried debt was spread evenly over the
+  counted days and a carried surplus came off them like an in-month surplus
+  (see :mod:`book_guard._plan`);
 * **required by today** = the plan's line at the *start* of today -- today's
   share is due tomorrow, so an evening reader is never locked in the morning
   for pages they meant to read tonight, and a declared free day moves the
   line instead of silently creating a deficit. Pages read past the line come
-  off later workdays first, then later Fri-Mon days (:mod:`book_guard._plan`).
-* **debt share** = the pages behind the line split evenly over the month's
-  remaining counted days, today included -- recomputed every day, so a
-  deficit is never asked for in one sitting; what is still short at month
-  end goes into the balance.
+  off later Mon-Fri days (before the switch: Tue-Thu, then Fri-Mon).
+* **debt share** = the pages behind the line spread evenly over the month's
+  remaining Sat/Sun days, today included, none past 60 -- recomputed every
+  day; what fits nowhere, or is still short at month end, goes into the
+  balance. (Before the switch: evenly over all remaining counted days.)
+* **today's requirement** = today's quota after the moves plus, on a
+  weekend, today's debt share, fixed at the start of the day and rounded up.
+  Reaching it earns the day's bonus (:mod:`book_guard._bonus`).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from fractions import Fraction
 import math
 from typing import TYPE_CHECKING
 
+from book_guard._ask import Ask, today_ask
 from book_guard._books import all_books
 from book_guard._constants import (
     DAILY_PASS_PAGES,
@@ -42,6 +48,7 @@ from book_guard._constants import (
     MONTHLY_PAGES,
     OFFDAY_PAGES,
     PACE_START_DATE,
+    QUOTA_SWITCH_DATE,
     WORKDAY_PAGES,
 )
 from book_guard._ledger import CREDIT
@@ -69,22 +76,13 @@ class Pace:
     pages_today: int = 0
     days_left: int = 0
     """Counted (non-free) days left in the month, today included."""
+    ask: Ask = field(default_factory=Ask)
+    """Today's requirement (the bonus threshold) and the debt's spread."""
 
     @property
     def behind(self) -> int:
         """Pages short of the line right now (0 when on pace)."""
         return max(0, self.required - self.pages)
-
-    @property
-    def debt_per_day(self) -> int:
-        """Extra pages a day that clear :attr:`behind` by month end.
-
-        0 when on pace or when no counted day is left: then the debt simply
-        goes into the balance spread over the months left.
-        """
-        if not self.days_left:
-            return 0
-        return math.ceil(self.behind / self.days_left)
 
     @property
     def passed_today(self) -> bool:
@@ -160,8 +158,8 @@ def _plan(
     is_free: Callable[[date], bool],
     carry: int,
     until: date,
-) -> tuple[MonthPlan, dict[date, int], int, int]:
-    """The month's plan through ``until``: plan, daily pages, books, base."""
+) -> tuple[MonthPlan, MonthInput, int, int]:
+    """The month's plan through ``until``: plan, its input, books, base."""
     counted = _counted(first, is_free)
     quotas = {d: _quota(d) for d in counted}
     total = sum(quotas.values())
@@ -176,8 +174,8 @@ def _plan(
         credit=Fraction(max(-carry, 0)),
         pages_on=pages_on,
     )
-    plan = plan_month(month, until)
-    return plan, pages_on, finished, base
+    switch = QUOTA_SWITCH_DATE if _next_month(first) > QUOTA_SWITCH_DATE else None
+    return plan_month(month, until, switch), month, finished, base
 
 
 def compute_pace(ledger: Ledger, today: date, is_free: Callable[[date], bool]) -> Pace:
@@ -187,20 +185,23 @@ def compute_pace(ledger: Ledger, today: date, is_free: Callable[[date], bool]) -
     balance = 0
     while first < current:
         month_end = _next_month(first) - timedelta(days=1)
-        _, pages_on, _, base = _plan(ledger, first, is_free, 0, month_end)
-        balance += base - sum(pages_on.values())
+        _, done, _, base = _plan(ledger, first, is_free, 0, month_end)
+        balance += base - sum(done.pages_on.values())
         first = _next_month(first)
 
     carry = _share(balance, _months_left(current))
-    plan, pages_on, finished, _ = _plan(ledger, current, is_free, carry, today)
+    plan, month, finished, _ = _plan(ledger, current, is_free, carry, today)
+    pages = sum(month.pages_on.values())
+    required = math.ceil(plan.line_before(today))
     return Pace(
         month=current,
         target=math.ceil(plan.target),
         carried_debt=max(carry, 0),
-        pages=sum(pages_on.values()),
-        required=math.ceil(plan.line_before(today)),
+        pages=pages,
+        required=required,
         finished_books=finished,
         carried_credit=max(-carry, 0),
-        pages_today=pages_on.get(today, 0),
-        days_left=sum(1 for d in _counted(current, is_free) if d >= today),
+        pages_today=month.pages_on.get(today, 0),
+        days_left=sum(1 for d in month.counted if d >= today),
+        ask=today_ask(ledger, plan, month, today, max(0, required - pages)),
     )

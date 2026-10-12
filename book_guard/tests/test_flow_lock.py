@@ -70,7 +70,17 @@ def test_demo_lock_arms_without_waiting(
         "window.grab_input",
     ]
     assert [ms for ms, _cb in _root(gate).scheduled] == [POLL_INTERVAL_MS, 500]
-    assert gate._vars.status.get().startswith("LOCKED: 438 pages behind")
+    status = gate._vars.status.get()
+    assert status.startswith("LOCKED: 423 pages behind")
+    # The locked screen keeps the requirement, the pass and where the debt goes.
+    assert status.splitlines()[3:] == [
+        "Today: 0/18 pages, today's requirement (reaching it earns the +1h bonus)",
+        "Lock pass: 0/20 pages (not yet: 20 pages a day open the lock even when behind)",
+        (
+            "Debt: 423 pages = up to 3/day over the 5 weekend days left "
+            "(Sat/Sun, at most 60 a day); 409 carried into next month"
+        ),
+    ]
     assert gate._vars.todo.get().startswith("No book registered")
     assert gate._vars.quiz_title.get() == "No session is waiting for a summary."
     gate.run()

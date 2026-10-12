@@ -62,22 +62,27 @@ never makes the app useless.
 
 | | |
 |---|---|
-| Monthly target | 1000 pages, split 20:40 Tue-Thu:Fri-Mon over non-free days, plus this month's share of the year's balance |
+| Monthly target | 1000 pages plus this month's share of the year's balance, split over non-free days by weight: Tue-Thu 15, Mon/Fri 30, Sat/Sun 50 (from 2026-10-12; before it 20:40 Tue-Thu:Fri-Mon) |
+| Weekend cap | a Sat/Sun never asks more than 60 pages, debt included; a month whose split would push weekends higher (February) pins them at 60 and spreads the rest over Mon-Fri, still 15:30 |
 | Year balance | each month's 1000 minus pages read, summed: spread evenly over the months left in the year (this one included, odd pages first), a surplus lowering targets and a shortfall raising them, never below 0; December's balance lands whole on January |
-| Pace line | `ceil(target * elapsed / counted)`, days weighted by their quota; today's share is due tomorrow |
-| Debt | pages behind the line, shown as an even share over the month's counted days left (today included), recomputed daily; at month end it goes into the year balance |
+| Pace line | `ceil(target * elapsed / counted)`, days weighted by their quota; today's share is due tomorrow. At the 2026-10-12 switch the line stayed where the old plan had it; the rest of October was re-split by the new weights |
+| Ahead | pages past the line come off the month's remaining Mon-Fri days, evenly, never off a weekend; what they cannot absorb carries into the year balance |
+| Debt | pages behind the line go onto the month's remaining Sat/Sun days, evenly, none past 60; what fits nowhere (or is still short at month end) goes into the year balance |
+| Today's requirement | today's quota after those moves plus, on a weekend, its debt share, rounded up and fixed at the start of the day |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up, or until 20 pages are credited that day (by the day the reading ended; clears the lock only, no bonus) |
 | Escape | 2 per month; forgives the day, credits no pages |
 | Summary | a fail lists what to add; rewrite as often as needed, judged on that; ungraded credit after 1 h of grader outage |
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |
 | Starts | 2026-10-01 |
 
-**Bonuses** (read from the ledger by the consumers, fail closed): a credited
-session of 15+ pages and 15+ minutes -- or 10+ and 10+ when the reader is on
-the pace line once it is counted -- earns **+1h** of shutdown time in
-screen-locker and **+1h** of gaming in steam-backlog-enforcer, once per day,
-dated by when the reading ended. A session that qualifies only under a newer
-rule gets a zero-page bonus row from `book_guard regrant` (signed rows are never
+**Bonuses** (read from the ledger by the consumers, fail closed): a day whose
+credited pages (summed across sessions, dated by when the reading ended)
+reach **today's requirement** earns **+1h** of shutdown time in
+screen-locker and **+1h** of gaming in steam-backlog-enforcer, once per day;
+the credit row that gets there carries the flag. Before 2026-10-12 it was one
+session of 15+ pages and 15+ minutes, or 10+ and 10+ when on pace. A day
+that qualifies only later (a late-graded session lowered its requirement)
+gets a zero-page bonus row from `book_guard regrant` (signed rows are never
 edited; it is idempotent and `--dry-run` previews it). To pay for it, from 2026-10-01 the shutdown
 base is 19:00 (cap 23:00) and the gaming base 4h (cap 8h).
 

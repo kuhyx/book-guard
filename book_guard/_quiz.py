@@ -83,7 +83,10 @@ def _vote(answer: dict[str, object]) -> Verdict:
 
 
 def bonus_eligible(session: Session, *, on_pace: bool = False) -> bool:
-    """Whether this session earns the day's reading hour by size alone.
+    """Whether this session earned the day's reading hour by size alone.
+
+    The rule before :data:`QUOTA_SWITCH_DATE`; from it the day's requirement
+    decides (:func:`book_guard._bonus.reaches_requirement`).
 
     ``on_pace`` is the smaller bar for a reader on the pace line; the pace
     itself is judged in :func:`record_verdict`, where the ledger is at hand.

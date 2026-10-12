@@ -8,6 +8,7 @@ from datetime import timedelta
 
 import pytest
 
+from book_guard._ask import Ask
 from book_guard._render import session_line, status_lines, todo_lines
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, SessionView
@@ -24,7 +25,10 @@ from book_guard.tests._flow_helpers import (
 
 WHEN = T0.astimezone().strftime("%a %d.%m %H:%M")
 CHECK = only_session(check_pair())
-TODAY = "Today: 0/20 pages (not yet: 20 pages a day open the lock even when behind)"
+TODAY = [
+    "Today: 0/0 pages, today's requirement (reaching it earns the +1h bonus)",
+    "Lock pass: 0/20 pages (not yet: 20 pages a day open the lock even when behind)",
+]
 
 
 @pytest.mark.parametrize(
@@ -73,20 +77,20 @@ def test_status_lines_locked_with_everything() -> None:
     views = [SessionView(CHECK, None, NEEDS_CHECK)] * 8
     snap = make_snap(book=make_book(), sessions=views, locked=True)
     lines = status_lines(snap, recent=3)
-    assert lines[:6] == [
+    assert lines[:7] == [
         "LOCKED: 12 pages behind",
         "Book: War -- Tol, last page 300",
         (
             "October 2026: 12/300 pages (pace line today: 40; carried debt 5; "
             "books finished 1)"
         ),
-        TODAY,
+        *TODAY,
         "Debt: 28 pages, carried into next month",
         "Escapes left this month: 2",
     ]
-    assert lines[6:8] == ["", "Next:"]
+    assert lines[7:9] == ["", "Next:"]
     assert lines.count("Recent sessions:") == 1
-    assert len(lines) == 6 + 2 + 8 + 2 + 3
+    assert len(lines) == 7 + 2 + 8 + 2 + 3
 
 
 def test_status_lines_quiet() -> None:
@@ -98,25 +102,47 @@ def test_status_lines_quiet() -> None:
             "October 2026: 12/300 pages (pace line today: 40; carried debt 5; "
             "books finished 1)"
         ),
-        TODAY,
+        *TODAY,
         "Debt: 28 pages, carried into next month",
         "Escapes left this month: 2",
     ]
 
 
-def test_status_lines_show_the_daily_pass_and_debt_share() -> None:
-    pace = dataclasses.replace(make_snap().pace, pages_today=20, days_left=5)
+def test_status_lines_show_the_requirement_pass_and_weekend_debt() -> None:
+    pace = dataclasses.replace(
+        make_snap().pace,
+        pages_today=20,
+        ask=Ask(required=34, debt_per_day=5, debt_days=3),
+    )
     lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
-    assert lines[3:5] == [
-        "Today: 20/20 pages (passed: 20 pages a day open the lock even when behind)",
-        "Debt: 28 pages = 6/day over the 5 counted days left this month",
+    assert lines[3:6] == [
+        "Today: 20/34 pages, today's requirement (reaching it earns the +1h bonus)",
+        "Lock pass: 20/20 pages (passed: 20 pages a day open the lock even when behind)",
+        (
+            "Debt: 28 pages = up to 5/day over the 3 weekend days left (Sat/Sun, "
+            "at most 60 a day)"
+        ),
     ]
+
+
+def test_status_lines_carry_debt_no_weekend_holds() -> None:
+    pace = dataclasses.replace(
+        make_snap().pace,
+        pages_today=40,
+        ask=Ask(required=34, bonus=True, debt_per_day=2, debt_days=2, debt_unplaced=24),
+    )
+    lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
+    assert lines[3] == "Today: 40/34 pages, today's requirement (bonus earned)"
+    assert lines[5] == (
+        "Debt: 28 pages = up to 2/day over the 2 weekend days left (Sat/Sun, "
+        "at most 60 a day); 24 carried into next month"
+    )
 
 
 def test_status_lines_on_pace_show_no_debt() -> None:
     pace = dataclasses.replace(make_snap().pace, pages=40)
     lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
-    assert lines[3:5] == [TODAY, "Escapes left this month: 2"]
+    assert lines[3:6] == [*TODAY, "Escapes left this month: 2"]
 
 
 def test_status_lines_without_a_book() -> None:

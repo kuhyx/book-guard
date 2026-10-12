@@ -15,12 +15,30 @@ PACE_START_DATE: Final = date(2026, 10, 2)
 
 WORKDAY_PAGES: Final = 20
 OFFDAY_PAGES: Final = 40
-"""Each counted (non-free) day's share of its month's target:
+"""Before :data:`QUOTA_SWITCH_DATE`: each counted (non-free) day's weight,
 :data:`WORKDAY_PAGES` on ``freedays.WORKDAYS`` (Tue-Thu), :data:`OFFDAY_PAGES`
-on Fri-Mon -- 220 a week, the long weekend doing the heavy lifting while
-workdays keep the book moving. From :data:`MONTHLY_GOAL_START` they are only
-weights: the month's :data:`MONTHLY_PAGES` is split over its counted days in
-this 20:40 ratio."""
+on Fri-Mon. The month's :data:`MONTHLY_PAGES` was split over its counted days
+in this 20:40 ratio; days before the switch keep those quotas."""
+
+QUOTA_SWITCH_DATE: Final = date(2026, 10, 12)
+"""From this day (a Monday) the month is split by :data:`MIDWEEK_WEIGHT`,
+:data:`EDGE_WEIGHT` and :data:`WEEKEND_WEIGHT`, surplus comes off Mon-Fri,
+debt goes onto weekends, and the day's bonus is earned by reading the day's
+requirement. The line at its start is the old plan's line exactly: the rest
+of October's target is re-split over Oct 12-31, nothing jumps."""
+
+MIDWEEK_WEIGHT: Final = 15
+EDGE_WEIGHT: Final = 30
+WEEKEND_WEIGHT: Final = 50
+"""From :data:`QUOTA_SWITCH_DATE`, a counted day's weight: Tue/Wed/Thu 15,
+Mon/Fri 30, Sat/Sun 50. Only the ratio matters: each month's target is
+rescaled over its counted days (weekends capped at :data:`WEEKEND_CAP_PAGES`)."""
+
+WEEKEND_CAP_PAGES: Final = 60
+"""No Sat/Sun asks for more than this, base quota plus debt. A month whose
+rescale would push its weekends higher pins them at 60 and spreads the rest
+over Mon-Fri (still 15:30); debt that no weekend can hold carries into the
+next month through the year balance."""
 
 MONTHLY_PAGES: Final = 1000
 """Each month's goal from :data:`MONTHLY_GOAL_START`, before the year's carry."""
@@ -33,8 +51,7 @@ DAILY_PASS_PAGES: Final = 20
 """Pages credited on one day (summed across sessions, by the day the reading
 ended) that open the lock for the rest of that day even while behind the
 pace line: reading anything beats reading nothing. It clears the lock only --
-it earns no bonus; the debt stays and is spread over the month's remaining
-counted days."""
+it earns no bonus; the debt stays, on the month's remaining weekends."""
 
 MIN_SECONDS_PER_PAGE: Final = 50
 """A session faster than this is page-flipping, not reading."""
@@ -56,13 +73,15 @@ Claude being down must never make the app useless."""
 
 BONUS_MIN_PAGES: Final = 15
 BONUS_MIN_MINUTES: Final = 15
-"""One credited session at least this big earns the day's reading hour in
-screen-locker (shutdown) and steam-backlog-enforcer (gaming)."""
+"""Before :data:`QUOTA_SWITCH_DATE`: one credited session at least this big
+earned the day's reading hour in screen-locker (shutdown) and
+steam-backlog-enforcer (gaming). From the switch the hour is earned by the
+day's credited pages reaching the day's requirement (``_bonus``)."""
 
 PACE_BONUS_MIN_PAGES: Final = 10
 PACE_BONUS_MIN_MINUTES: Final = 10
-"""The smaller bar for a reader who is on the pace line once the session is
-counted: being ahead earns the same hour, but a few flipped pages still do not."""
+"""Before :data:`QUOTA_SWITCH_DATE`: the smaller bar for a reader on the pace
+line once the session is counted."""
 
 ESCAPES_PER_MONTH: Final = 2
 """Escape-hatch uses allowed per calendar month. An escape forgives the day's

@@ -47,10 +47,17 @@ Read README.md first. These are the invariants that are easy to break.
 - **The ledger is the only value-carrying state**, HMAC-signed with the shared
   `/etc/workout-locker/hmac.key`. screen-locker and steam-backlog-enforcer
   read `credit` rows with `detail.bonus == "1"`, dated by `detail.ended_at`.
-  The rule (`_bonus.py`): 15 pages + 15 min, or 10 + 10 when on pace once the
-  session is counted -- judged at credit time. Consumers cannot judge pace, so
-  a rule change reaches old rows only via `regrant` (zero-page `bonus:<id>` row).
+  The rule (`_bonus.py`), from `QUOTA_SWITCH_DATE` (2026-10-12): the day's
+  credited pages reach the day's requirement (`Pace.ask.required`: quota
+  after surplus moves + weekend debt share, ceil), stamped on the crossing
+  row, one per day; before it 15 pages + 15 min, or 10 + 10 when on pace --
+  judged at credit time. Consumers cannot judge pace, so a rule change
+  reaches old rows only via `regrant` (zero-page `bonus:<id>` row).
   Changing that contract means changing both consumers in the same session.
+- **Quotas** (`_quotas.py`, `_plan.py`): from the switch Tue-Thu 15, Mon/Fri
+  30, Sat/Sun 50, weekends capped at 60 (debt included); surplus comes off
+  Mon-Fri only, debt goes onto weekends only. The switch month keeps the old
+  plan's line at the switch exactly -- never re-split the days before it.
 - **Nothing credits without the grader** -- except a summary (150+ chars)
   whose grading has failed for `GRADER_GRACE` (1 h, outage or usage cap):
   `quiz_one` credits it with `detail.graded == "0"`. The MCP server and the

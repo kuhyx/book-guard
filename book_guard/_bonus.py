@@ -1,6 +1,12 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """Who earns the day's reading hour, and the grant for rows written before a rule.
 
+From :data:`QUOTA_SWITCH_DATE` the day earns it when its credited pages
+(summed across sessions, dated by when the reading ended) reach the day's
+requirement (:attr:`Pace.ask.required`); the credit row that gets there
+carries the flag, one per day. Before the switch it was one session's size:
+15 pages + 15 min, or 10 + 10 when on pace once counted.
+
 The consumers (screen-locker, steam-backlog-enforcer) only read
 ``detail.bonus == "1"`` on a ``credit`` row, so the rule lives here and is
 stamped into the row when it is written. Rows are signed and never edited: a
@@ -20,6 +26,7 @@ from book_guard._constants import (
     BONUS_MIN_PAGES,
     PACE_BONUS_MIN_MINUTES,
     PACE_BONUS_MIN_PAGES,
+    QUOTA_SWITCH_DATE,
 )
 from book_guard._flock import exclusive
 from book_guard._ledger import CREDIT, Entry, Ledger, append, load
@@ -53,8 +60,44 @@ def is_on_pace(ledger: Ledger, credit: Entry) -> bool:
     return pace.behind == 0
 
 
+def day_requirement(ledger: Ledger, day: date) -> int:
+    """What ``day`` asks, judged from the credits dated before it."""
+    kept = [
+        e for e in ledger.entries if not (e.kind == CREDIT and e.day >= day.isoformat())
+    ]
+    return compute_pace(Ledger(kept), day, freedays.is_free_day).ask.required
+
+
+def reaches_requirement(ledger: Ledger, credit: Entry) -> bool:
+    """Whether ``credit`` brings its day's pages to the day's requirement.
+
+    ``ledger`` is everything but ``credit``: at credit time the rows written
+    so far, in :func:`regrant` every other row (so a day whose credits now
+    reach the requirement is granted once, on its first credit). A day keeps
+    one bonus: a same-day row that already carries it means this one does
+    not. A row with no pages never earns it, so a day that asks nothing
+    still needs some reading.
+    """
+    if credit.amount <= 0:
+        return False
+    pages = credit.amount
+    for entry in ledger.entries:
+        if entry.kind != CREDIT or entry.day != credit.day:
+            continue
+        if entry.detail.get("bonus") == "1":
+            return False
+        pages += entry.amount
+    return pages >= day_requirement(ledger, date.fromisoformat(credit.day))
+
+
 def earns(pages: int, minutes: int, ledger: Ledger, credit: Entry) -> bool:
-    """Whether ``credit`` earns the hour: big enough, or smaller but on pace."""
+    """Whether ``credit`` earns the hour.
+
+    From :data:`QUOTA_SWITCH_DATE`: the day's requirement is reached
+    (:func:`reaches_requirement`). Before it: big enough, or smaller but on pace.
+    """
+    if credit.day >= QUOTA_SWITCH_DATE.isoformat():
+        return reaches_requirement(ledger, credit)
     if qualifies(pages, minutes, on_pace=False):
         return True
     return qualifies(pages, minutes, on_pace=True) and is_on_pace(ledger, credit)

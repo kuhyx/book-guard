@@ -173,12 +173,30 @@ void main() {
       'minutes': 49,
       'status': 'needs-quiz',
     });
+    Pace pace({int required = 60, int today = 10, bool bonus = false}) =>
+        Pace.fromJson({
+          'today_required': required,
+          'pages_today': today,
+          'bonus_today': bonus,
+        });
     expect(
-      expectedCredit(big),
+      expectedCredit(big, pace: pace()),
       'Passing credits 53 pages and +1h gaming. If the grader is unreachable '
       'for an hour, it is credited without grading.',
     );
-    expect(expectedCredit(_session()), startsWith('Passing credits 0 pages. '));
+    // 10 + 53 short of 64; a bonus already earned today; no pace known; a
+    // PC too old to send today's requirement.
+    final old = Pace.fromJson(const {'pages_today': 10});
+    for (final short in [pace(required: 64), pace(bonus: true), null, old]) {
+      expect(
+        expectedCredit(big, pace: short),
+        startsWith('Passing credits 53 pages. '),
+      );
+    }
+    expect(
+      expectedCredit(_session(), pace: pace(required: 0)),
+      startsWith('Passing credits 0 pages. '),
+    );
   });
 
   testWidgets('a retry without a missing list shows no empty list', (

@@ -79,7 +79,7 @@ def test_behind_locks(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (
         True,
-        "438 pages behind the pace line; 20 more pages read today open it",
+        "423 pages behind the pace line; 20 more pages read today open it",
     )
     assert snap.escapes_left == 2
 
@@ -90,7 +90,7 @@ def test_twenty_pages_today_open_the_lock_while_behind(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (
         False,
-        "20 pages read today (still 418 behind the pace line)",
+        "20 pages read today (still 403 behind the pace line)",
     )
 
 
@@ -101,12 +101,12 @@ def test_nineteen_pages_today_stay_locked(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (
         True,
-        "389 pages behind the pace line; 1 more page read today open it",
+        "374 pages behind the pace line; 1 more page read today open it",
     )
 
 
 def test_on_pace(bg_paths: Paths) -> None:
-    add_credit(bg_paths, "2026-10-14", 438)
+    add_credit(bg_paths, "2026-10-14", 423)
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason) == (False, "on pace")
 
@@ -147,7 +147,12 @@ def test_to_json_full(bg_paths: Paths) -> None:
         "chapter": None,
     }
     assert doc["pace"]["month"] == "2026-10"
-    assert doc["pace"]["behind"] == 437
+    assert doc["pace"]["behind"] == 422
+    # Thu Oct 15 asks its 15-weight share of the 646 left at the switch; the
+    # debt fills the five weekends left to 60 (57.15 base) and the rest carries.
+    keys = ("today_required", "debt_per_day", "debt_days_left", "debt_unplaced")
+    assert [doc["pace"][k] for k in keys] == [18, 3, 5, 408]
+    assert doc["pace"]["bonus_today"] is False
     assert doc["open_start"]["page"] == 50
     first = doc["sessions"][0]
     assert (first["status"], first["book"], first["check_page"]) == (
@@ -179,7 +184,7 @@ def test_publish_writes_both_files(bg_paths: Paths) -> None:
     _publish.write_next_file(bg_paths, snap)
     body = bg_paths.next_file.read_text(encoding="utf-8")
     assert body.startswith("book-guard -- open this after uploading photos.\n\n")
-    assert "LOCKED: 438 pages behind the pace line" in body
+    assert "LOCKED: 423 pages behind the pace line" in body
     assert body.endswith("Page numbers must be visible.\n")
     state = json.loads(bg_paths.state_file.read_text(encoding="utf-8"))
     assert state["locked"] is True

@@ -143,10 +143,14 @@ def test_free_days_move_the_line() -> None:
     pace = _pace.compute_pace(Ledger(), date(2026, 10, 11), free.__contains__)
     assert pace.required == 0
     later = _pace.compute_pace(Ledger(), date(2026, 10, 16), free.__contains__)
-    # The month keeps its 1000; Oct 11-31 (660 in quotas) carry all of it.
-    # Oct 11-15 counted: Sun Mon (2x40) Tue Wed Thu (3x20)
-    rest = Fraction(MONTHLY_PAGES, 960 - (4 * 40 + 3 * 20 + 2 * 40))
-    assert later.required == _line(2 * 40 + 3 * 20, scale=rest)
+    # The month keeps its 1000. Before the switch Oct 11-31 weighed 660 in
+    # 20:40 quotas, so Sun Oct 11 asked 40/660 of it; the rest, re-split
+    # 15:30:50 over Oct 12-31, would ask 83 a weekend day: the five weekend
+    # days sit at 60 and Mon-Fri (315 units) share the remainder.
+    sunday = Fraction(40 * MONTHLY_PAGES, 660)
+    unit = (MONTHLY_PAGES - sunday - 5 * 60) / 315
+    # Oct 12-15: Mon (30) Tue Wed Thu (3x15).
+    assert later.required == math.ceil(sunday + (30 + 3 * 15) * unit)
     assert later.target == OCTOBER
 
 

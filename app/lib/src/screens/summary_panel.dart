@@ -8,12 +8,15 @@ import 'package:book_guard_app/src/summary_store.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// What [session] earns once its summary passes -- worked out here, so it
-/// shows offline too. The PC signs the credit when it sees the summary.
-String expectedCredit(SessionInfo session) =>
+/// What [session] earns once its summary passes -- worked out here from the
+/// last [pace], so it shows offline too: the +1h comes when today's credited
+/// pages reach today's requirement. The PC signs the credit when it sees the
+/// summary.
+String expectedCredit(SessionInfo session, {Pace? pace}) =>
     'Passing credits ${session.pages} pages'
-    '${session.bonusEligible ? ' and +1h gaming' : ''}. If the grader is '
-    'unreachable for an hour, it is credited without grading.';
+    '${pace?.earnsBonus(session.pages) ?? false ? ' and +1h gaming' : ''}. '
+    'If the grader is unreachable for an hour, it is credited without '
+    'grading.';
 
 /// The summary for [session]: typed text kept as a draft, locked while the
 /// grader has it, and still "with the grader" after leaving the tab -- the
@@ -29,6 +32,7 @@ class SummaryPanel extends StatefulWidget {
     required this.onChanged,
     super.key,
     this.grader,
+    this.pace,
   });
 
   /// The PC.
@@ -42,6 +46,9 @@ class SummaryPanel extends StatefulWidget {
 
   /// Why grading may wait (Claude down), if it may.
   final String? grader;
+
+  /// The month's pace, for the bonus hint (today's requirement).
+  final Pace? pace;
 
   @override
   State<SummaryPanel> createState() => _SummaryPanelState();
@@ -178,7 +185,7 @@ class _SummaryPanelState extends State<SummaryPanel> {
         if (_passed != true)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Text(expectedCredit(widget.session)),
+            child: Text(expectedCredit(widget.session, pace: widget.pace)),
           ),
       ],
     );

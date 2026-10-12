@@ -3,6 +3,13 @@
 
 Schema version 1. Every field the app shows comes from here; the app never
 derives pace or session state itself, so the PC stays the only authority.
+
+``pace.today_required`` is the day's requirement (its quota after surplus
+moves, plus its weekend debt share): the day's credited pages reaching it
+earn the +1h bonus; ``pace.bonus_today`` says a credit today already has it.
+``pace.debt_per_day`` is the debt asked of each of the ``debt_days_left``
+remaining weekend days (Sat/Sun, at most 60 a day with the base quota);
+``debt_unplaced`` fits on no day and carries into next month.
 """
 
 from __future__ import annotations
@@ -138,7 +145,11 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
             "pages_today": pace.pages_today,
             "passed_today": pace.passed_today,
             "days_left": pace.days_left,
-            "debt_per_day": pace.debt_per_day,
+            "debt_per_day": pace.ask.debt_per_day,
+            "debt_days_left": pace.ask.debt_days,
+            "debt_unplaced": pace.ask.debt_unplaced,
+            "today_required": pace.ask.required,
+            "bonus_today": pace.ask.bonus,
         },
         "open_start": None
         if start is None

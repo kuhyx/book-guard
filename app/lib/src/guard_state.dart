@@ -149,6 +149,9 @@ class Pace {
     required this.required,
     required this.behind,
     required this.carriedDebt,
+    this.todayRequired,
+    this.pagesToday = 0,
+    this.bonusToday = false,
   });
 
   /// Parses the `pace` object.
@@ -159,6 +162,9 @@ class Pace {
     required: _int(json['required']) ?? 0,
     behind: _int(json['behind']) ?? 0,
     carriedDebt: _int(json['carried_debt']) ?? 0,
+    todayRequired: _int(json['today_required']),
+    pagesToday: _int(json['pages_today']) ?? 0,
+    bonusToday: json['bonus_today'] == true,
   );
 
   /// `YYYY-MM`.
@@ -178,4 +184,21 @@ class Pace {
 
   /// This month's share of pages owed from earlier months.
   final int carriedDebt;
+
+  /// Today's requirement: the day's credited pages reaching it earn the +1h.
+  /// Null from a PC that predates it: then no bonus is promised.
+  final int? todayRequired;
+
+  /// Pages credited today, by the day the reading ended.
+  final int pagesToday;
+
+  /// A credit today already carries the bonus.
+  final bool bonusToday;
+
+  /// Whether [pages] more credited today would earn the day's +1h.
+  bool earnsBonus(int pages) => switch (todayRequired) {
+    final required? =>
+      !bonusToday && pages > 0 && pagesToday + pages >= required,
+    null => false,
+  };
 }

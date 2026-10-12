@@ -190,6 +190,7 @@ class _ReadTabState extends State<ReadTab> {
             api: widget.api,
             session: quiz.first,
             grader: graderNote(state),
+            pace: state?.pace,
             onChanged: widget.onChanged,
           ),
         FailedPhotos(
