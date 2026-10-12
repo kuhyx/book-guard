@@ -50,7 +50,9 @@ Read README.md first. These are the invariants that are easy to break.
   The rule (`_bonus.py`), from `QUOTA_SWITCH_DATE` (2026-10-12): the day's
   credited pages reach the day's requirement (`Pace.ask.required`: quota
   after surplus moves + weekend debt share, ceil), stamped on the crossing
-  row, one per day; before it 15 pages + 15 min, or 10 + 10 when on pace --
+  row, one per day; a day asking 0 gets a zero-page `bonus:auto:<day>` row
+  from the periodic runs (`_autogrant.py`: inbox pass, lock gate), once;
+  before the switch 15 pages + 15 min, or 10 + 10 when on pace --
   judged at credit time. Consumers cannot judge pace, so a rule change
   reaches old rows only via `regrant` (zero-page `bonus:<id>` row).
   Changing that contract means changing both consumers in the same session.

@@ -28,6 +28,7 @@ from gatelock import (
 
 from book_guard import _ledger
 from book_guard._actions import escape_today, process
+from book_guard._autogrant import auto_grant
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import POLL_INTERVAL_MS, RANK_BOOK_GUARD
 from book_guard._grading import quiz_one
@@ -235,6 +236,7 @@ def run_gate(paths: Paths, *, production: bool, today: date | None = None) -> in
     if not _ledger.key_usable(paths.key_file):
         _logger.error("integrity key %s unreadable -- gate not armed", paths.key_file)
         return 0
+    auto_grant(paths, today=today)
     snap = snapshot(paths, today=today)
     write_next_file(paths, snap)
     if not snap.locked:

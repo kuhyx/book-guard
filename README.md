@@ -79,7 +79,10 @@ never makes the app useless.
 credited pages (summed across sessions, dated by when the reading ended)
 reach **today's requirement** earns **+1h** of shutdown time in
 screen-locker and **+1h** of gaming in steam-backlog-enforcer, once per day;
-the credit row that gets there carries the flag. Before 2026-10-12 it was one
+the credit row that gets there carries the flag. A day that asks no pages
+(a free day, or a weekday reading ahead already emptied) earns it without
+reading: the next periodic run writes a zero-page `bonus:auto:<day>` row,
+once. Before 2026-10-12 it was one
 session of 15+ pages and 15+ minutes, or 10+ and 10+ when on pace. A day
 that qualifies only later (a late-graded session lowered its requirement)
 gets a zero-page bonus row from `book_guard regrant` (signed rows are never

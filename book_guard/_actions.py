@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Final
 from book_guard import _ledger
 from book_guard._app_handlers import HANDLERS
 from book_guard._attach import attach_dropped
+from book_guard._autogrant import auto_grant
 from book_guard._books import current, normalise_chapters, register
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
 from book_guard._errlog import merge_phone, merge_reports
@@ -84,6 +85,8 @@ def process(
     # grading call or a book index must not hold up the next photo pass.
     handle_requests(paths, HANDLERS)
     attached = attach_dropped(paths)
+    if grant := auto_grant(paths):
+        _logger.info("%s: today asks no pages, bonus granted", grant.day)
     snap = snapshot(paths)
     write_next_file(paths, snap)
     if result.read or attached:

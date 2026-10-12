@@ -66,6 +66,16 @@ def todo_lines(snap: Snapshot) -> list[str]:
     return lines
 
 
+def _today_line(p: Pace) -> str:
+    """Today's requirement and whether its +1h bonus is in."""
+    if not p.ask.required and p.ask.bonus:
+        return "Today asks no pages: the +1h bonus is granted without reading"
+    return (
+        f"Today: {p.pages_today}/{p.ask.required} pages, today's requirement "
+        f"({'bonus earned' if p.ask.bonus else _EARN})"
+    )
+
+
 def _debt_line(p: Pace) -> str:
     """Where the debt goes: onto the weekends left, what fits nowhere carried."""
     if not p.ask.debt_per_day:
@@ -94,10 +104,7 @@ def status_lines(snap: Snapshot, *, recent: int = 6) -> list[str]:
             f"{f'carried credit {p.carried_credit}; ' if p.carried_credit else ''}"
             f"books finished {p.finished_books})"
         ),
-        (
-            f"Today: {p.pages_today}/{p.ask.required} pages, today's requirement "
-            f"({'bonus earned' if p.ask.bonus else _EARN})"
-        ),
+        _today_line(p),
         (
             f"Lock pass: {p.pages_today}/{DAILY_PASS_PAGES} pages "
             f"({'passed' if p.passed_today else 'not yet'}: "
