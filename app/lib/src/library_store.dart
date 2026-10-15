@@ -46,28 +46,15 @@ extension LibraryStore on GuardApi {
 
   /// [book]'s notes: the PC's copy merged with the device's, the newer
   /// edit of each winning; by page (unpaged last), then oldest first.
-  Future<List<Note>> notesOf(LibraryBook book) async {
-    final byId = {for (final n in book.notes) n.id: n};
-    for (final name in await store.list(_notes)) {
-      final raw = await store.read(name);
-      if (raw == null) continue;
-      final note = Note.fromJson(
-        jsonDecode(utf8.decode(raw)) as Map<String, dynamic>,
-      );
-      final pc = byId[note.id];
-      if (note.isbn == book.isbn &&
-          (pc == null || note.updatedAt.isAfter(pc.updatedAt))) {
-        byId[note.id] = note;
-      }
-    }
-    return byId.values.toList()..sort(_byPlace);
-  }
+  Future<List<Note>> notesOf(LibraryBook book) async =>
+      mergeNotes(book, await deviceNotes());
 
-  static int _byPlace(Note a, Note b) {
-    final pa = a.page ?? 1 << 30;
-    final pb = b.page ?? 1 << 30;
-    return pa != pb ? pa.compareTo(pb) : a.createdAt.compareTo(b.createdAt);
-  }
+  /// Every note written on this device, for any book.
+  Future<List<Note>> deviceNotes() async => [
+    for (final name in await store.list(_notes))
+      if (await store.read(name) case final raw?)
+        Note.fromJson(jsonDecode(utf8.decode(raw)) as Map<String, dynamic>),
+  ];
 
   /// Keeps [note] on the device and queues it for the PC (a `note`
   /// request through the outbox); sent now if the PC answers, else later.
@@ -90,4 +77,30 @@ extension LibraryStore on GuardApi {
     await store.write('$_pending$id', Uint8List.fromList(utf8.encode('Note')));
     await flush();
   }
+}
+
+/// [book]'s notes: its PC copy merged with the [device] notes (of any
+/// book), the newer edit of each winning; by page (unpaged last), then
+/// oldest first.
+List<Note> mergeNotes(LibraryBook book, List<Note> device) {
+  final byId = {for (final n in book.notes) n.id: n};
+  for (final note in device) {
+    if (note.isbn == book.isbn && queuedOnPhone(book, note)) {
+      byId[note.id] = note;
+    }
+  }
+  return byId.values.toList()..sort(_byPlace);
+}
+
+/// Whether [note] (as the device has it) is not in [book]'s PC copy yet:
+/// the PC has no such note, or only an older edit of it. True until the
+/// PC's `library.json` lists this edit.
+bool queuedOnPhone(LibraryBook book, Note note) => !book.notes.any(
+  (pc) => pc.id == note.id && !note.updatedAt.isAfter(pc.updatedAt),
+);
+
+int _byPlace(Note a, Note b) {
+  final pa = a.page ?? 1 << 30;
+  final pb = b.page ?? 1 << 30;
+  return pa != pb ? pa.compareTo(pb) : a.createdAt.compareTo(b.createdAt);
 }

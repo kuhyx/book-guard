@@ -31,9 +31,15 @@ class LibraryTab extends StatefulWidget {
   State<LibraryTab> createState() => _LibraryTabState();
 }
 
+/// `1 note`, `2 notes`, `0 notes`.
+String counted(int n, String noun) => '$n $noun${n == 1 ? '' : 's'}';
+
 class _LibraryTabState extends State<LibraryTab> {
   Library? _library;
   bool _loaded = false;
+
+  /// Notes written on this device: counted until the PC lists them.
+  List<Note> _device = const [];
 
   @override
   void initState() {
@@ -43,6 +49,7 @@ class _LibraryTabState extends State<LibraryTab> {
 
   /// The kept copy at once (offline-first), then the PC's.
   Future<void> _start() async {
+    await _loadDeviceNotes();
     final kept = await widget.api.cachedLibrary();
     if (mounted && !_loaded && kept != null) {
       setState(() {
@@ -57,6 +64,11 @@ class _LibraryTabState extends State<LibraryTab> {
   void didUpdateWidget(LibraryTab old) {
     super.didUpdateWidget(old);
     if (old.state?.generatedAt != widget.state?.generatedAt) unawaited(_load());
+  }
+
+  Future<void> _loadDeviceNotes() async {
+    final device = await widget.api.deviceNotes();
+    if (mounted) setState(() => _device = device);
   }
 
   Future<void> _load() async {
@@ -75,18 +87,24 @@ class _LibraryTabState extends State<LibraryTab> {
       'reading' => '${dmy(book.firstReadAt)} - ${dmy(book.lastReadAt)}',
       _ => 'not started',
     };
+    final sessions = counted(book.sessions.length, 'session');
+    final notes = counted(mergeNotes(book, _device).length, 'note');
     return [
       if (book.author.isNotEmpty) book.author,
       'p. $pages - $when',
-      '${book.sessions.length} sessions, ${book.notes.length} notes',
+      '$sessions, $notes',
     ].join('\n');
   }
 
-  void _open(LibraryBook book) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => LibraryBookScreen(api: widget.api, book: book),
-    ),
-  );
+  /// Opens [book]; on return counts the notes again (one may be new).
+  Future<void> _open(LibraryBook book) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LibraryBookScreen(api: widget.api, book: book),
+      ),
+    );
+    await _loadDeviceNotes();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +134,7 @@ class _LibraryTabState extends State<LibraryTab> {
                 ),
                 title: Text(book.title),
                 subtitle: Text(_subtitle(book)),
-                onTap: () => _open(book),
+                onTap: () => unawaited(_open(book)),
               ),
             ),
         ],

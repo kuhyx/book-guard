@@ -56,6 +56,21 @@ void main() {
       expect(cellText(view(kind: DayKind.today)), '22/17');
     });
 
+    test('the simulated day shows its simulated total', () {
+      final today = view(kind: DayKind.today, assumed: 27, simulated: 5);
+      expect(cellText(today), '27/17');
+      expect(
+        cellText(view(kind: DayKind.future, assumed: 7, simulated: -10)),
+        '7/17',
+      );
+      expect(cellText(view(free: true, assumed: 5, simulated: 5)), '5/17');
+      expect(met(today), isTrue);
+      expect(
+        met(view(kind: DayKind.today, assumed: 12, simulated: -10)),
+        isFalse,
+      );
+    });
+
     test('met needs a quota day that is not in the future', () {
       expect(met(view()), isTrue);
       expect(met(view(credited: 16)), isFalse);
@@ -167,7 +182,7 @@ void main() {
       expect(decoration(tester).color, isNull);
       await pumpCell(tester, view(kind: DayKind.future, simulated: 5));
       expect(decoration(tester).color, isNull);
-      final text = tester.widget<Text>(find.text('17'));
+      final text = tester.widget<Text>(find.text('22/17'));
       expect(text.style?.fontWeight, FontWeight.bold);
     });
   });

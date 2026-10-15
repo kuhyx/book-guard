@@ -38,7 +38,7 @@ void main() {
     expect(
       find.text(
         'James Clear\np. 81/320 - 2.10.2026 - 14.10.2026\n'
-        '2 sessions, 1 notes',
+        '2 sessions, 1 note',
       ),
       findsOneWidget,
     );
@@ -106,6 +106,34 @@ void main() {
     await tester.tap(find.text('Done Book'));
     await tester.pumpAndSettle();
     expect(find.byType(LibraryBookScreen), findsOneWidget);
+  });
+
+  test('counted pluralises', () {
+    expect(counted(0, 'note'), '0 notes');
+    expect(counted(1, 'note'), '1 note');
+    expect(counted(2, 'session'), '2 sessions');
+  });
+
+  testWidgets('notes still only on the phone count too, also after a visit', (
+    tester,
+  ) async {
+    tallSurface(tester);
+    putLibrary(share, libraryJson());
+    final api = libraryApi(share);
+    final books = Library.fromJson(libraryJson()).books;
+    final now = DateTime.utc(2026, 10, 15);
+    Note note(String id, String isbn) =>
+        Note(id: id, isbn: isbn, text: id, createdAt: now, updatedAt: now);
+    await api.saveNote(note('phone', books.first.isbn));
+    await pumpTab(tester, LibraryTab(api: api, state: null));
+    await settle(tester);
+    expect(find.textContaining('2 sessions, 2 notes'), findsOneWidget);
+    await tester.tap(find.text('Done Book'));
+    await tester.pumpAndSettle();
+    await api.saveNote(note('later', books[1].isbn));
+    await tester.pageBack();
+    await settle(tester);
+    expect(find.textContaining('1 note'), findsOneWidget);
   });
 
   testWidgets('closing the tab while loading is harmless', (tester) async {

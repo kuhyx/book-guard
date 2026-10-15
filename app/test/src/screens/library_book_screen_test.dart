@@ -158,6 +158,31 @@ void main() {
     expect(find.text('from the PC'), findsNothing);
   });
 
+  testWidgets('a note only on the phone is marked queued until the PC has it', (
+    tester,
+  ) async {
+    await pump(tester, books.first);
+    expect(find.textContaining('Queued: not on the PC yet'), findsNothing);
+    await tester.tap(find.byTooltip('Add a note'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Note'), 'mine');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Queued: not on the PC yet'), findsOneWidget);
+    expect(find.byIcon(Icons.cloud_upload_outlined), findsOneWidget);
+    // The PC stores it and lists it in library.json: the marker goes,
+    // even on a screen opened from the older copy.
+    final mine = (await api.deviceNotes()).single;
+    final json = libraryJson();
+    final book = (json['books'] as List).first as Map<String, dynamic>;
+    book['notes'] = [...book['notes'] as List, mine.toJson()];
+    putLibrary(share, json);
+    await tester.pumpWidget(const SizedBox());
+    await pump(tester, books.first);
+    expect(find.text('mine'), findsOneWidget);
+    expect(find.textContaining('Queued: not on the PC yet'), findsNothing);
+  });
+
   testWidgets('leaving before the notes load is harmless', (tester) async {
     await pump(tester, books.first);
     await tester.pumpWidget(const SizedBox());

@@ -33,21 +33,24 @@ const _months = [
 List<String> get weekdayInitials => [for (final d in _weekdays) d[0]];
 
 /// What a cell shows under the date: `22/17` (credited/required), `34`
-/// (future: required), `free`, `old 53` (before the switch), or `-`.
+/// (future: required), `free`, `old 53` (before the switch), or `-`; the
+/// simulated day shows its simulated total, `27/17` (the cell is bold).
 String cellText(DayView v) {
   if (v.beforeQuotas) return '-';
+  if (v.simulated != 0) return '${v.assumed}/${v.required}';
   if (v.free) return 'free';
   if (v.oldRule) return 'old ${v.credited}';
   if (v.kind == DayKind.future) return '${v.required}';
   return '${v.credited}/${v.required}';
 }
 
-/// Whether the day's credited pages reached its requirement (past/today).
+/// Whether the day's pages reached its requirement (past/today): the
+/// simulated total on the simulated day, else the credited pages.
 bool met(DayView v) =>
     v.kind != DayKind.future &&
     !v.oldRule &&
     !v.beforeQuotas &&
-    v.credited >= v.required;
+    (v.simulated != 0 ? v.assumed : v.credited) >= v.required;
 
 /// Everything about one day, as lines (the day card).
 List<String> dayLines(DayView v) {

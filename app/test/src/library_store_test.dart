@@ -131,6 +131,33 @@ void main() {
     });
   });
 
+  test('queuedOnPhone until library.json lists that edit', () {
+    final book = Library.fromJson(libraryJson()).books.first;
+    final pcTime = DateTime.utc(2026, 10, 3, 10);
+    expect(queuedOnPhone(book, _note('n1', updated: pcTime)), isFalse);
+    expect(
+      queuedOnPhone(book, _note('n1', updated: DateTime.utc(2026, 10))),
+      isFalse,
+    );
+    expect(
+      queuedOnPhone(book, _note('n1', updated: DateTime.utc(2026, 10, 9))),
+      isTrue,
+    );
+    expect(queuedOnPhone(book, _note('new')), isTrue);
+  });
+
+  test('deviceNotes lists every book; mergeNotes keeps one book', () async {
+    final book = Library.fromJson(libraryJson()).books.first;
+    await store.write('notes/a.json', _b(jsonEncode(_note('a').toJson())));
+    await store.write(
+      'notes/b.json',
+      _b(jsonEncode(_note('b', isbn: 'other').toJson())),
+    );
+    final device = await api.deviceNotes();
+    expect(device.map((n) => n.id).toSet(), {'a', 'b'});
+    expect(mergeNotes(book, device).map((n) => n.id), ['n1', 'a']);
+  });
+
   group('saveNote', () {
     test(
       'keeps the note and queues a note request with a pending marker',

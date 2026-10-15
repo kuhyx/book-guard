@@ -1,5 +1,7 @@
+import 'package:book_guard_app/src/screens/monday_first.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:book_guard_app/src/screens/pace_panel.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -139,6 +141,42 @@ void main() {
       find.text('Simulation: +5 pages on Sat 24.10 (display only)'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('both date pickers start the week on Monday, as the grid does', (
+    tester,
+  ) async {
+    await pump(tester);
+    for (final opener in ['Any day: Thu 15.10', 'on Thu 15.10']) {
+      await tapVisible(tester, find.text(opener));
+      await tester.pumpAndSettle();
+      final monday = tester.getCenter(inDialog(find.text('M'))).dx;
+      for (final weekend in inDialog(find.text('S')).evaluate()) {
+        expect(
+          monday,
+          lessThan(tester.getCenter(find.byWidget(weekend.widget)).dx),
+        );
+      }
+      // Thu 1 October sits in the fourth column.
+      expect(
+        tester.getCenter(inDialog(find.text('1'))).dx,
+        greaterThan(tester.getCenter(inDialog(find.text('W'))).dx),
+      );
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    }
+  });
+
+  test('the Monday-first delegate loads synchronously and never reloads', () {
+    const delegate = MondayFirstLocalizations.delegate;
+    const locale = Locale('pl');
+    expect(delegate.isSupported(locale), isTrue);
+    expect(delegate.shouldReload(delegate), isFalse);
+    expect(
+      delegate.load(locale),
+      isA<SynchronousFuture<MaterialLocalizations>>(),
+    );
+    expect(const MondayFirstLocalizations().firstDayOfWeekIndex, 1);
   });
 
   testWidgets('cancelling the simulation day picker keeps the day', (

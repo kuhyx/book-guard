@@ -71,8 +71,11 @@ void main() {
       for (final group in bookFormatGroups) {
         expect(find.text(group.label), findsOneWidget);
       }
-      expect(find.text('.pdf'), findsOneWidget);
-      expect(find.textContaining('.epub  .kepub'), findsOneWidget);
+      // Each extension is its own widget, so none breaks mid-name.
+      for (final e in bookFormatGroups.expand((g) => g.extensions)) {
+        expect(find.text('.$e'), findsOneWidget);
+      }
+      expect(find.byType(Wrap), findsNWidgets(bookFormatGroups.length));
     });
 
     testWidgets('Choose file is true', (tester) async {

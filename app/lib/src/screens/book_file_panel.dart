@@ -41,7 +41,17 @@ Future<bool> showBookFormats(BuildContext context) async =>
                 for (final group in bookFormatGroups) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(group.label, style: heading),
-                  Text(group.extensions.map((e) => '.$e').join('  ')),
+                  // One widget per extension: a joined line breaks inside
+                  // ".azw3" (Unicode forbids a break before "." after a
+                  // space, so it breaks after the dot instead).
+                  Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      for (final e in group.extensions)
+                        Text('.$e', softWrap: false),
+                    ],
+                  ),
                 ],
               ],
             ),

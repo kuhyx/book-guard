@@ -27,18 +27,27 @@ class LibraryBookScreen extends StatefulWidget {
 }
 
 class _LibraryBookScreenState extends State<LibraryBookScreen> {
-  List<Note> _notes = const [];
+  /// The notes written on this device (any book).
+  List<Note> _device = const [];
+
+  /// The book's notes as the PC's `library.json` has them, refreshed on
+  /// load: a device note not in it (at that edit) shows as queued.
+  late LibraryBook _pc = widget.book;
 
   @override
   void initState() {
     super.initState();
-    _notes = widget.book.notes;
     unawaited(_loadNotes());
   }
 
   Future<void> _loadNotes() async {
-    final notes = await widget.api.notesOf(widget.book);
-    if (mounted) setState(() => _notes = notes);
+    final device = await widget.api.deviceNotes();
+    if (mounted) setState(() => _device = device);
+    final library = await widget.api.loadLibrary();
+    final fresh = library?.books
+        .where((b) => b.isbn == widget.book.isbn)
+        .firstOrNull;
+    if (mounted && fresh != null) setState(() => _pc = fresh);
   }
 
   Future<void> _edit([Note? existing]) async {
@@ -57,6 +66,8 @@ class _LibraryBookScreenState extends State<LibraryBookScreen> {
   @override
   Widget build(BuildContext context) {
     final book = widget.book;
+    final notes = mergeNotes(_pc, _device);
+    final queuedColor = context.statusColors.warning;
     return Scaffold(
       appBar: AppBar(title: Text(book.title)),
       floatingActionButton: FloatingActionButton(
@@ -74,12 +85,34 @@ class _LibraryBookScreenState extends State<LibraryBookScreen> {
             '${_status(book)}',
           ),
           const SectionHeader('Notes'),
-          if (_notes.isEmpty) const Text('No notes yet.'),
-          for (final note in _notes)
+          if (notes.isEmpty) const Text('No notes yet.'),
+          for (final note in notes)
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(note.text),
-              subtitle: Text(_place(note)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_place(note)),
+                  if (queuedOnPhone(_pc, note))
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Icon(
+                              Icons.cloud_upload_outlined,
+                              size: 16,
+                              color: queuedColor,
+                            ),
+                          ),
+                          const TextSpan(text: ' Queued: not on the PC yet'),
+                        ],
+                      ),
+                      style: TextStyle(color: queuedColor),
+                    ),
+                ],
+              ),
               trailing: const Icon(Icons.edit_outlined),
               onTap: () => _edit(note),
             ),
