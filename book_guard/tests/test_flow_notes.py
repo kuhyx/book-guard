@@ -128,8 +128,23 @@ def test_summaries_unreadable_or_odd_files_are_empty(bg_paths: Paths) -> None:
 
 
 def test_summary_save_failure_is_logged(
-    bg_paths: Paths, caplog: pytest.LogCaptureFixture
+    bg_paths: Paths, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    bg_paths.summaries.mkdir(parents=True)  # a directory where the file goes
+    def refuse(*_args: object, **_kwargs: object) -> None:
+        msg = "disk full"
+        raise OSError(msg)
+
+    monkeypatch.setattr(_summaries, "write_json", refuse)
     _summaries.save_unlocked(bg_paths, "session:x", "text")
     assert "could not keep the full summary" in caplog.text
+
+
+def test_an_unreadable_summaries_file_is_never_overwritten(
+    bg_paths: Paths, caplog: pytest.LogCaptureFixture
+) -> None:
+    bg_paths.summaries.parent.mkdir(parents=True)
+    for text in ("{", "[1]"):
+        bg_paths.summaries.write_text(text, encoding="utf-8")
+        _summaries.save_unlocked(bg_paths, "session:x", "text")
+        assert bg_paths.summaries.read_text(encoding="utf-8") == text
+    assert "not keeping the full summary of session:x" in caplog.text

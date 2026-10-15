@@ -42,11 +42,9 @@ def load(paths: Paths) -> dict[str, dict[str, Any]]:
         CorruptFileError: The file exists but is not a notes file -- never
             overwrite what cannot be read.
     """
-    try:
-        raw = json.loads(paths.notes.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        _logger.warning("no notes at %s yet; starting empty", paths.notes)
+    if not paths.notes.exists():
         return {}
+    raw = json.loads(paths.notes.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         msg = f"{paths.notes} is not a notes file"
         raise CorruptFileError(msg)

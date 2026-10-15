@@ -24,26 +24,36 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 
-def load(paths: Paths) -> dict[str, str]:
-    """Verdict id -> full summary; missing or unreadable is empty."""
+def _read(paths: Paths) -> dict[str, str] | None:
+    """The kept summaries; ``{}`` when none yet, ``None`` when unreadable."""
+    if not paths.summaries.exists():
+        return {}
     try:
         raw = json.loads(paths.summaries.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:  # missing too: nothing kept yet
-        _logger.warning(
-            "unreadable %s (%s); using the ledger's copies", paths.summaries, exc
-        )
-        return {}
+    except (OSError, ValueError) as exc:
+        _logger.warning("unreadable %s (%s)", paths.summaries, exc)
+        return None
     if not isinstance(raw, dict):
-        return {}
+        _logger.warning("%s is not a summaries file", paths.summaries)
+        return None
     return {str(k): v for k, v in raw.items() if isinstance(v, str)}
+
+
+def load(paths: Paths) -> dict[str, str]:
+    """Verdict id -> full summary; missing or unreadable is empty."""
+    return _read(paths) or {}
 
 
 def save_unlocked(paths: Paths, entry_id: str, summary: str) -> None:
     """Record ``summary`` for ``entry_id``. The caller holds ``exclusive``.
 
-    Never raises: the ledger row is the record, this is the long copy.
+    Never raises: the ledger row is the record, this is the long copy. An
+    unreadable file is left alone rather than overwritten with one entry.
     """
-    found = load(paths)
+    found = _read(paths)
+    if found is None:
+        _logger.warning("not keeping the full summary of %s", entry_id)
+        return
     found[entry_id] = summary.strip()
     try:
         write_json(paths.summaries, found, indent=1)
