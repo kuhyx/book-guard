@@ -181,8 +181,8 @@ void main() {
         });
     expect(
       expectedCredit(big, pace: pace()),
-      'Passing credits 53 pages and +1h gaming. If the grader is unreachable '
-      'for an hour, it is credited without grading.',
+      'Passing credits 53 pages and +1h gaming. If no grader answers for 5 '
+      'minutes, it is credited without grading.',
     );
     // 10 + 53 short of 64; a bonus already earned today; no pace known; a
     // PC too old to send today's requirement.

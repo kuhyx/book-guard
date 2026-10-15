@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 String expectedCredit(SessionInfo session, {Pace? pace}) =>
     'Passing credits ${session.pages} pages'
     '${pace?.earnsBonus(session.pages) ?? false ? ' and +1h gaming' : ''}. '
-    'If the grader is unreachable for an hour, it is credited without '
+    'If no grader answers for 5 minutes, it is credited without '
     'grading.';
 
 /// The summary for [session]: typed text kept as a draft, locked while the
