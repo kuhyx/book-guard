@@ -44,25 +44,37 @@ void main() {
     ),
   );
 
+  /// Taps "Attach book file", then "Choose file" in the formats dialog.
+  Future<void> attach(WidgetTester tester) async {
+    await tapVisible(tester, find.text('Attach book file'));
+    await settle(tester);
+    await tester.tap(find.text('Choose file'));
+    await settle(tester);
+  }
+
   testWidgets('attaching waits until the PC has indexed the file', (
     tester,
   ) async {
-    api.awaited = sampleState();
+    api.awaited = sampleState({
+      'index_job': {
+        'file': 'Atomic.epub',
+        'stage': 'done',
+        'total': 12,
+        'updated_at': '2026-10-15T10:00:00Z',
+      },
+    });
     await pump(tester, file: XFile.fromData(_epub, path: '/b/Atomic.epub'));
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
+    await attach(tester);
     expect(api.books, {'Atomic.epub': _epub});
-    expect(find.text('Ebook attached.'), findsNWidgets(2));
-    expect(changed, 1);
+    expect(find.text('Book file attached.'), findsOneWidget);
   });
 
   testWidgets('a PC that has not indexed the file yet says so', (tester) async {
     await pump(tester, file: XFile.fromData(_epub, path: '/b/a.epub'));
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
+    await attach(tester);
     expect(
-      find.text('The PC has not indexed it yet - it will when it is on.'),
-      findsNWidgets(2),
+      find.text('Still indexing - progress keeps showing here.'),
+      findsOneWidget,
     );
   });
 
@@ -133,7 +145,7 @@ void main() {
     final slow = _GatedApi(gate.future)
       ..awaited = sampleState()
       ..readings['toc-c.jpg'] = reading(name: 'toc-c.jpg', kind: 'toc');
-    for (final label in ['Photograph contents', 'Attach ebook file']) {
+    for (final label in ['Photograph contents', 'Attach book file']) {
       await pumpTab(
         tester,
         BookTab(
@@ -147,6 +159,10 @@ void main() {
       );
       await tapVisible(tester, find.text(label));
       await settle(tester);
+      if (label == 'Attach book file') {
+        await tester.tap(find.text('Choose file'));
+        await settle(tester);
+      }
       await tester.pumpWidget(const SizedBox());
     }
     gate.complete();
@@ -156,8 +172,7 @@ void main() {
 
   testWidgets('a cancelled pick uploads nothing', (tester) async {
     await pump(tester);
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
+    await attach(tester);
     expect(api.books, isEmpty);
     expect(find.textContaining('Uploaded'), findsNothing);
   });
@@ -165,8 +180,7 @@ void main() {
   testWidgets('an upload failure is shown', (tester) async {
     api.uploadError = shareDown();
     await pump(tester, file: XFile.fromData(_epub, path: '/b/a.pdf'));
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
-    await settle(tester);
+    await attach(tester);
     expect(find.text('dufs Reading/x failed (500)'), findsOneWidget);
   });
 }

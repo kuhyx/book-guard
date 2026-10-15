@@ -92,9 +92,9 @@ def test_process_reads_registers_and_notifies(
 
 
 def test_notify_skipped_headless_or_empty(monkeypatch: pytest.MonkeyPatch) -> None:
-    _actions._notify(["headless: which() is None in tests"])
+    _actions.notify(["headless: which() is None in tests"])
     sent = _notifier(monkeypatch)
-    _actions._notify([])
+    _actions.notify([])
     assert sent == []
 
 

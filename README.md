@@ -99,14 +99,32 @@ book-guard add 9780735211292 --file ~/Downloads/atomic.epub
 book-guard pages 320                   # the last page of *your* copy
 book-guard status                      # or: status --json
 book-guard quiz                        # write the pending summary
+book-guard ask --week                  # any day's requirement: --date D, --month,
+                                       #   --simulate=-20@2026-10-16 (display only)
+book-guard library                     # every book; --isbn X, --export md
+book-guard index                       # index files dropped into Reading/books
 ```
+
+A book file dropped into `Reading/books/` (or sent from the app's "Attach
+book file") is never indexed by the photo pass: photos always come first.
+The pass only marks it `uploaded` and starts `book-guard-index.service`, a
+low-priority (idle CPU/IO) oneshot that runs `book-guard index`, also fired by
+`book-guard-index.path` and a fallback `book-guard-index.timer`. Embedding
+checkpoints, so a killed run resumes the book. Each stage
+(`uploaded/extracting/embedding/done/failed`, with chunk progress) is
+patched into `state.json` as `index_job`; a failed file moves to
+`books/failed/` with its reason in `<file>.txt`, and the app's Retry queues
+it again.
 
 The Flutter app (`app/`) does all of it: Status (pace; tap a session for
 its photos, what was read off them, your summary and the grader's reply),
 Read (camera buttons that wait for the PC's verdict, summary, a gallery
-of every photo) and Book (Open Library + Biblioteka Narodowa search, a
+of every photo), Book (Open Library + Biblioteka Narodowa search, a
 typed ISBN, Edit with "Fill from ISBN", a contents photo that becomes
-the chapter list, attach file). Phone: installed APK with the `bookguard` dufs login. Desktop: `book-guard-desktop` serves
+the chapter list, attach a book file with the indexing progress) and
+Library (every book with its sessions, full summaries, grader replies and
+your notes). Status also shows this week, the month grid, any picked day
+and a ±N-page simulation, computed offline by a Dart port of the plan. Phone: installed APK with the `bookguard` dufs login. Desktop: `book-guard-desktop` serves
 the web build on `localhost:8773` and opens it in a Chrome `--app` window;
 it proxies WebDAV with the login, so the browser never holds it.
 

@@ -63,12 +63,16 @@ CALIBRE_SUFFIXES: Final = frozenset(
 )
 PLAIN_SUFFIXES: Final = frozenset({".txt", ".md", ".text"})
 HTML_SUFFIXES: Final = frozenset({".html", ".htm", ".xhtml"})
-SUPPORTED: Final = (
-    CALIBRE_SUFFIXES
-    | PLAIN_SUFFIXES
-    | HTML_SUFFIXES
-    | frozenset({".pdf", ".djvu", ".djv"})
-)
+FORMAT_GROUPS: Final[dict[str, frozenset[str]]] = {
+    "calibre": CALIBRE_SUFFIXES,
+    "pdf": frozenset({".pdf"}),
+    "djvu": frozenset({".djvu", ".djv"}),
+    "text": PLAIN_SUFFIXES | HTML_SUFFIXES,
+}
+"""Every readable format, by the tool that reads it. The app's attach modal
+lists the same groups (``app/lib/src/book_formats.dart``); a test parses that
+file and fails on any drift, so this stays the one source."""
+SUPPORTED: Final = frozenset().union(*FORMAT_GROUPS.values())
 
 _TAG: Final = re.compile(r"<[^>]+>")
 _BLANKS: Final = re.compile(r"[ \t\r\f\v]+")

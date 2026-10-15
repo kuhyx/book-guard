@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 from book_guard._atomic_json import write_json, write_text
+from book_guard._library import write_library
 from book_guard._render import status_lines
 from book_guard._session_files import write_session_files
 from book_guard._state_json import to_json
@@ -38,6 +39,7 @@ def write_next_file(paths: Paths, snap: Snapshot) -> None:
     )
     backfill(paths.processed, paths.thumbs)
     write_session_files(paths, snap)
+    write_library(paths, snap)
     try:
         write_text(paths.next_file, body + "\n")
         write_json(paths.state_file, to_json(paths, snap), indent=1)

@@ -124,6 +124,61 @@ void main() {
   });
 
   test('the default hold keeps the process alive', fakeAsyncHold);
+
+  group('previewOverrides', () {
+    test('production: the live port, dufs and login', () {
+      final (port, dufs, login) = previewOverrides(const {}, '/home/u');
+      expect(port, kWrapperPort);
+      expect(dufs, isNull);
+      expect(login, loginEnvPath('/home/u'));
+    });
+
+    test('a sandbox preview moves all three', () {
+      final (port, dufs, login) = previewOverrides(const {
+        'BOOK_GUARD_WRAPPER_PORT': '9911',
+        'BOOK_GUARD_DUFS_URL': 'http://127.0.0.1:5999',
+        'BOOK_GUARD_LOGIN_ENV': '/tmp/demo.env',
+      }, '/home/u');
+      expect(port, 9911);
+      expect(dufs, Uri.parse('http://127.0.0.1:5999'));
+      expect(login, '/tmp/demo.env');
+    });
+
+    test('junk values fall back to the live ones', () {
+      for (final junk in ['', 'nohost', 'x y']) {
+        final (port, dufs, _) = previewOverrides({
+          'BOOK_GUARD_WRAPPER_PORT': 'many',
+          'BOOK_GUARD_DUFS_URL': junk,
+        }, '/h');
+        expect(port, kWrapperPort);
+        expect(dufs, isNull, reason: 'dufs "$junk"');
+      }
+    });
+  });
+
+  test('the real starter honours the preview port, dufs and login', () async {
+    // A port that is already taken: the real starter must report that port,
+    // not the live one, and never touch the live wrapper.
+    final taken = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(taken.close);
+    final sink = _Sink();
+    await runDesktop(
+      ['--serve-only'],
+      home: '/h',
+      exeDir: '/x',
+      cwd: tmp.path,
+      environment: {
+        'BOOK_GUARD_WRAPPER_PORT': '${taken.port}',
+        'BOOK_GUARD_DUFS_URL': 'http://127.0.0.1:5999',
+        'BOOK_GUARD_LOGIN_ENV': p.join(tmp.path, 'demo.env'),
+      },
+      err: sink,
+    );
+    expect(
+      sink.lines.single,
+      'book-guard desktop: already running on :${taken.port}',
+    );
+  });
 }
 
 /// The production hold is a year-long delay: prove it is pending, not done.

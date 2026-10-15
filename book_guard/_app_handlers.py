@@ -8,12 +8,15 @@ import os
 from typing import TYPE_CHECKING, Any, Final
 
 from book_guard import _ledger
+from book_guard._attach import requeue
 from book_guard._bookindex import index_path
 from book_guard._books import current, normalise_chapters, register
+from book_guard._booktext import BookTextError
 from book_guard._flock import exclusive
 from book_guard._grading import quiz_one, register_isbn
 from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book
+from book_guard._notes import upsert as upsert_note
 from book_guard._openlibrary import BookInfo
 from book_guard._requests import Response
 from book_guard._reread import box_photo
@@ -139,6 +142,16 @@ def _summary(paths: Paths, request: dict[str, Any]) -> Response:
     return Response(ok=True, message=verdict.feedback, passed=verdict.passed)
 
 
+def _retry_book(paths: Paths, request: dict[str, Any]) -> Response:
+    """Queue a failed book file again (``books/failed/`` back to ``books/``)."""
+    try:
+        message = requeue(paths, _text(request.get("file")))
+    except BookTextError as exc:
+        _logger.warning("retry of %r refused: %s", request.get("file"), exc)
+        return Response(ok=False, message=str(exc))
+    return Response(ok=True, message=message)
+
+
 HANDLERS: dict[str, Callable[[Paths, dict[str, Any]], Response]] = {
     "register": _register,
     "edit_book": _edit_book,
@@ -146,4 +159,6 @@ HANDLERS: dict[str, Callable[[Paths, dict[str, Any]], Response]] = {
     "summary": _summary,
     "box": box_photo,
     "session_times": set_times,
+    "retry_book": _retry_book,
+    "note": upsert_note,
 }

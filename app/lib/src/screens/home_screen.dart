@@ -6,6 +6,7 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/screens/library_tab.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
@@ -13,7 +14,7 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Three tabs over one live snapshot: Status, Read, Book.
+/// Four tabs over one live snapshot: Status, Read, Book, Library.
 ///
 /// The snapshot is refetched every [refreshEvery] and after every action,
 /// because the PC changes it on its own (a photo read, a check page named).
@@ -175,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onChanged: refresh,
         desktop: widget.desktop,
       ),
+      LibraryTab(api: widget.api, state: state),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -233,6 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
           const NavigationDestination(
             icon: Icon(Icons.library_books),
             label: 'Book',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.local_library),
+            label: 'Library',
           ),
         ],
       ),

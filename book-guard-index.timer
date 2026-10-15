@@ -1,0 +1,13 @@
+[Unit]
+Description=Resume or retry book-file indexing
+
+[Timer]
+# After boot (a run the shutdown cut off resumes from its checkpoint), then
+# every 15 min after the last run ended; a run with nothing queued exits at
+# once.
+OnBootSec=3min
+OnUnitInactiveSec=15min
+Unit=book-guard-index.service
+
+[Install]
+WantedBy=timers.target

@@ -1,7 +1,6 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -119,7 +118,7 @@ void main() {
     expect(changed, 0);
   });
 
-  testWidgets('defaults to the file_selector ebook picker', (tester) async {
+  testWidgets('defaults to the file_selector book picker', (tester) async {
     const channel = MethodChannel('plugins.flutter.io/file_selector');
     final calls = <MethodCall>[];
     final messenger = tester.binding.defaultBinaryMessenger
@@ -132,10 +131,13 @@ void main() {
       tester,
       BookTab(api: api, state: sampleState(), onChanged: () async {}),
     );
-    await tapVisible(tester, find.byIcon(Icons.attach_file));
+    await tapVisible(tester, find.text('Attach book file'));
+    await settle(tester);
+    await tester.tap(find.text('Choose file'));
     await settle(tester);
     expect(calls.single.method, 'openFile');
-    expect('${calls.single.arguments}', contains('epub'));
+    // flutter_test runs as Android: no filter, the extension is checked later.
+    expect('${calls.single.arguments}', contains('acceptedTypeGroups: []'));
     expect(api.books, isEmpty);
   });
 }

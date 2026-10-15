@@ -16,11 +16,13 @@ from typing import Final
 
 from gatelock.morning_session import MORNING_SESSION_FILE
 
+from book_guard._share_paths import SharePaths
+
 _REAL_KEY: Final = Path("/etc/workout-locker/hmac.key")
 
 
 @dataclass(frozen=True)
-class Paths:
+class Paths(SharePaths):
     """The locations of one book-guard installation.
 
     Attributes:
@@ -71,69 +73,24 @@ class Paths:
         return self.data_dir / "session_times.json"
 
     @property
-    def error_log(self) -> Path:
-        """Every failure, phone and PC, one JSON object per line."""
-        return self.reading_dir / "logs" / "errors.jsonl"
+    def index_job(self) -> Path:
+        """Where the last dropped book file's indexing stands."""
+        return self.data_dir / "index_job.json"
 
     @property
-    def uploaded_reports(self) -> Path:
-        """Bug reports ("this should not have failed"), as uploaded."""
-        return self.reading_dir / "logs" / "reports"
+    def notes(self) -> Path:
+        """The reader's notes per book, written from the app (never pruned)."""
+        return self.data_dir / "notes.json"
+
+    @property
+    def summaries(self) -> Path:
+        """Every summary in full, by verdict id (the ledger keeps 1000 chars)."""
+        return self.data_dir / "summaries.json"
 
     @property
     def reports(self) -> Path:
         """Filed bug reports: each photo and what was made of it."""
         return self.data_dir / "reports"
-
-    @property
-    def phone_logs(self) -> Path:
-        """The phone's error entries, one file each, until merged."""
-        return self.reading_dir / "logs" / "phone"
-
-    @property
-    def inbox(self) -> Path:
-        """Where the phone drops new photos (dufs-cloud upload)."""
-        return self.reading_dir / "inbox"
-
-    @property
-    def processed(self) -> Path:
-        """Where a photo moves once it has been read."""
-        return self.reading_dir / "processed"
-
-    @property
-    def thumbs(self) -> Path:
-        """Small copies of the filed photos, for the app's gallery."""
-        return self.reading_dir / "thumbs"
-
-    @property
-    def sessions(self) -> Path:
-        """One detail file per session, for the app's history view."""
-        return self.reading_dir / "sessions"
-
-    @property
-    def requests(self) -> Path:
-        """Where the app drops request files."""
-        return self.reading_dir / "requests"
-
-    @property
-    def responses(self) -> Path:
-        """Where answers to request files go."""
-        return self.reading_dir / "responses"
-
-    @property
-    def books(self) -> Path:
-        """Where a book file (epub/pdf/...) is dropped to be attached."""
-        return self.reading_dir / "books"
-
-    @property
-    def state_file(self) -> Path:
-        """The app-readable snapshot (JSON twin of NEXT.txt)."""
-        return self.reading_dir / "state.json"
-
-    @property
-    def next_file(self) -> Path:
-        """The phone-readable "what to do next" note."""
-        return self.reading_dir / "NEXT.txt"
 
 
 def _default() -> Paths:

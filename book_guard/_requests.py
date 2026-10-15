@@ -13,6 +13,9 @@ Request types:
 * ``register`` -- ``{"isbn": str, "pages": int | null}``
 * ``set_pages`` -- ``{"pages": int}`` for the current book
 * ``summary`` -- ``{"session_id": str, "summary": str}``
+* ``retry_book`` -- ``{"file": str}``: a failed book file, queued again
+* ``note`` -- ``{"note_id": str, "isbn": str, "text": str, "page": int | null,
+  "chapter": str, "created_at": iso, "updated_at": iso}`` (upsert, ``_notes``)
 """
 
 from __future__ import annotations

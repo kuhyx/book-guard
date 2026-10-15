@@ -28,6 +28,7 @@ map_py() {
         t="book_guard/tests/$cand"
         [[ -f "$t" ]] && MAPPED+=("$t")
     done
+    return 0  # a missing last candidate must not trip set -e
 }
 
 for f in "${CHANGED[@]}"; do

@@ -1,0 +1,20 @@
+[Unit]
+Description=Index book files dropped into Reading/books (background, resumable)
+
+[Service]
+Type=oneshot
+# Installed into the system python's user site-packages (install.sh), so no
+# WorkingDirectory: the checked-out branch must never be the running config.
+ExecStart=/usr/bin/python3 -m book_guard index
+# Photos always come first: indexing has its own unit so the inbox pass is
+# never busy with it, and it yields the CPU and disk to everything else.
+# Same memory ceiling as the inbox unit had (the embedding model plus a
+# whole book), and the shared 10 %-of-24-cores cap.
+Nice=19
+CPUWeight=idle
+CPUQuota=240%
+IOSchedulingClass=idle
+MemoryMax=4G
+# No deadline: build() checkpoints every 64 chunks, so a kill, an OOM or a
+# reboot resumes the book where it stopped and a big one finishes over runs.
+TimeoutStartSec=infinity

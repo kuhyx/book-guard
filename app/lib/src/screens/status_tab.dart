@@ -1,5 +1,6 @@
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/pace_panel.dart';
 import 'package:book_guard_app/src/screens/session_screen.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -118,6 +119,7 @@ class StatusTab extends StatelessWidget {
           ),
         ),
       ),
+      if (s.paceInputs case final inputs?) PacePanel(inputs: inputs),
       if (s.todo.isNotEmpty) ...[
         const SectionHeader('Next'),
         for (final t in s.todo)

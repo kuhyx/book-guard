@@ -22,6 +22,9 @@ readonly UNITS=(
     book-guard-inbox.service
     book-guard-inbox.path
     book-guard-inbox.timer
+    book-guard-index.service
+    book-guard-index.path
+    book-guard-index.timer
 )
 
 log() { printf 'install: %s\n' "$1" >&2; }
@@ -85,7 +88,8 @@ install_units() {
         install -m 644 "$REPO_DIR/$unit" "$UNIT_DIR/"
     done
     systemctl --user daemon-reload
-    systemctl --user enable --now book-guard-inbox.path book-guard-inbox.timer book-guard.timer
+    systemctl --user enable --now book-guard-inbox.path book-guard-inbox.timer book-guard.timer \
+        book-guard-index.path book-guard-index.timer
     # Enabled for login arming, not started: starting it now would run the
     # gate immediately, which is the timer's and the next login's job.
     systemctl --user enable book-guard.service

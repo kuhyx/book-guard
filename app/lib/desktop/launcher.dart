@@ -26,10 +26,27 @@ Future<WrapperServer> startWrapper(
   String webRoot,
   File loginEnv, {
   int port = kWrapperPort,
+  Uri? dufs,
 }) async {
-  final server = WrapperServer(webRoot: webRoot, loginEnv: loginEnv);
+  final server = WrapperServer(
+    webRoot: webRoot,
+    loginEnv: loginEnv,
+    dufs: dufs,
+  );
   await server.start(port: port);
   return server;
+}
+
+/// Sandbox-preview overrides, never set in production: another wrapper
+/// port, dufs and login file, so a preview never touches the live ones.
+/// Returns (port, dufs or null for the live one, login env path).
+(int, Uri?, String) previewOverrides(Map<String, String> env, String home) {
+  final dufs = Uri.tryParse(env['BOOK_GUARD_DUFS_URL'] ?? '');
+  return (
+    int.tryParse(env['BOOK_GUARD_WRAPPER_PORT'] ?? '') ?? kWrapperPort,
+    dufs != null && dufs.hasAuthority ? dufs : null,
+    env['BOOK_GUARD_LOGIN_ENV'] ?? loginEnvPath(home),
+  );
 }
 
 /// Where the web build is: next to the installed binary (`bundle/web`), or
@@ -50,7 +67,8 @@ Future<void> runDesktop(
   required String home,
   required String exeDir,
   required String cwd,
-  ServerStarter startServer = startWrapper,
+  ServerStarter? startServer,
+  Map<String, String>? environment,
   String Function() browserFinder = findBrowser,
   ProcessStarter startProcess = Process.start,
   Future<void> Function()? hold,
@@ -58,18 +76,25 @@ Future<void> runDesktop(
 }) async {
   final log = err ?? stderr;
   final webRoot = resolveWebRoot(exeDir: exeDir, cwd: cwd);
+  final (port, dufs, login) = previewOverrides(
+    environment ?? Platform.environment,
+    home,
+  );
+  final start =
+      startServer ??
+      (root, loginEnv) => startWrapper(root, loginEnv, port: port, dufs: dufs);
   try {
-    await startServer(webRoot, File(loginEnvPath(home)));
+    await start(webRoot, File(login));
   } on SocketException {
     // Already serving: just open another window onto it.
-    log.writeln('book-guard desktop: already running on :$kWrapperPort');
+    log.writeln('book-guard desktop: already running on :$port');
   }
   if (args.contains('--serve-only')) return;
   final browser = browserFinder();
   if (browser.isEmpty) {
     log.writeln(
       'book-guard desktop: no Chrome-family browser found; '
-      'open http://localhost:$kWrapperPort or set BOOK_GUARD_BROWSER',
+      'open http://localhost:$port or set BOOK_GUARD_BROWSER',
     );
     return;
   }

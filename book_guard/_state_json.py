@@ -10,6 +10,13 @@ earn the +1h bonus; ``pace.bonus_today`` says a credit today already has it.
 ``pace.debt_per_day`` is the debt asked of each of the ``debt_days_left``
 remaining weekend days (Sat/Sun, at most 60 a day with the base quota);
 ``debt_unplaced`` fits on no day and carries into next month.
+
+``index_job`` is the last dropped book file's indexing (``_indexjob``):
+``{file, stage, done, total, error, updated_at}``, or null.
+
+``pace_inputs`` (credits per day, free days, the plan's constants) feeds the
+app's port of the plan (``app/lib/src/pace_plan.dart``) -- the one place the
+app does derive pace, for the week/month/any-day/simulation views, offline.
 """
 
 from __future__ import annotations
@@ -17,9 +24,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
+import freedays
+
+from book_guard import _indexjob
 from book_guard import _photos as _photo_cache
 from book_guard._bookindex import index_path
 from book_guard._errlog import claude_down_since
+from book_guard._ledger import load as load_ledger
+from book_guard._pace_inputs import pace_inputs
 from book_guard._render import todo_lines
 from book_guard._session_files import file_name
 from book_guard._sessions import NEEDS_QUIZ
@@ -159,4 +171,8 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         "escapes_left": snap.escapes_left,
         "photos": _photos(paths),
         "claude_down_since": claude_down_since(paths),
+        "index_job": _indexjob.load(paths),
+        "pace_inputs": pace_inputs(
+            load_ledger(paths.ledger, paths.key_file), snap.today, freedays.is_free_day
+        ),
     }

@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard import _ledger
 from book_guard._app_handlers import HANDLERS
-from book_guard._attach import attach_dropped
 from book_guard._autogrant import auto_grant
 from book_guard._books import current, normalise_chapters, register
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
@@ -19,6 +18,7 @@ from book_guard._errlog import merge_phone, merge_reports
 from book_guard._flock import exclusive
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
+from book_guard._indexer import kick, mark_queued
 from book_guard._ledger import ESCAPE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._publish import write_next_file
@@ -37,7 +37,7 @@ _SETTLE_WAIT_MAX: Final = 120.0
 """Longest a run waits for in-flight uploads before leaving them to the timer."""
 
 
-def _notify(lines: list[str]) -> None:
+def notify(lines: list[str]) -> None:
     """A desktop notification with the new to-dos; silently skipped headless."""
     notifier = shutil.which("notify-send")
     if notifier and lines:
@@ -80,17 +80,19 @@ def process(
         _logger.info("%s", register_isbn(paths, isbn)[1])
     for chapters in result.contents:
         _logger.info("%s", add_chapters(paths, chapters))
-    # Requests and dropped book files after the photos, and outside the
-    # write lock: their handlers take it themselves around each write, and a
-    # grading call or a book index must not hold up the next photo pass.
+    # Requests after the photos, and outside the write lock: their handlers
+    # take it themselves around each write, and a grading call must not
+    # hold up the next photo pass. Book files are never indexed here --
+    # photos come first; the index unit does it in the background.
     handle_requests(paths, HANDLERS)
-    attached = attach_dropped(paths)
+    if mark_queued(paths):
+        kick()
     if grant := auto_grant(paths):
         _logger.info("%s: today asks no pages, bonus granted", grant.day)
     snap = snapshot(paths)
     write_next_file(paths, snap)
-    if result.read or attached:
-        _notify(todo_lines(snap) + attached)
+    if result.read:
+        notify(todo_lines(snap))
     return result, snap
 
 

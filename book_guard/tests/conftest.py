@@ -9,6 +9,8 @@ Autouse, so no test can forget them:
 * the Claude CLI, the network (urllib) and desktop notifications raise or
   no-op unless a test installs its own fake;
 * embeddings come from a tiny deterministic fake instead of fastembed;
+* the background index unit is never started (``systemctl --user start``
+  raises unless a test installs its own fake);
 * the free-day pool is empty.
 """
 
@@ -72,6 +74,13 @@ def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     monkeypatch.setattr(_openlibrary, "urlopen", no_network)
     monkeypatch.setattr(_http, "urlopen", no_network)
     monkeypatch.setattr("book_guard._local.urlopen", no_network)  # ollama
+
+    def no_systemctl(*_args: object, **_kwargs: object) -> object:
+        msg = "test tried to start a real systemd unit"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("book_guard._indexer.subprocess.run", no_systemctl)
+    monkeypatch.delenv("BOOK_GUARD_ROOT", raising=False)
     # Lookup pacing must never really sleep in a test.
     monkeypatch.setattr("book_guard._lookup.time.sleep", lambda _s: None)
     # The fastembed CLASS is faked, not the factory, so _embed._embedder

@@ -1,7 +1,10 @@
 import 'package:book_guard_app/src/book_extras.dart';
+import 'package:book_guard_app/src/index_job.dart';
+import 'package:book_guard_app/src/pace/day_views.dart';
 import 'package:book_guard_app/src/session_info.dart';
 
 export 'package:book_guard_app/src/book_extras.dart';
+export 'package:book_guard_app/src/index_job.dart';
 export 'package:book_guard_app/src/session_info.dart';
 
 /// `Reading/state.json`, as book-guard on the PC writes it (schema 1).
@@ -21,12 +24,15 @@ class GuardState {
     required this.generatedAt,
     this.photos = const [],
     this.claudeDownSince,
+    this.indexJob,
+    this.paceInputs,
   });
 
   /// Parses the JSON document.
   factory fromJson(Map<String, dynamic> json) {
     final book = json['book'];
     final start = json['open_start'];
+    final job = json['index_job'];
     return GuardState(
       locked: json['locked'] == true,
       reason: '${json['reason'] ?? ''}',
@@ -40,10 +46,12 @@ class GuardState {
       openStart: start is Map<String, dynamic> ? _int(start['page']) : null,
       generatedAt: DateTime.tryParse('${json['generated_at']}'),
       claudeDownSince: DateTime.tryParse('${json['claude_down_since']}'),
+      paceInputs: PaceInputs.fromJson(json['pace_inputs']),
       photos: [
         for (final p in json['photos'] as List? ?? const [])
           if (p is Map<String, dynamic>) PhotoInfo.fromJson(p),
       ],
+      indexJob: job is Map<String, dynamic> ? IndexJob.fromJson(job) : null,
     );
   }
 
@@ -76,6 +84,13 @@ class GuardState {
 
   /// Since when the PC's Claude calls (the summary grader) fail, if they do.
   final DateTime? claudeDownSince;
+
+  /// The last dropped book file's indexing, if any.
+  final IndexJob? indexJob;
+
+  /// What the week/month/any-day/simulation views are computed from,
+  /// offline; null from a PC that predates them (the views hide).
+  final PaceInputs? paceInputs;
 
   /// Sessions waiting for their check-page photo.
   List<SessionInfo> get needCheck =>

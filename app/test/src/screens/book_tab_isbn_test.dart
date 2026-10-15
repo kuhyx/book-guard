@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:book_guard_app/src/book_formats.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
@@ -129,6 +130,6 @@ void main() {
   });
 
   test('every format the PC reads is pickable', () {
-    expect(ebookExtensions, containsAll(['epub', 'pdf', 'mobi', 'azw3']));
+    expect(bookExtensions, containsAll(['epub', 'pdf', 'mobi', 'azw3']));
   });
 }

@@ -1,0 +1,14 @@
+[Unit]
+Description=Index a book file the moment the app uploads it
+
+[Path]
+# The app's (or desktop's) dropped book files. The inbox pass also starts
+# the service with --no-block when it sees one, and book-guard-index.timer
+# resumes a run a reboot or a kill interrupted.
+PathChanged=%h/data/cloud/Reading/books
+MakeDirectory=yes
+DirectoryMode=0755
+Unit=book-guard-index.service
+
+[Install]
+WantedBy=paths.target

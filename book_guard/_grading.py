@@ -23,6 +23,7 @@ from book_guard._prompt import Context
 from book_guard._publish import write_next_file
 from book_guard._quiz import Verdict, grade, record_verdict
 from book_guard._state import snapshot
+from book_guard._summaries import save_unlocked
 
 if TYPE_CHECKING:
     from book_guard._paths import Paths
@@ -122,6 +123,9 @@ def quiz_one(
     verdict = _grade_or_wait(paths, view, summary, model)
     with exclusive(paths):
         entry = record_verdict(paths, view.book, view.session, verdict, summary)
+        if entry is not None:
+            # Inside the same lock: a second exclusive() here would deadlock.
+            save_unlocked(paths, entry.entry_id, summary)
     if entry is None:
         return Verdict(passed=False, feedback="This session was already credited.")
     write_next_file(paths, snapshot(paths))

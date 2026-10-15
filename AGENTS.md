@@ -23,6 +23,11 @@ Read README.md first. These are the invariants that are easy to break.
   `adb push` it to `/sdcard/Android/data/com.kuhy.book_guard_app/files/page_truth/`,
   `touch .../run` (chmod 666), launch the app, read `page_truth {...}` lines
   from logcat (the app's own files are not adb-readable).
+- `scripts/pace_goldens.py` writes `app/test/fixtures/pace_goldens.json`,
+  the answers the app's Dart port of the plan must match. Re-run it after
+  touching `_quotas.py`, `_plan.py`, `_pace*.py` or `_ask.py`, and commit
+  the fixture with the change (`test_pace_goldens_are_current` fails on a
+  stale one).
 - Heavy commands run under `~/.claude/scripts/capped.sh`; indexing a book
   needs `CAP_MEM=4G`.
 
@@ -67,6 +72,12 @@ Read README.md first. These are the invariants that are easy to break.
   30, Sat/Sun 50, weekends capped at 60 (debt included); surplus comes off
   Mon-Fri only, debt goes onto weekends only. The switch month keeps the old
   plan's line at the switch exactly -- never re-split the days before it.
+- **Photos always first: indexing never runs in the photo pass.** A book
+  file in `Reading/books/` is only marked `uploaded` by `process`, which
+  starts `book-guard-index.service` (idle CPU/IO, resumable checkpoints)
+  without waiting; `book-guard index` does the work under its own
+  `index.lock`, never the ledger's `write.lock`. A page photo must never
+  wait on an ebook being embedded.
 - **Nothing credits without the grader** -- except a summary (150+ chars)
   that neither Claude nor the local model graded for `GRADER_GRACE` (5 min):
   `quiz_one` credits it with `detail.graded == "0"`. `detail.grader` names
@@ -78,8 +89,16 @@ Read README.md first. These are the invariants that are easy to break.
   (`_prompt.py`). The grader never fails on what it cannot verify against
   the text it was given (often just three photographed pages). Re-run
   `scripts/grader_suite.py` after touching it.
-- **One writer at a time**: every read-modify-write of the ledger or the
-  photo cache happens inside `_flock.exclusive`.
+- **The PC never deletes the record**: the ledger, `Reading/processed/`,
+  `Reading/thumbs/`, `Reading/sessions/`, `notes.json` and
+  `summaries.json` (full summaries; the ledger row keeps `summary[:1000]`)
+  only grow. A note edit keeps the replaced text under `previous`; an empty
+  edit is refused, never a delete. Only the phone prunes (its 40 newest
+  photos); the Library shows older ones from the PC's thumbs.
+- **One writer at a time**: every read-modify-write of the ledger, the
+  photo cache, `notes.json` or `summaries.json` happens inside
+  `_flock.exclusive` -- never nested (a second `exclusive()` in the same
+  process deadlocks; use the `*_unlocked` helper inside a held lock).
 - **EXIF capture time is the session clock**: DateTimeOriginal, falling back
   to IFD0 DateTime + OffsetTime (what the Android camera intent writes).
 - **Never ship a penalty before its reward**: the 19:00 / 4h base cuts in the

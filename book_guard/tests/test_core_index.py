@@ -114,3 +114,34 @@ def test_real_embedder_factory(
     embedder = _embed._embedder(bg_paths)
     assert isinstance(embedder, FakeTextEmbedding)
     assert created == [(_bookindex.EMBED_MODEL, str(bg_paths.data_dir / "models"))]
+
+
+def test_a_killed_build_resumes_from_its_checkpoint(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    text = " ".join(f"word{i % 97} sentence{i % 13}." for i in range(4000))
+    total = len(list(_bookindex.windows(text)))
+    monkeypatch.setattr(_embed, "CHECKPOINT_CHUNKS", 2)
+    real = _embed._embedder(bg_paths)
+
+    class Dying:
+        def embed(self, texts: list[str], batch_size: int = 0) -> object:
+            for i, vec in enumerate(real.embed(texts, batch_size)):
+                if i == 3:
+                    msg = "killed"
+                    raise MemoryError(msg)
+                yield vec
+
+    monkeypatch.setattr(_embed, "_embedder", lambda _p: Dying())
+    with pytest.raises(MemoryError):
+        _embed.build(bg_paths, "9", text, source="a")
+    monkeypatch.setattr(_embed, "_embedder", lambda _p: real)
+    seen: list[tuple[int, int]] = []
+    assert (
+        _embed.build(
+            bg_paths, "9", text, source="a", progress=lambda d, t: seen.append((d, t))
+        )
+        == total
+    )
+    assert seen[0] == (2, total)  # the two checkpointed chunks were kept
+    assert seen[-1] == (total, total)

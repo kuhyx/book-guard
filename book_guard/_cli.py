@@ -12,13 +12,15 @@ from pathlib import Path
 import sys
 from typing import TYPE_CHECKING, Final, TextIO
 
-from book_guard._actions import next_quiz, process
+from book_guard import _ask_cli, _library_cli
+from book_guard._actions import next_quiz, notify, process
 from book_guard._attach import attach
 from book_guard._bonus import regrant
 from book_guard._books import current, register
 from book_guard._booktext import BookTextError
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._grading import quiz_one, register_isbn
+from book_guard._indexer import index_lock, run_index
 from book_guard._ledger import load
 from book_guard._lock import run_gate
 from book_guard._openlibrary import BookInfo, search_title
@@ -73,9 +75,24 @@ def _cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_index(_args: argparse.Namespace) -> int:
+    messages = run_index(paths())
+    if messages is None:
+        _say("another index run is going; it picks up new files too")
+        return 0
+    for message in messages:
+        _say(message)
+    notify(messages)
+    return 0
+
+
 def _cmd_attach(args: argparse.Namespace) -> int:
     try:
-        _say(attach(paths(), Path(args.file).expanduser()))
+        with index_lock(paths()) as mine:
+            if not mine:
+                _say("an index run is going; attach again when it ends")
+                return 1
+            _say(attach(paths(), Path(args.file).expanduser()))
     except BookTextError as exc:
         _logger.warning("attach failed: %s", exc)
         _say(f"Not attached: {exc}", file=sys.stderr)
@@ -175,8 +192,11 @@ def _parser() -> argparse.ArgumentParser:
         ("pages", "set the current book's last page", _cmd_pages),
         ("attach", "attach the current book's ebook file (any format)", _cmd_attach),
         ("process", "read new photos from the inbox", _cmd_process),
+        ("index", "index book files dropped into Reading/books", _cmd_index),
         ("status", "show pace, sessions and what to do next", _cmd_status),
         ("quiz", "write the summary for a finished session", _cmd_quiz),
+        ("ask", "what any day asks: past, today, projected", _ask_cli.cmd_ask),
+        ("library", "every book, its sessions and notes", _library_cli.cmd_library),
         ("regrant", "grant the day's bonus to credits that now earn it", _cmd_regrant),
         ("lock", "run the gate (locks only when behind pace)", _cmd_lock),
     ]
@@ -206,6 +226,8 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_MODEL,
         help="grader for this run only (default: haiku)",
     )
+    _ask_cli.configure(subs["ask"])
+    _library_cli.configure(subs["library"])
     subs["regrant"].add_argument("--dry-run", action="store_true")
     subs["lock"].add_argument("--production", action="store_true")
     subs["lock"].add_argument(

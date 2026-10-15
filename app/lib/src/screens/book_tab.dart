@@ -1,33 +1,17 @@
 import 'dart:async';
 
+import 'package:book_guard_app/src/book_formats.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
+import 'package:book_guard_app/src/screens/book_file_panel.dart';
 import 'package:book_guard_app/src/screens/book_finder.dart';
 import 'package:book_guard_app/src/screens/edit_book_screen.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:design_system/design_system.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-
-/// Every ebook format the PC can extract text from (book-guard `_booktext`).
-const ebookExtensions = <String>[
-  'epub', 'kepub', 'mobi', 'azw', 'azw1', 'azw3', 'azw4', 'prc', 'pdb', //
-  'fb2', 'fbz', 'lit', 'lrf', 'rb', 'snb', 'tcr', 'pml', 'chm', 'rtf', //
-  'docx', 'odt', 'htmlz', 'txtz', 'pdf', 'djvu', 'djv', 'txt', 'md', //
-  'html', 'htm', 'xhtml',
-];
-
-/// Picks a book file; replaced in tests.
-typedef BookFileSource = Future<XFile?> Function();
-
-Future<XFile?> _pickBook() => openFile(
-  acceptedTypeGroups: const [
-    XTypeGroup(label: 'Ebooks', extensions: ebookExtensions),
-  ],
-);
 
 /// This month's book: find it (see [BookFinder]), register it, attach its file.
 class BookTab extends StatefulWidget {
@@ -39,7 +23,7 @@ class BookTab extends StatefulWidget {
     super.key,
     this.library,
     this.nationalLibrary,
-    this.bookSource = _pickBook,
+    this.bookSource = pickBookFile,
     this.photoSource = pickPhoto,
     this.desktop = false,
   });
@@ -79,6 +63,10 @@ class _BookTabState extends State<BookTab> {
   bool _busy = false;
   String? _note;
 
+  /// The job being followed right after an upload or a retry, fresher
+  /// than the 10-second snapshot; null once it has ended.
+  IndexJob? _live;
+
   Future<void> _run(Future<void> Function() action) async {
     setState(() => _busy = true);
     try {
@@ -100,22 +88,57 @@ class _BookTabState extends State<BookTab> {
     if (saved ?? false) await widget.onChanged();
   }
 
-  /// Waits for the PC to index the file before unlocking the button.
-  Future<void> _attach() => _run(() async {
-    final file = await widget.bookSource();
-    if (file == null) return;
-    setState(() => _note = 'Uploading ${file.name}...');
-    await widget.api.uploadBook(file.name, await file.readAsBytes());
+  /// Shows the formats first, then picks, uploads and follows the indexing.
+  Future<void> _attach() async {
+    if (!await showBookFormats(context)) return;
+    await _run(() async {
+      final file = await widget.bookSource();
+      if (file == null || !mounted) return;
+      if (!isBookFile(file.name)) {
+        showError(context, '${file.name}: the PC cannot read this format.');
+        return;
+      }
+      final since = widget.state?.indexJob?.updatedAt;
+      setState(() => _note = 'Uploading ${file.name}...');
+      // The name the PC files it under: its index_job.file.
+      final name = widget.api.safeName(file.name);
+      await widget.api.uploadBook(file.name, await file.readAsBytes());
+      if (!mounted) return;
+      setState(() => _note = null);
+      await _follow(name, since);
+    });
+  }
+
+  /// Queues a failed (or stalled) file again -- offline too, through the
+  /// outbox; the 10-second refresh then shows its progress.
+  Future<void> _retry(IndexJob job) => _run(() async {
+    final response = await widget.api.sendQueued('retry_book', {
+      'file': job.file,
+    }, 'Retry of ${job.file}');
     if (!mounted) return;
-    setState(() => _note = 'Uploaded - the PC is indexing it...');
-    final done = await widget.api.waitFor((s) => s.book?.hasFile ?? false);
-    if (!mounted) return;
-    final note = done == null
-        ? 'The PC has not indexed it yet - it will when it is on.'
-        : 'Ebook attached.';
-    setState(() => _note = note);
-    done == null ? showError(context, note) : showToast(context, note);
+    response.ok
+        ? showToast(context, response.message)
+        : showError(context, response.message);
   });
+
+  /// Polls the PC until the job for [name] (newer than [since]) ends.
+  Future<void> _follow(String name, DateTime? since) async {
+    setState(() => _live = IndexJob(file: name, stage: 'uploaded'));
+    bool fresh(IndexJob? job) =>
+        job != null && job.file == name && job.updatedAt != since;
+    final state = await widget.api.waitFor((s) {
+      if (fresh(s.indexJob) && mounted) setState(() => _live = s.indexJob);
+      return fresh(s.indexJob) && s.indexJob!.finished;
+    });
+    if (!mounted) return;
+    final job = state?.indexJob;
+    setState(() => _live = null);
+    if (job == null) {
+      showToast(context, 'Still indexing - progress keeps showing here.');
+    } else if (job.stage == 'done') {
+      showToast(context, 'Book file attached.');
+    }
+  }
 
   /// A contents photo: waits for the PC's reading, then reports it.
   Future<void> _contents() => _run(() async {
@@ -187,10 +210,14 @@ class _BookTabState extends State<BookTab> {
               OutlinedButton.icon(
                 onPressed: _busy ? null : _attach,
                 icon: const Icon(Icons.attach_file),
-                label: const Text('Attach ebook file'),
+                label: const Text('Attach book file'),
               ),
             ],
           ),
+          if (_live ?? widget.state?.indexJob case final job?) ...[
+            const SizedBox(height: AppSpacing.sm),
+            IndexJobCard(job: job, onRetry: _busy ? null : () => _retry(job)),
+          ],
           if (_note case final note?) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(note),
