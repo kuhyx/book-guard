@@ -8,6 +8,9 @@
 #
 #   scripts/build_apk.sh aot   # Dart AOT snapshot only (gradle task)
 #   scripts/build_apk.sh apk   # package + sign; reuses the AOT output
+#
+# An optional second argument picks another platform, e.g. android-x64 for
+# the emulator: `scripts/build_apk.sh aot android-x64`.
 # ============================================================================
 
 set -euo pipefail
@@ -15,6 +18,7 @@ set -euo pipefail
 APP="$(cd "$(dirname "$0")/../app" && pwd)"
 readonly APP
 readonly CAPPED="$HOME/.claude/scripts/capped.sh"
+readonly PLATFORM="${2:-android-arm64}"
 
 capped() {
     CAP_MEM=4G CAP_CPU_PCT=20 "$CAPPED" "$@"
@@ -23,14 +27,14 @@ capped() {
 case "${1:-}" in
     aot)
         capped "$APP/android/gradlew" -p "$APP/android" -q \
-            :app:compileFlutterBuildRelease -Ptarget-platform=android-arm64
+            :app:compileFlutterBuildRelease -Ptarget-platform="$PLATFORM"
         ;;
     apk)
         cd "$APP"
-        capped flutter build apk --release --target-platform android-arm64
+        capped flutter build apk --release --target-platform "$PLATFORM"
         ;;
     *)
-        echo "usage: $0 aot|apk" >&2
+        echo "usage: $0 aot|apk [android-arm64|android-x64]" >&2
         exit 2
         ;;
 esac
