@@ -215,3 +215,16 @@ def _rewrite_rules(checklist: tuple[str, ...]) -> list[str]:
             " missing."
         ),
     ]
+
+
+LOCAL_REMINDER: Final = (
+    "\n\nREMINDER before you answer: details that are NOT on the photographed"
+    " pages are what a real reader adds -- they are the reason to PASS, never"
+    " a reason to fail. FAIL a first summary only when ALL its specific"
+    " claims are on the photographed pages, or it is generic, or about"
+    " another book or part."
+)
+"""Appended only for the local fallback grader (:mod:`book_guard._local`):
+measured 2026-10-15 on the reader's 15 real summaries, both local qwen3
+models failed genuine ones *because* they went past the photos -- the rule
+read backwards. Haiku's prompt is untouched."""

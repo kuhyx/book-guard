@@ -12,18 +12,27 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
+import logging
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _ledger
+from book_guard import _ledger, _local
 from book_guard._bonus import earns, qualifies
-from book_guard._claude import DEFAULT_MODEL, ask
+from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
 from book_guard._ledger import CREDIT, REJECT, Entry
-from book_guard._prompt import MAX_MISSING, SYSTEM, Context, build_prompt
+from book_guard._prompt import (
+    LOCAL_REMINDER,
+    MAX_MISSING,
+    SYSTEM,
+    Context,
+    build_prompt,
+)
 
 if TYPE_CHECKING:
     from book_guard._books import Book
     from book_guard._paths import Paths
     from book_guard._sessions import Session
+
+_logger: Final = logging.getLogger(__name__)
 
 MIN_SUMMARY_CHARS: Final = 150
 GRADER_VOTES: Final = 3
@@ -39,7 +48,11 @@ class Verdict:
     missing: tuple[str, ...] = ()
     """On a fail: what to add for it to pass (topics, not answers)."""
     ungraded: bool = False
-    """Credited without a grader: it was unreachable for an hour."""
+    """Credited without a grader: none answered for :data:`GRADER_GRACE`."""
+    grader: str = ""
+    """Who judged it: ``claude:<model>`` or ``local:<model>``."""
+    votes: tuple[bool, ...] = ()
+    """Each grading call's pass/fail, in order."""
 
 
 def grade(
@@ -53,7 +66,9 @@ def grade(
     """Grade ``summary`` for ``session``.
 
     A summary shorter than :data:`MIN_SUMMARY_CHARS` fails without a model
-    call. Raises ``ClaudeUnavailableError`` when the grader cannot answer --
+    call. When Claude cannot answer (outage, usage cap) every vote is
+    re-cast on the local model -- all of them, so a verdict never mixes two
+    graders. Raises ``ClaudeUnavailableError`` only when neither answers --
     the caller keeps the session open rather than failing it.
     """
     if len(summary.strip()) < MIN_SUMMARY_CHARS:
@@ -64,13 +79,25 @@ def grade(
     prompt = build_prompt(book, session, summary, context)
     # A majority of independent calls, run side by side: one Haiku answer is
     # noisy (2026-10-03: the same summary passed twice and failed once).
-    with ThreadPoolExecutor(max_workers=GRADER_VOTES) as pool:
-        answers = list(
-            pool.map(lambda _: ask(SYSTEM, prompt, model=model), range(GRADER_VOTES))
-        )
+    grader = f"claude:{model}"
+    try:
+        with ThreadPoolExecutor(max_workers=GRADER_VOTES) as pool:
+            answers = list(
+                pool.map(
+                    lambda _: ask(SYSTEM, prompt, model=model), range(GRADER_VOTES)
+                )
+            )
+    except ClaudeUnavailableError as exc:
+        _logger.warning("Claude did not grade (%s); asking %s", exc, _local.LOCAL_MODEL)
+        grader = f"local:{_local.LOCAL_MODEL}"
+        # One after another: the card holds one copy of the model.
+        rewrite = bool(context and context.checklist)
+        local_prompt = prompt + ("" if rewrite else LOCAL_REMINDER)
+        answers = [_local.ask_local(SYSTEM, local_prompt) for _ in range(GRADER_VOTES)]
     votes = [_vote(a) for a in answers]
     passed = sum(v.passed for v in votes) * 2 > len(votes)
-    return next(v for v in votes if v.passed == passed)
+    chosen = next(v for v in votes if v.passed == passed)
+    return replace(chosen, grader=grader, votes=tuple(v.passed for v in votes))
 
 
 def _vote(answer: dict[str, object]) -> Verdict:
@@ -141,6 +168,7 @@ def record_verdict(
             "attempt": str(attempt),
             "missing": "\n".join(verdict.missing),
             "graded": "0" if verdict.ungraded else "1",
+            "grader": verdict.grader,
         },
     )
     if verdict.passed and earns(session.pages, session.minutes, ledger, entry):

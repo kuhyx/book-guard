@@ -130,23 +130,35 @@ def parse_result(stdout: str) -> dict[str, object]:
     if not results or results[-1].get("is_error"):
         msg = f"claude returned no successful result: {why(stdout)}"
         raise ClaudeUnavailableError(msg)
-    raw = str(results[-1].get("result", "")).strip()
+    return parse_answer(str(results[-1].get("result", "")), "claude")
+
+
+def parse_answer(answer: str, who: str) -> dict[str, object]:
+    """A model's answer text -> its JSON object (plus ``text`` after the marker).
+
+    Shared with the local fallback (:mod:`book_guard._local`).
+
+    Raises:
+        ClaudeUnavailableError: The answer is not a JSON object.
+    """
+    raw = answer.strip()
     head, marker, body = raw.partition(TEXT_MARKER)
-    text = _FENCE.sub("", head.strip())
+    # rstrip: a stray comma before the marker (seen from the local model).
+    text = _FENCE.sub("", head.strip()).rstrip(",").rstrip()
     try:
         parsed = json.loads(text, strict=False)  # raw newlines inside long strings
     except ValueError as exc:
-        msg = f"claude answered with non-JSON: {text[:200]!r}"
+        msg = f"{who} answered with non-JSON: {text[:200]!r}"
         raise ClaudeUnavailableError(msg) from exc
     if not isinstance(parsed, dict):
-        msg = f"claude answered with a non-object: {text[:200]!r}"
+        msg = f"{who} answered with a non-object: {text[:200]!r}"
         raise ClaudeUnavailableError(msg)
     if marker:
         parsed["text"] = _FENCE.sub("", body.strip())
     return parsed
 
 
-_RETRY_NOTE: Final = (
+RETRY_NOTE: Final = (
     "\n\nIMPORTANT: your previous answer was not valid JSON. Answer with one "
     'JSON object only, escaping every double quote inside strings as \\".'
 )
@@ -189,7 +201,7 @@ def _ask(system: str, prompt: str, images: list[str], model: str) -> dict[str, o
         if "non-JSON" not in str(exc) and "non-object" not in str(exc):
             raise
         _logger.warning("retrying after malformed JSON: %s", exc)
-    return _ask_once(system, _message(prompt + _RETRY_NOTE, images), model)
+    return _ask_once(system, _message(prompt + RETRY_NOTE, images), model)
 
 
 def ask(

@@ -39,8 +39,15 @@ Read README.md first. These are the invariants that are easy to break.
   must keep working (photos, page numbers, check page, summary queued) with
   the PC and the network both gone. App data lives in its support folder
   and survives `adb install -r` -- never uninstall or clear it.
-- **Haiku only.** Every Claude call defaults to `DEFAULT_MODEL = "haiku"`;
-  another model only via an explicit per-run `--model`. Never a config value.
+- **Haiku only, then local.** Every Claude call defaults to
+  `DEFAULT_MODEL = "haiku"`; another model only via an explicit per-run
+  `--model`. Never a config value. Only when Claude fails (outage, usage
+  cap) does the fallback in `_local.py` (ollama) answer: `LOCAL_MODEL`
+  (`qwen3:32b`) re-casts *all* grading votes, `LOCAL_VISION_MODEL` reads a
+  contents photo -- constants too. The local grader gets `LOCAL_REMINDER`
+  appended; Haiku's prompt never does. Re-run `scripts/replay_verdicts.py
+  --local` (the reader's real summaries) and `grader_suite.py --local`
+  after changing either model.
 - **Isolated Claude calls.** `_claude.ask` runs the CLI with
   `--setting-sources "" --tools "" --strict-mcp-config` from `cwd=/`, images
   as base64 blocks. Long free text goes after `---TEXT---`, never inside JSON.
@@ -61,8 +68,9 @@ Read README.md first. These are the invariants that are easy to break.
   Mon-Fri only, debt goes onto weekends only. The switch month keeps the old
   plan's line at the switch exactly -- never re-split the days before it.
 - **Nothing credits without the grader** -- except a summary (150+ chars)
-  whose grading has failed for `GRADER_GRACE` (1 h, outage or usage cap):
-  `quiz_one` credits it with `detail.graded == "0"`. The MCP server and the
+  that neither Claude nor the local model graded for `GRADER_GRACE` (5 min):
+  `quiz_one` credits it with `detail.graded == "0"`. `detail.grader` names
+  who judged a graded row (`claude:<model>` / `local:<model>`). The MCP server and the
   app's request files are read-only / route through `_grading.quiz_one`.
 - **A fail names what is missing** (1-3 topics, never the answers); a
   failed summary can be rewritten any number of times (`<sid>#2`, `#3`, ...

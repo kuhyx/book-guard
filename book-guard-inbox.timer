@@ -3,7 +3,7 @@ Description=Fallback sweep of the book-guard inbox
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=15min
+OnUnitActiveSec=2min
 Unit=book-guard-inbox.service
 
 [Install]

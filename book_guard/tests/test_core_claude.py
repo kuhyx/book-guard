@@ -211,3 +211,8 @@ def test_failure_is_logged_with_reason_and_marks_the_outage(
     assert since is not None
     assert _claude.ask("sys", "prompt") == {}
     assert _errlog.claude_down_since(bg_paths) is None
+
+
+def test_a_stray_comma_before_the_marker_is_forgiven() -> None:
+    raw = '{"kind": "toc"},\n---TEXT---\nWstęp 7'
+    assert _claude.parse_answer(raw, "m") == {"kind": "toc", "text": "Wstęp 7"}

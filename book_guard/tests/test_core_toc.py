@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from book_guard import _toc
 from book_guard._books import Chapter
+from book_guard._claude import ClaudeUnavailableError
 
 if TYPE_CHECKING:
     import pytest
@@ -41,3 +42,24 @@ def test_transcribe_and_read(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _toc.transcribe("B64") == ""
     chapters = _toc.read_toc(Path("x.jpg"), "B64", model_text=lambda _b: "Wstęp 13")
     assert chapters == (Chapter(13, "Wstęp"),)
+
+
+def test_transcribe_falls_back_to_the_local_vision_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def down(*_args: object, **_kwargs: object) -> dict[str, object]:
+        msg = "usage limit reached"
+        raise ClaudeUnavailableError(msg)
+
+    seen: list[list[str] | None] = []
+
+    def local(
+        _system: str, _prompt: str, images: list[str] | None = None
+    ) -> dict[str, object]:
+        seen.append(images)
+        return {"kind": "toc", "text": "Wstęp 7"}
+
+    monkeypatch.setattr(_toc, "ask", down)
+    monkeypatch.setattr(_toc, "ask_local", local)
+    assert _toc.transcribe("B64") == "Wstęp 7"
+    assert seen == [["B64"]]

@@ -51,6 +51,24 @@ install_converters() {
     fi
 }
 
+install_local_models() {
+    # The fallback grader and contents reader for when Claude is down or out
+    # of usage (book_guard/_local.py). The names come from the code, so the
+    # two cannot drift; `ollama pull` is a no-op for a model already there.
+    command -v ollama >/dev/null || sudo pacman -S --needed --noconfirm ollama \
+        || fail "pacman ollama"
+    systemctl is-active --quiet ollama || sudo systemctl enable --now ollama \
+        || fail "ollama service"
+    # Captured first: a failing $(...) in a `for` list is silently empty.
+    local models model
+    models=$("$SYSTEM_PYTHON" -c 'from book_guard import _local as m; print(m.LOCAL_MODEL, m.LOCAL_VISION_MODEL)') \
+        || fail "cannot read the local model names from book_guard._local"
+    for model in $models; do
+        log "pulling local model $model"
+        ollama pull "$model" >/dev/null || fail "ollama pull $model"
+    done
+}
+
 verify_runtime() {
     log "verifying imports with $SYSTEM_PYTHON"
     "$SYSTEM_PYTHON" -c "import book_guard, gatelock, freedays, PIL, fastembed; print('imports OK')" \
@@ -76,6 +94,7 @@ install_units() {
 main() {
     install_converters
     install_package
+    install_local_models
     verify_runtime
     install_units
     log "done -- uploads: $READING ; status: python3 -m book_guard status"

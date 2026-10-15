@@ -14,15 +14,19 @@ model call is the right price.
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING, Final
 
 from book_guard._books import Chapter, normalise_chapters
-from book_guard._claude import DEFAULT_MODEL, ask
+from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
+from book_guard._local import ask_local
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+_logger: Final = logging.getLogger(__name__)
 
 TOC_PREFIX: Final = "toc-"
 _LEADER: Final = re.compile(r"\s*[.·…_]{3,}|\s*(?:\. ){3,}")
@@ -53,8 +57,16 @@ def parse_toc(text: str) -> tuple[Chapter, ...]:
 
 
 def transcribe(jpeg_b64: str, *, model: str = DEFAULT_MODEL) -> str:
-    """The model's ``title page`` transcription of a contents page."""
-    return str(ask(_SYSTEM, _PROMPT, [jpeg_b64], model=model).get("text") or "")
+    """The model's ``title page`` transcription of a contents page.
+
+    Claude first; when it cannot answer, the local model reads the photo.
+    """
+    try:
+        answer = ask(_SYSTEM, _PROMPT, [jpeg_b64], model=model)
+    except ClaudeUnavailableError as exc:
+        _logger.warning("Claude did not read the contents (%s); asking ollama", exc)
+        answer = ask_local(_SYSTEM, _PROMPT, [jpeg_b64])
+    return str(answer.get("text") or "")
 
 
 def read_toc(

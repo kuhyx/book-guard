@@ -7,6 +7,12 @@ the local page reader and ``grade`` directly and prints a pass/fail table, exiti
 non-zero if any case lands on the wrong side.
 
     BOOK_GUARD_ROOT=.demo python3 scripts/grader_suite.py [MODEL]
+
+``--local`` makes every Claude call fail, so the cases are judged by the
+fallback grader (``_local.LOCAL_MODEL``) through the real fallback path.
+``--local-model NAME`` tries another ollama model in its place.
+``--case NAME`` runs one grading case (a local case takes ~30 s);
+``--no-vision`` skips the page-reader rows.
 """
 
 from __future__ import annotations
@@ -14,10 +20,11 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from book_guard import _ledger, _photos
+from book_guard import _ledger, _local, _photos, _quiz
 from book_guard._anchor import find_span
 from book_guard._books import book_at
-from book_guard._claude import ask
+from book_guard._claude import ClaudeUnavailableError, ask
+from book_guard._local import ask_local
 from book_guard._pagenum import Context
 from book_guard._paths import paths
 from book_guard._prompt import Context as GradeContext
@@ -104,15 +111,16 @@ def _smart_cheat(photos: list[PhotoRecord], model: str) -> str:
     Fluent, as someone who skimmed three pages would write it.
     """
     excerpts = "\n\n".join(p.text for p in photos)
-    answer = ask(
-        "You write short, natural book-club summaries.",
+    system = "You write short, natural book-club summaries."
+    prompt = (
         "Write a natural 4-sentence summary of the reading below, as if you "
         "had read the whole stretch. Use ONLY facts from these excerpts. "
         'Answer with the line {"ok": true}, then ---TEXT---, then the '
-        "summary.\n\n" + excerpts,
-        model=model,
+        "summary.\n\n" + excerpts
     )
-    return str(answer["text"])
+    if "--local" in sys.argv:
+        return str(ask_local(system, prompt)["text"])
+    return str(ask(system, prompt, model=model)["text"])
 
 
 def _vision_failures(active: Paths, session: Session) -> int:
@@ -140,13 +148,17 @@ def _grade_failures(
             False,
         ),
         ("wrong-part", WRONG_PART, False),
-        ("smart-photo-cheat", _smart_cheat(session.evidence, model), False),
+        ("smart-photo-cheat", "", False),  # written below, only when run
         ("polish", POLISH, True),
         ("rewrite-genuine", REWRITE_GENUINE, True),
         ("rewrite-echo", REWRITE_ECHO, False),
     ]
+    only = _flag_value("--case")
     failures = 0
-    for name, summary, want in cases:
+    for name, written, want in cases:
+        if only and name != only:
+            continue
+        summary = written or _smart_cheat(session.evidence, model)
         checklist = CHECKLIST if name.startswith("rewrite-") else ()
         context = GradeContext(span=span_text, checklist=checklist)
         verdict = grade(book, session, summary, model=model, context=context)
@@ -157,6 +169,7 @@ def _grade_failures(
         _out(
             f"grade   {name:17} want {'pass' if want else 'fail'} got "
             f"{'pass' if verdict.passed else 'fail'}  {'ok' if ok else 'WRONG'}"
+            f" votes {''.join('P' if v else 'F' for v in verdict.votes)}"
             f"  -- {verdict.feedback[:110]}"
             + (
                 f"\n          missing: {'; '.join(verdict.missing)}"
@@ -167,10 +180,27 @@ def _grade_failures(
     return failures
 
 
+def _flag_value(flag: str) -> str:
+    """The word after ``flag`` on the command line, or ''."""
+    argv = sys.argv[1:]
+    return argv[argv.index(flag) + 1] if flag in argv[:-1] else ""
+
+
+def _claude_down(*_args: object, **_kwargs: object) -> dict[str, object]:
+    msg = "grader_suite --local: Claude is out of usage"
+    raise ClaudeUnavailableError(msg)
+
+
 def main() -> int:
     """Run every case; exit 1 if any landed on the wrong side."""
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    values = {_flag_value("--case"), _flag_value("--local-model")}
+    args = [a for a in sys.argv[1:] if not a.startswith("--") and a not in values]
     model = args[0] if args else "haiku"
+    if "--local" in sys.argv:
+        # The production fallback path; vars(): a script's monkeypatch past Final.
+        vars(_quiz)["ask"] = _claude_down
+        vars(_local)["LOCAL_MODEL"] = _flag_value("--local-model") or _local.LOCAL_MODEL
+        model = f"local:{_local.LOCAL_MODEL}"
     active = paths()
     ledger = _ledger.load(active.ledger, active.key_file)
     records = _photos.load(active.photos)
@@ -183,7 +213,7 @@ def main() -> int:
     use_span = book is not None and "--no-span" not in sys.argv
     span = find_span(active, book.isbn, session) if book and use_span else None
     _out("book text:", span.reason if span else "not used", span.scores if span else "")
-    failures = _vision_failures(active, session)
+    failures = 0 if "--no-vision" in sys.argv else _vision_failures(active, session)
     failures += _grade_failures(book, session, span.text if span else "", model)
     _out(f"{failures} case(s) on the wrong side ({model})")
     return 1 if failures else 0

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -152,9 +153,9 @@ def test_grade_parses_the_answer(
     monkeypatch.setattr(_quiz, "ask", ask)
     session = only_session(quiz_pair())
     context = Context(span="S")
-    assert _quiz.grade(
-        make_book(), session, SUMMARY, model="opus", context=context
-    ) == (expected)
+    verdict = _quiz.grade(make_book(), session, SUMMARY, model="opus", context=context)
+    assert verdict == replace(expected, grader="claude:opus", votes=verdict.votes)
+    assert verdict.votes == (expected.passed,) * _quiz.GRADER_VOTES
     assert calls[0][2] == "opus"
     assert "--- the book's own text" in calls[0][1]
 

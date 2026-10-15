@@ -53,10 +53,12 @@ is missing -- 1-3 topics from those pages, never the answers -- and may be
 rewritten and resent **as often as it takes**, with the old text prefilled:
 each rewrite is judged, generously, only on whether it now covers them
 (`reject` rows `<session>`, `<session>#2`, `#3`, ... until a `credit` row
-ends it). If the grader cannot be reached for an hour
-(an outage, or Claude usage running out), a summary of 150+ characters is
-credited without grading (`detail.graded == "0"`), bonus included, so Claude
-never makes the app useless.
+ends it). When Claude cannot grade (an outage, or usage running out), a
+local model on ollama (`qwen3:32b`) grades instead, at once (`detail.grader
+== "local:qwen3:32b"`); only if that is down too for 5 minutes is a summary
+of 150+ characters credited without grading (`detail.graded == "0"`), bonus
+included, so Claude never makes the app useless. A photographed contents
+page falls back the same way, to `qwen3-vl:30b-a3b-instruct`.
 
 ## The rules
 
@@ -71,7 +73,7 @@ never makes the app useless.
 | Today's requirement | today's quota after those moves plus, on a weekend, its debt share, rounded up and fixed at the start of the day |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up, or until 20 pages are credited that day (by the day the reading ended; clears the lock only, no bonus) |
 | Escape | 2 per month; forgives the day, credits no pages |
-| Summary | a fail lists what to add; rewrite as often as needed, judged on that; ungraded credit after 1 h of grader outage |
+| Summary | a fail lists what to add; rewrite as often as needed, judged on that; Claude down: graded locally (ollama); ungraded credit after 5 min with no grader at all |
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |
 | Starts | 2026-10-01 |
 

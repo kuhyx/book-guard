@@ -66,10 +66,11 @@ the session it claims to be from. A week, not a day: the app is offline-first
 and queues photos while the PC is off, and the EXIF capture time -- not the
 upload -- is the session clock."""
 
-GRADER_GRACE: Final = timedelta(hours=1)
-"""How long a summary waits on an unreachable grader (outage, usage cap)
-before it is credited ungraded -- short enough to keep the evening's bonus.
-Claude being down must never make the app useless."""
+GRADER_GRACE: Final = timedelta(minutes=5)
+"""How long a summary waits when no grader answers -- Claude down or out of
+usage *and* the local fallback down -- before it is credited ungraded.
+Claude being down must never make the app useless (an hour was too long,
+2026-10-15)."""
 
 BONUS_MIN_PAGES: Final = 15
 BONUS_MIN_MINUTES: Final = 15

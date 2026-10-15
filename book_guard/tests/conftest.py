@@ -71,6 +71,7 @@ def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     monkeypatch.setattr("book_guard._claude.subprocess.run", no_claude)
     monkeypatch.setattr(_openlibrary, "urlopen", no_network)
     monkeypatch.setattr(_http, "urlopen", no_network)
+    monkeypatch.setattr("book_guard._local.urlopen", no_network)  # ollama
     # Lookup pacing must never really sleep in a test.
     monkeypatch.setattr("book_guard._lookup.time.sleep", lambda _s: None)
     # The fastembed CLASS is faked, not the factory, so _embed._embedder

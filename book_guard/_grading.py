@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Final
 from book_guard._anchor import find_span
 from book_guard._books import register
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
+from book_guard._constants import GRADER_GRACE
 from book_guard._flock import exclusive
 from book_guard._grader_wait import stop, waited_out
 from book_guard._http import UnavailableError
@@ -30,8 +31,8 @@ if TYPE_CHECKING:
 _logger: Final = logging.getLogger(__name__)
 
 UNGRADED: Final = (
-    "The grader was unreachable for over an hour, so this summary is credited"
-    " without grading."
+    f"No grader answered for over {int(GRADER_GRACE.total_seconds()) // 60}"
+    " minutes, so this summary is credited without grading."
 )
 
 
@@ -115,7 +116,8 @@ def quiz_one(
     A fail names what is missing; the rewrite -- there is no limit on how
     many -- is judged on exactly that. While the grader is unreachable this
     raises (the request waits) -- for up to :data:`GRADER_GRACE`, then the
-    summary is credited ungraded.
+    summary is credited ungraded. Claude failing alone does not raise: the
+    local model grades instead (:func:`book_guard._quiz.grade`).
     """
     verdict = _grade_or_wait(paths, view, summary, model)
     with exclusive(paths):
