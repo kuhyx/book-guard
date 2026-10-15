@@ -31,7 +31,7 @@ dependencies:
   # Decodes the stored JPEG pixels *without* the EXIF turn, which is wrong
   # when the phone points straight down at a book, so the page can be
   # tried in all four orientations.
-  image: 4.10.1
+  image: 4.12.0
   # Session photos from the camera. Called with no resize/quality options so
   # the camera's original bytes -- and their EXIF capture time -- are uploaded.
   image_picker: 1.2.4
