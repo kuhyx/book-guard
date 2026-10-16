@@ -3,6 +3,8 @@
 /// Before the switch: the 20:40 weights, surplus off workdays then Fri-Mon.
 /// From it: 15:30:50 with weekends capped, surplus off Mon-Fri. The switch
 /// month walks the old rules up to the switch and re-splits the rest.
+/// A sick day keeps its weight and its place in every cut but asks nothing:
+/// its quota after the moves goes to [MonthPlan.excused], never re-split.
 library;
 
 import 'package:book_guard_app/src/pace/quotas.dart';
@@ -27,6 +29,9 @@ class MonthPlan {
 
   /// Debt in a month with no counted day.
   Rational unspread;
+
+  /// Sick days' quotas after the moves: off the line and the target.
+  final Quotas excused = {};
 
   /// Pages the plan expects by the start of [day].
   Rational lineBefore(DateTime day) =>
@@ -53,6 +58,7 @@ class MonthInput {
     required this.target,
     required this.credit,
     required this.pagesOn,
+    this.sick = const {},
   });
 
   /// Every day of the month.
@@ -72,6 +78,9 @@ class MonthInput {
 
   /// Pages credited per day.
   final Map<DateTime, int> pagesOn;
+
+  /// Sick days: counted, but no quota of their own.
+  final Set<DateTime> sick;
 }
 
 typedef _Cut = Rational Function(Quotas, List<DateTime>, Rational);
@@ -132,8 +141,10 @@ Rational _walk(
 ) {
   var ahead = start;
   for (final day in days) {
-    ahead +=
-        Rational.of(m.pagesOn[day] ?? 0) - (plan.quotas[day] ?? Rational.zero);
+    final planned = m.sick.contains(day)
+        ? Rational.zero
+        : plan.quotas[day] ?? Rational.zero;
+    ahead += Rational.of(m.pagesOn[day] ?? 0) - planned;
     if (ahead <= Rational.zero) continue;
     final later = m.counted.where((d) => d.isAfter(day)).toList();
     final moved = cut(plan.quotas, later, ahead);
@@ -175,6 +186,10 @@ MonthPlan planMonth(
     }
   }
   plan.leftover += maxQ(ahead, Rational.zero);
+  for (final d in m.sick) {
+    final quota = plan.quotas.remove(d);
+    if (quota != null) plan.excused[d] = quota;
+  }
   return plan;
 }
 
@@ -189,7 +204,9 @@ Rational dayRequirement(
   if (quota == null) return Rational.zero;
   if (!rules.isWeekend(day)) return quota;
   final weekends = m.counted
-      .where((d) => !d.isBefore(day) && rules.isWeekend(d))
+      .where(
+        (d) => !d.isBefore(day) && rules.isWeekend(d) && !m.sick.contains(d),
+      )
       .toList();
   final (shares, _) = fillWeekends(
     rules,

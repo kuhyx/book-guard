@@ -11,6 +11,7 @@ DayView view({
   int required = 17,
   int assumed = 22,
   bool free = false,
+  bool sick = false,
   bool oldRule = false,
   bool beforeQuotas = false,
   int simulated = 0,
@@ -33,6 +34,7 @@ DayView view({
   credited: credited,
   assumed: assumed,
   free: free,
+  sick: sick,
   oldRule: oldRule,
   beforeQuotas: beforeQuotas,
   simulated: simulated,
@@ -121,6 +123,14 @@ void main() {
       expect(plus[2], 'Simulated: 57 read (+40)');
       final minus = dayLines(view(assumed: 0, simulated: -17));
       expect(minus[2], 'Simulated: 0 read (-17)');
+    });
+
+    test('a sick day asks nothing and says so', () {
+      expect(cellText(view(sick: true, required: 0)), 'sick');
+      expect(
+        dayLines(view(sick: true))[1],
+        "Sick day: asks nothing, its share is off the month's target",
+      );
     });
 
     test('a free day asks nothing', () {

@@ -5,7 +5,7 @@ The app computes week/month/any-day/simulation views offline with a port of
 ``_quotas``/``_plan``/``_pace`` (``app/lib/src/pace_plan.dart``). This runs
 the Python views (:mod:`book_guard._pace_view`, the same code ``book-guard
 ask`` uses) over in-memory ledgers -- several months, free days, surplus,
-debt, the weekend cap, the December-to-January carry, simulations -- and
+debt, the weekend cap, the December-to-January carry, sick days, simulations -- and
 writes every day's numbers, so a Dart test can demand identical answers.
 
     python3 scripts/pace_goldens.py [OUT]
@@ -40,6 +40,7 @@ class Case:
     last: date
     credits: dict[date, int]
     free: frozenset[date] = frozenset()
+    sick: frozenset[date] = frozenset()
     sim: Simulation | None = None
     note: str = ""
 
@@ -171,6 +172,34 @@ def _cases() -> list[Case]:
             _reading(date(2026, 10, 2), date(2026, 11, 9), 10, 30, 5),
             sim=Simulation(date(2026, 11, 14), 25),
         ),
+        Case(
+            "sick-weekday-and-weekend",
+            date(2026, 10, 20),
+            date(2026, 10, 19),
+            date(2026, 11, 8),
+            _AHEAD,
+            sick=frozenset({date(2026, 10, 22), date(2026, 10, 25)}),
+            note="ahead: a Thu and a Sun ask nothing, every other day as before",
+        ),
+        Case(
+            "sick-weekend-with-debt",
+            date(2026, 10, 15),
+            date(2026, 10, 15),
+            date(2026, 11, 8),
+            _DEMO,
+            sick=frozenset({date(2026, 10, 17)}),
+            sim=Simulation(date(2026, 10, 17), 12),
+            note="behind: the debt skips the sick Saturday; 12 read on it count",
+        ),
+        Case(
+            "sick-last-month",
+            date(2026, 11, 10),
+            date(2026, 10, 19),
+            date(2026, 11, 30),
+            _reading(date(2026, 10, 2), date(2026, 11, 9), 20, 50, 6),
+            sick=frozenset({date(2026, 10, 21), date(2026, 10, 27)}),
+            note="October's sick shares stay out of November's carry",
+        ),
     ]
 
 
@@ -188,7 +217,7 @@ def _run(case: Case) -> dict[str, Any]:
         _ledger(case.credits),
         case.today,
         _span(case.first, case.last),
-        lambda d: d in case.free,
+        (lambda d: d in case.free, case.sick),
         case.sim,
     )
     return {
@@ -197,6 +226,7 @@ def _run(case: Case) -> dict[str, Any]:
         "today": case.today.isoformat(),
         "credits": {d.isoformat(): n for d, n in sorted(case.credits.items())},
         "free_days": sorted(d.isoformat() for d in case.free),
+        "sick_days": sorted(d.isoformat() for d in case.sick),
         "simulate": None
         if case.sim is None
         else {"day": case.sim.day.isoformat(), "delta": case.sim.delta},

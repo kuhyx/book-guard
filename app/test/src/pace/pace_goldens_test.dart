@@ -20,6 +20,7 @@ void main() {
         'rules': rules,
         'credits': kase['credits'],
         'free_days': kase['free_days'],
+        'sick_days': kase['sick_days'],
       })!;
       final simulate = kase['simulate'] as Map<String, dynamic>?;
       final sim = simulate == null
@@ -50,6 +51,7 @@ void main() {
           'carried_debt': v.pace.carriedDebt,
           'carried_credit': v.pace.carriedCredit,
           'free': v.free,
+          'sick': v.sick,
           'old_rule': v.oldRule,
         };
         for (final key in got.keys) {

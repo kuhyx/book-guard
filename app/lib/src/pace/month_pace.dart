@@ -62,6 +62,7 @@ int _share(int balance, int months) {
   Map<DateTime, int> credits,
   DateTime first,
   bool Function(DateTime) isFree,
+  Set<DateTime> sick,
   int carry,
   DateTime until,
 ) {
@@ -92,6 +93,7 @@ int _share(int balance, int months) {
         if (e.key.year == first.year && e.key.month == first.month)
           e.key: e.value,
     },
+    sick: sick,
   );
   final useSwitch = nextMonth(first).isAfter(rules.quotaSwitch);
   return (planMonth(month, until, rules, useSwitch: useSwitch), month, base);
@@ -102,8 +104,9 @@ DayPace computePace(
   PlanRules rules,
   Map<DateTime, int> credits,
   DateTime today,
-  bool Function(DateTime) isFree,
-) {
+  bool Function(DateTime) isFree, {
+  Set<DateTime> sick = const {},
+}) {
   final current = monthStart(today);
   var balance = 0;
   for (
@@ -128,10 +131,34 @@ DayPace computePace(
     final read = credits.entries
         .where((e) => e.key.year == first.year && e.key.month == first.month)
         .fold(0, (a, e) => a + e.value);
-    balance += base - read;
+    // A sick day's share is owed by nobody (Python: the month's plan).
+    final owed = days.any(sick.contains)
+        ? (Rational.of(base) -
+                  sumQ(
+                    _plan(
+                      rules,
+                      credits,
+                      first,
+                      isFree,
+                      sick,
+                      0,
+                      days.last,
+                    ).$1.excused.values,
+                  ))
+              .ceil()
+        : base;
+    balance += owed - read;
   }
   final carry = _share(balance, _monthsLeft(current));
-  final (plan, month, _) = _plan(rules, credits, current, isFree, carry, today);
+  final (plan, month, _) = _plan(
+    rules,
+    credits,
+    current,
+    isFree,
+    sick,
+    carry,
+    today,
+  );
   return DayPace(
     month: current,
     target: plan.target.ceil(),

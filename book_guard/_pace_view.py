@@ -11,6 +11,8 @@ day is :func:`book_guard._pace.compute_pace` on an in-memory ledger copy.
 * **future day** -- every day from today until then assumed to meet its
   requirement exactly: one forward walk appends a synthetic credit row per
   day (today: topped up to the requirement, never below what is credited);
+* **sick day** -- asks nothing, so a future one is assumed to read 0 (a
+  simulation can still add pages to it);
 * **simulation** -- one ``±N`` deviation on a day from today on: that day's
   assumed pages are its baseline (the requirement, or today's credited pages
   when more) plus ``N``, never below 0, and every later day is recomputed by
@@ -67,6 +69,7 @@ class DayView:
     assumed: int
     """Pages the projection counts that day: ``credited`` on a past day."""
     free: bool
+    sick: bool
     simulated: int = 0
     """The simulation's ``delta`` when it falls on this day."""
 
@@ -132,10 +135,18 @@ def _before(ledger: Ledger, day: date) -> list[Entry]:
     return [e for e in ledger.entries if not (e.kind == CREDIT and e.day >= iso)]
 
 
-def _past(ledger: Ledger, day: date, is_free: Callable[[date], bool]) -> DayView:
-    pace = compute_pace(Ledger(_before(ledger, day)), day, is_free)
+@dataclass(frozen=True)
+class _Days:
+    """Which days are free and which are sick, for every view of one call."""
+
+    is_free: Callable[[date], bool]
+    sick: frozenset[date]
+
+
+def _past(ledger: Ledger, day: date, cal: _Days) -> DayView:
+    pace = compute_pace(Ledger(_before(ledger, day)), day, cal.is_free, sick=cal.sick)
     pages = _credited(ledger, day)
-    return DayView(day, PAST, pace, pages, pages, is_free(day))
+    return DayView(day, PAST, pace, pages, pages, cal.is_free(day), day in cal.sick)
 
 
 def _synthetic(day: date, amount: int) -> Entry:
@@ -147,13 +158,13 @@ def _forward(
     ledger: Ledger,
     today: date,
     last: date,
-    is_free: Callable[[date], bool],
+    cal: _Days,
     sim: Simulation | None,
 ) -> Iterable[DayView]:
     """Today through ``last``, each day meeting its requirement (one walk)."""
     rows = _before(ledger, today + timedelta(days=1))
     for day in _days(today, last):
-        pace = compute_pace(Ledger(rows), day, is_free)
+        pace = compute_pace(Ledger(rows), day, cal.is_free, sick=cal.sick)
         real = _credited(ledger, day) if day == today else 0
         assumed = max(real, pace.ask.required)
         delta = sim.delta if sim is not None and sim.day == day else 0
@@ -161,22 +172,27 @@ def _forward(
         if assumed != real:
             rows.append(_synthetic(day, assumed - real))
         kind = TODAY if day == today else FUTURE
-        yield DayView(day, kind, pace, real, assumed, is_free(day), delta)
+        sick = day in cal.sick
+        yield DayView(day, kind, pace, real, assumed, cal.is_free(day), sick, delta)
 
 
 def views(
     ledger: Ledger,
     today: date,
     days: list[date],
-    is_free: Callable[[date], bool],
+    calendar: tuple[Callable[[date], bool], frozenset[date]],
     sim: Simulation | None = None,
 ) -> list[DayView]:
-    """Each of ``days`` (ascending) as past, today or projected."""
-    check = cached(is_free)
-    out = [_past(ledger, d, check) for d in days if d < today]
+    """Each of ``days`` (ascending) as past, today or projected.
+
+    ``calendar`` is ``(is_free, sick days)``.
+    """
+    is_free, sick = calendar
+    cal = _Days(cached(is_free), sick)
+    out = [_past(ledger, d, cal) for d in days if d < today]
     if days and days[-1] >= today:
         wanted = set(days)
-        ahead = _forward(ledger, today, days[-1], check, sim)
+        ahead = _forward(ledger, today, days[-1], cal, sim)
         out.extend(v for v in ahead if v.day in wanted)
     return out
 

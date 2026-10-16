@@ -60,8 +60,9 @@ Read README.md first. These are the invariants that are easy to break.
   `/etc/workout-locker/hmac.key`. screen-locker and steam-backlog-enforcer
   read `credit` rows with `detail.bonus == "1"`, dated by `detail.ended_at`.
   The rule (`_bonus.py`), from `QUOTA_SWITCH_DATE` (2026-10-12): the day's
-  credited pages reach the day's requirement (`Pace.ask.required`: quota
-  after surplus moves + weekend debt share, ceil), stamped on the crossing
+  credited pages reach the day's requirement (`Pace.ask.bonus_at`: quota
+  after surplus moves + weekend debt share, ceil; on a sick day the
+  requirement it would have had, never 0 by sickness), stamped on the crossing
   row, one per day; a day asking 0 gets a zero-page `bonus:auto:<day>` row
   from the periodic runs (`_autogrant.py`: inbox pass, lock gate), once;
   before the switch 15 pages + 15 min, or 10 + 10 when on pace --
@@ -72,6 +73,12 @@ Read README.md first. These are the invariants that are easy to break.
   30, Sat/Sun 50, weekends capped at 60 (debt included); surplus comes off
   Mon-Fri only, debt goes onto weekends only. The switch month keeps the old
   plan's line at the switch exactly -- never re-split the days before it.
+- **Sick days are not free days** (`sickdays` pool, `_plan.py`): a sick day
+  stays in `counted` (keeps its weight in the split and every surplus cut)
+  but plans 0 in the walk; its quota goes to `MonthPlan.excused` -- off the
+  line, the target and the year balance, never re-split. The gate's verdict
+  checks it first ("today is a sick day"). Every `compute_pace` caller
+  passes `sick=` explicitly; the Dart port mirrors it (goldens).
 - **Photos always first: indexing never runs in the photo pass.** A book
   file in `Reading/books/` is only marked `uploaded` by `process`, which
   starts `book-guard-index.service` (idle CPU/IO, resumable checkpoints)

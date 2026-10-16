@@ -148,7 +148,7 @@ def make_snap(
         sessions=sessions or [],
         open_start=open_start,
         pace=make_pace(required=40, pages=12),
-        free_today=False,
+        sick_days=frozenset(),
         escaped_today=False,
         escapes_left=2,
         locked=locked,

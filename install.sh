@@ -74,7 +74,7 @@ install_local_models() {
 
 verify_runtime() {
     log "verifying imports with $SYSTEM_PYTHON"
-    "$SYSTEM_PYTHON" -c "import book_guard, gatelock, freedays, PIL, fastembed; print('imports OK')" \
+    "$SYSTEM_PYTHON" -c "import book_guard, gatelock, freedays, sickdays, PIL, fastembed; print('imports OK')" \
         || fail "a runtime dependency is missing from the system python"
     [[ -x "$CLAUDE_BIN" ]] || fail "no claude CLI at $CLAUDE_BIN (vision + grading need it)"
     [[ -r "$HMAC_KEY" ]] || fail "$HMAC_KEY unreadable -- the ledger cannot be signed"

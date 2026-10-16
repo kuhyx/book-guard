@@ -36,6 +36,10 @@ def _line(quota_pages: int, *, scale: Fraction = SCALE) -> int:
     return math.ceil(quota_pages * scale)
 
 
+NO: frozenset[date] = frozenset()
+"""No sick days."""
+
+
 def _never(_day: date) -> bool:
     return False
 
@@ -68,7 +72,7 @@ def test_month_helpers() -> None:
 
 def test_before_gate_start_nothing_is_owed() -> None:
     ledger = Ledger([_credit("2026-09-10", 50)])
-    pace = _pace.compute_pace(ledger, date(2026, 9, 20), _never)
+    pace = _pace.compute_pace(ledger, date(2026, 9, 20), _never, sick=NO)
     assert (pace.month, pace.target, pace.carried_debt) == (date(2026, 9, 1), 0, 0)
     assert pace.pages == 50
     assert pace.required == 0
@@ -76,15 +80,17 @@ def test_before_gate_start_nothing_is_owed() -> None:
 
 
 def test_first_day_of_gate_requires_nothing() -> None:
-    pace = _pace.compute_pace(Ledger(), GATE_START_DATE, _never)
+    pace = _pace.compute_pace(Ledger(), GATE_START_DATE, _never, sick=NO)
     assert pace.required == 0
     # Oct 1 predates the quotas: the line on Oct 3 is Friday's share alone.
-    assert _pace.compute_pace(Ledger(), date(2026, 10, 3), _never).required == _line(40)
+    assert _pace.compute_pace(
+        Ledger(), date(2026, 10, 3), _never, sick=NO
+    ).required == _line(40)
 
 
 def test_required_is_prorated_over_elapsed_days() -> None:
     ledger = Ledger([_credit("2026-10-03", 40), _credit("2026-09-30", 500)])
-    pace = _pace.compute_pace(ledger, date(2026, 10, 11), _never)
+    pace = _pace.compute_pace(ledger, date(2026, 10, 11), _never, sick=NO)
     assert pace.target == OCTOBER
     assert pace.pages == 40
     # Oct 2-10: Fri Sat Sun Mon (4x40) Tue Wed Thu (3x20) Fri Sat (2x40)
@@ -95,23 +101,23 @@ def test_required_is_prorated_over_elapsed_days() -> None:
 def test_debt_carries_across_months() -> None:
     ledger = Ledger([_credit("2026-10-05", 100), _credit("2026-11-02", 700)])
     # 900 short, split over November and December.
-    november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
+    november = _pace.compute_pace(ledger, date(2026, 11, 1), _never, sick=NO)
     assert november.carried_debt == 450
     assert november.target == MONTHLY_PAGES + 450
     # December is the year's last month: all 900 + 300 short in November.
-    december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
+    december = _pace.compute_pace(ledger, date(2026, 12, 1), _never, sick=NO)
     assert december.carried_debt == 900 + MONTHLY_PAGES - 700
     # January takes December's whole balance.
-    january = _pace.compute_pace(Ledger(), date(2027, 1, 15), _never)
+    january = _pace.compute_pace(Ledger(), date(2027, 1, 15), _never, sick=NO)
     assert january.carried_debt == OCTOBER + 2 * MONTHLY_PAGES
 
 
 def test_surplus_carries_across_months() -> None:
     # 2500 pages by Oct 5 read October's 1000 and 1500 ahead.
     ledger = Ledger([_credit("2026-10-05", 2500)])
-    november = _pace.compute_pace(ledger, date(2026, 11, 1), _never)
+    november = _pace.compute_pace(ledger, date(2026, 11, 1), _never, sick=NO)
     assert (november.carried_credit, november.target) == (750, MONTHLY_PAGES - 750)
-    december = _pace.compute_pace(ledger, date(2026, 12, 1), _never)
+    december = _pace.compute_pace(ledger, date(2026, 12, 1), _never, sick=NO)
     assert december.carried_debt == 0
     assert december.carried_credit == 2500 - OCTOBER - MONTHLY_PAGES
     assert december.target == MONTHLY_PAGES - december.carried_credit
@@ -130,19 +136,19 @@ def test_finished_book_clears_no_debt() -> None:
             Entry(entry_id="esc", kind=ESCAPE, day="2026-10-15"),
         ]
     )
-    october = _pace.compute_pace(ledger, date(2026, 10, 20), _never)
+    october = _pace.compute_pace(ledger, date(2026, 10, 20), _never, sick=NO)
     assert october.finished_books == 1
     assert october.pages == 40
     # Only pages count: finishing a book forgives none of the shortfall.
-    november = _pace.compute_pace(ledger, date(2026, 11, 3), _never)
+    november = _pace.compute_pace(ledger, date(2026, 11, 3), _never, sick=NO)
     assert november.carried_debt == (OCTOBER - 40) // 2
 
 
 def test_free_days_move_the_line() -> None:
     free = {date(2026, 10, d) for d in range(1, 11)}
-    pace = _pace.compute_pace(Ledger(), date(2026, 10, 11), free.__contains__)
+    pace = _pace.compute_pace(Ledger(), date(2026, 10, 11), free.__contains__, sick=NO)
     assert pace.required == 0
-    later = _pace.compute_pace(Ledger(), date(2026, 10, 16), free.__contains__)
+    later = _pace.compute_pace(Ledger(), date(2026, 10, 16), free.__contains__, sick=NO)
     # The month keeps its 1000. Before the switch Oct 11-31 weighed 660 in
     # 20:40 quotas, so Sun Oct 11 asked 40/660 of it; the rest, re-split
     # 15:30:50 over Oct 12-31, would ask 83 a weekend day: the five weekend
@@ -155,7 +161,7 @@ def test_free_days_move_the_line() -> None:
 
 
 def test_all_days_free() -> None:
-    pace = _pace.compute_pace(Ledger(), date(2026, 10, 20), lambda _d: True)
+    pace = _pace.compute_pace(Ledger(), date(2026, 10, 20), lambda _d: True, sick=NO)
     assert pace.required == 0
 
 
@@ -163,23 +169,23 @@ def test_debt_survives_a_fully_free_month() -> None:
     def november_free(day: date) -> bool:
         return day.month == 11
 
-    november = _pace.compute_pace(Ledger(), date(2026, 11, 20), november_free)
+    november = _pace.compute_pace(Ledger(), date(2026, 11, 20), november_free, sick=NO)
     owed = MONTHLY_PAGES + OCTOBER // 2
     assert (november.target, november.required) == (owed, 0)
-    december = _pace.compute_pace(Ledger(), date(2026, 12, 1), november_free)
+    december = _pace.compute_pace(Ledger(), date(2026, 12, 1), november_free, sick=NO)
     assert december.carried_debt == OCTOBER + MONTHLY_PAGES
 
 
 def test_surplus_lightens_workdays_not_tomorrow() -> None:
     ledger = Ledger([_credit("2026-10-02", 44)])
-    saturday = _pace.compute_pace(ledger, date(2026, 10, 3), _never)
+    saturday = _pace.compute_pace(ledger, date(2026, 10, 3), _never, sick=NO)
     assert (saturday.required, saturday.behind) == (44, 0)
     # Saturday's share is still owed in full: the extra went to the workdays.
-    sunday = _pace.compute_pace(ledger, date(2026, 10, 4), _never)
+    sunday = _pace.compute_pace(ledger, date(2026, 10, 4), _never, sick=NO)
     assert sunday.required == math.ceil(44 + 40 * SCALE)
     # Tuesday lost a twelfth of the extra.
     extra = 44 - 40 * SCALE
-    wednesday = _pace.compute_pace(ledger, date(2026, 10, 7), _never)
+    wednesday = _pace.compute_pace(ledger, date(2026, 10, 7), _never, sick=NO)
     assert wednesday.required == math.ceil(
         44 + 3 * 40 * SCALE + 20 * SCALE - extra / 12
     )
@@ -191,7 +197,7 @@ def test_surplus_past_the_workdays_lightens_fri_to_mon() -> None:
     # over the 17 remaining Fri-Mon days.
     ledger = Ledger([_credit("2026-10-02", 300)])
     left = 300 - 40 * SCALE - 12 * 20 * SCALE
-    wednesday = _pace.compute_pace(ledger, date(2026, 10, 7), _never)
+    wednesday = _pace.compute_pace(ledger, date(2026, 10, 7), _never, sick=NO)
     assert wednesday.required == math.ceil(300 + 3 * (40 * SCALE - left / 17))
     assert wednesday.target == OCTOBER
 

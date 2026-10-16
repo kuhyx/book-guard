@@ -45,6 +45,8 @@ def row(view: DayView) -> str:
         return f"{head}  no quota yet, read {view.credited}"
     if view.free:
         return f"{head}  free day, read {view.credited}{_assumed_note(view)}"
+    if view.sick:
+        return f"{head}  sick day, read {view.credited}{_assumed_note(view)}"
     if view.old_rule:
         return f"{head}  old rule (15+15 / 10+10), read {view.credited}"
     met = "  met" if view.kind != FUTURE and view.credited >= view.required else ""
@@ -67,6 +69,11 @@ def detail(view: DayView) -> list[str]:
         return [*lines, f"  {OLD_RULE}; credited that day: {view.credited} pages"]
     if view.free:
         lines.append("  free day: asks nothing")
+    elif view.sick:
+        lines.append(
+            "  sick day: asks nothing, its share is off the month's target "
+            f"(reading {view.pace.ask.bonus_at} pages still earns the +1h)"
+        )
     else:
         got = "" if view.kind == FUTURE else f"; credited {view.credited}"
         lines.append(f"  requirement: {view.required} pages{got}{_assumed_note(view)}")

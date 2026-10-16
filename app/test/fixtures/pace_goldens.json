@@ -40,6 +40,7 @@
     "2026-10-15": 22
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": null,
    "days": [
     {
@@ -55,6 +56,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -70,6 +72,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -85,6 +88,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -100,6 +104,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -115,6 +120,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -130,6 +136,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -145,6 +152,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -160,6 +168,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -175,6 +184,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -190,6 +200,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -205,6 +216,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -220,6 +232,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -235,6 +248,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -250,6 +264,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -265,6 +280,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -280,6 +296,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -295,6 +312,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -310,6 +328,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -325,6 +344,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -340,6 +360,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -355,6 +376,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -370,6 +392,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -385,6 +408,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -400,6 +424,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -415,6 +440,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -430,6 +456,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -445,6 +472,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -460,6 +488,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -475,6 +504,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -490,6 +520,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -505,6 +536,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -520,6 +552,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -535,6 +568,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -550,6 +584,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -565,6 +600,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -580,6 +616,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -595,6 +632,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -610,6 +648,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -625,6 +664,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -640,6 +680,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -655,6 +696,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -670,6 +712,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -685,6 +728,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -700,6 +744,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -715,6 +760,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -730,6 +776,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -745,6 +792,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -760,6 +808,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -775,6 +824,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -790,6 +840,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -805,6 +856,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -820,6 +872,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -835,6 +888,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -850,6 +904,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -865,6 +920,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -880,6 +936,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -895,6 +952,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -910,6 +968,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -925,6 +984,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -940,6 +1000,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -955,6 +1016,7 @@
      "carried_debt": 88,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -982,6 +1044,7 @@
     "2026-10-19": 64
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": null,
    "days": [
     {
@@ -997,6 +1060,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1012,6 +1076,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1027,6 +1092,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1042,6 +1108,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1057,6 +1124,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1072,6 +1140,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1087,6 +1156,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1102,6 +1172,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1117,6 +1188,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1132,6 +1204,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1147,6 +1220,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": true
     },
     {
@@ -1162,6 +1236,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1177,6 +1252,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1192,6 +1268,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1207,6 +1284,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1222,6 +1300,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1237,6 +1316,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1252,6 +1332,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1267,6 +1348,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1282,6 +1364,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1297,6 +1380,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1312,6 +1396,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1327,6 +1412,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1342,6 +1428,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1357,6 +1444,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1372,6 +1460,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1387,6 +1476,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1402,6 +1492,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1417,6 +1508,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1432,6 +1524,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1447,6 +1540,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1462,6 +1556,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1477,6 +1572,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1492,6 +1588,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1507,6 +1604,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1522,6 +1620,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1537,6 +1636,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1552,6 +1652,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1567,6 +1668,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1582,6 +1684,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1597,6 +1700,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1612,6 +1716,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1627,6 +1732,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1642,6 +1748,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1657,6 +1764,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1672,6 +1780,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1687,6 +1796,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1702,6 +1812,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1717,6 +1828,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1732,6 +1844,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1747,6 +1860,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1762,6 +1876,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1777,6 +1892,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1792,6 +1908,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1807,6 +1924,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1822,6 +1940,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1837,6 +1956,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1852,6 +1972,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1867,6 +1988,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1882,6 +2004,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1897,6 +2020,7 @@
      "carried_debt": 0,
      "carried_credit": 1,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -1948,6 +2072,7 @@
     "2026-11-21",
     "2026-12-24"
    ],
+   "sick_days": [],
    "simulate": null,
    "days": [
     {
@@ -1963,6 +2088,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1978,6 +2104,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -1993,6 +2120,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2008,6 +2136,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2023,6 +2152,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2038,6 +2168,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2053,6 +2184,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2068,6 +2200,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2083,6 +2216,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2098,6 +2232,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2113,6 +2248,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": true,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2128,6 +2264,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": true,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2143,6 +2280,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2158,6 +2296,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2173,6 +2312,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2188,6 +2328,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2203,6 +2344,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2218,6 +2360,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2233,6 +2376,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2248,6 +2392,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": true,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2263,6 +2408,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": true,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2278,6 +2424,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2293,6 +2440,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2308,6 +2456,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2323,6 +2472,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2338,6 +2488,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2353,6 +2504,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2368,6 +2520,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2383,6 +2536,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2398,6 +2552,7 @@
      "carried_debt": 106,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2413,6 +2568,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2428,6 +2584,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2443,6 +2600,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2458,6 +2616,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2473,6 +2632,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2488,6 +2648,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2503,6 +2664,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2518,6 +2680,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2533,6 +2696,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2548,6 +2712,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2563,6 +2728,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2578,6 +2744,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2593,6 +2760,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2608,6 +2776,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2623,6 +2792,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2638,6 +2808,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2653,6 +2824,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2668,6 +2840,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2683,6 +2856,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2698,6 +2872,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2713,6 +2888,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2728,6 +2904,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2743,6 +2920,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2758,6 +2936,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": true,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2773,6 +2952,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2788,6 +2968,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2803,6 +2984,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2818,6 +3000,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2833,6 +3016,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2848,6 +3032,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2863,6 +3048,7 @@
      "carried_debt": 200,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -2942,6 +3128,7 @@
     "2026-12-19": 23
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": null,
    "days": [
     {
@@ -2957,6 +3144,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2972,6 +3160,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -2987,6 +3176,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3002,6 +3192,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3017,6 +3208,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3032,6 +3224,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3047,6 +3240,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3062,6 +3256,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3077,6 +3272,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3092,6 +3288,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3107,6 +3304,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3122,6 +3320,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3137,6 +3336,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3152,6 +3352,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3167,6 +3368,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3182,6 +3384,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3197,6 +3400,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3212,6 +3416,7 @@
      "carried_debt": 1259,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3227,6 +3432,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3242,6 +3448,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3257,6 +3464,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3272,6 +3480,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3287,6 +3496,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3302,6 +3512,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3317,6 +3528,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3332,6 +3544,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3347,6 +3560,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3362,6 +3576,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3377,6 +3592,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3392,6 +3608,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3407,6 +3624,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3422,6 +3640,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3437,6 +3656,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3452,6 +3672,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3467,6 +3688,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3482,6 +3704,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3497,6 +3720,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3512,6 +3736,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3527,6 +3752,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3542,6 +3768,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3557,6 +3784,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3572,6 +3800,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3587,6 +3816,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3602,6 +3832,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3617,6 +3848,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3632,6 +3864,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3647,6 +3880,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3662,6 +3896,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3677,6 +3912,7 @@
      "carried_debt": 1173,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -3787,6 +4023,7 @@
     "2027-01-24": 31
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": null,
    "days": [
     {
@@ -3802,6 +4039,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3817,6 +4055,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3832,6 +4071,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3847,6 +4087,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3862,6 +4103,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3877,6 +4119,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3892,6 +4135,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3907,6 +4151,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3922,6 +4167,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3937,6 +4183,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3952,6 +4199,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3967,6 +4215,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3982,6 +4231,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -3997,6 +4247,7 @@
      "carried_debt": 207,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4012,6 +4263,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4027,6 +4279,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4042,6 +4295,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4057,6 +4311,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4072,6 +4327,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4087,6 +4343,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4102,6 +4359,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4117,6 +4375,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4132,6 +4391,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4147,6 +4407,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4162,6 +4423,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4177,6 +4439,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4192,6 +4455,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4207,6 +4471,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4222,6 +4487,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4237,6 +4503,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4252,6 +4519,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4267,6 +4535,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4282,6 +4551,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4297,6 +4567,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4312,6 +4583,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4327,6 +4599,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4342,6 +4615,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4357,6 +4631,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4372,6 +4647,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4387,6 +4663,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4402,6 +4679,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4417,6 +4695,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4432,6 +4711,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4447,6 +4727,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4462,6 +4743,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4477,6 +4759,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4492,6 +4775,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4507,6 +4791,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4522,6 +4807,7 @@
      "carried_debt": 27,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -4549,6 +4835,7 @@
     "2026-10-19": 64
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": {
     "day": "2026-10-24",
     "delta": -20
@@ -4567,6 +4854,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4582,6 +4870,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4597,6 +4886,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4612,6 +4902,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4627,6 +4918,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4642,6 +4934,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4657,6 +4950,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4672,6 +4966,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4687,6 +4982,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4702,6 +4998,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4717,6 +5014,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4732,6 +5030,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4747,6 +5046,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4762,6 +5062,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4777,6 +5078,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4792,6 +5094,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4807,6 +5110,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4822,6 +5126,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4837,6 +5142,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4852,6 +5158,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4867,6 +5174,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -4884,6 +5192,7 @@
     "2026-10-15": 22
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": {
     "day": "2026-10-16",
     "delta": -20
@@ -4902,6 +5211,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4917,6 +5227,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4932,6 +5243,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4947,6 +5259,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4962,6 +5275,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4977,6 +5291,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -4992,6 +5307,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5007,6 +5323,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5022,6 +5339,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5037,6 +5355,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5052,6 +5371,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5067,6 +5387,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5082,6 +5403,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5097,6 +5419,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5112,6 +5435,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5127,6 +5451,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5142,6 +5467,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5157,6 +5483,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5172,6 +5499,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5187,6 +5515,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5202,6 +5531,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5217,6 +5547,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5232,6 +5563,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5247,6 +5579,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5262,6 +5595,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -5289,6 +5623,7 @@
     "2026-10-19": 64
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": {
     "day": "2026-10-20",
     "delta": 40
@@ -5307,6 +5642,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5322,6 +5658,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5337,6 +5674,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5352,6 +5690,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5367,6 +5706,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5382,6 +5722,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5397,6 +5738,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5412,6 +5754,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5427,6 +5770,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5442,6 +5786,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5457,6 +5802,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5472,6 +5818,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5487,6 +5834,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5502,6 +5850,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5517,6 +5866,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5532,6 +5882,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5547,6 +5898,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5562,6 +5914,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5577,6 +5930,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5592,6 +5946,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5607,6 +5962,7 @@
      "carried_debt": 0,
      "carried_credit": 17,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -5624,6 +5980,7 @@
     "2026-10-15": 22
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": {
     "day": "2026-10-15",
     "delta": -20
@@ -5642,6 +5999,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5657,6 +6015,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5672,6 +6031,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5687,6 +6047,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5702,6 +6063,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5717,6 +6079,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5732,6 +6095,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5747,6 +6111,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5762,6 +6127,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5777,6 +6143,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5792,6 +6159,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5807,6 +6175,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5822,6 +6191,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5837,6 +6207,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5852,6 +6223,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5867,6 +6239,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5882,6 +6255,7 @@
      "carried_debt": 0,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5897,6 +6271,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5912,6 +6287,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5927,6 +6303,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5942,6 +6319,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5957,6 +6335,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5972,6 +6351,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -5987,6 +6367,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6002,6 +6383,7 @@
      "carried_debt": 98,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]
@@ -6047,6 +6429,7 @@
     "2026-11-09": 16
    },
    "free_days": [],
+   "sick_days": [],
    "simulate": {
     "day": "2026-11-14",
     "delta": 25
@@ -6065,6 +6448,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6080,6 +6464,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6095,6 +6480,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6110,6 +6496,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6125,6 +6512,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6140,6 +6528,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6155,6 +6544,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6170,6 +6560,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6185,6 +6576,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6200,6 +6592,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6215,6 +6608,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6230,6 +6624,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6245,6 +6640,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6260,6 +6656,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6275,6 +6672,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6290,6 +6688,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6305,6 +6704,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6320,6 +6720,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6335,6 +6736,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6350,6 +6752,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6365,6 +6768,7 @@
      "carried_debt": 217,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6380,6 +6784,7 @@
      "carried_debt": 457,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6395,6 +6800,7 @@
      "carried_debt": 457,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6410,6 +6816,7 @@
      "carried_debt": 457,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6425,6 +6832,7 @@
      "carried_debt": 457,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6440,6 +6848,7 @@
      "carried_debt": 457,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
      "old_rule": false
     },
     {
@@ -6455,6 +6864,1533 @@
      "carried_debt": 457,
      "carried_credit": 0,
      "free": false,
+     "sick": false,
+     "old_rule": false
+    }
+   ]
+  },
+  {
+   "name": "sick-weekday-and-weekend",
+   "note": "ahead: a Thu and a Sun ask nothing, every other day as before",
+   "today": "2026-10-20",
+   "credits": {
+    "2026-10-02": 46,
+    "2026-10-03": 42,
+    "2026-10-04": 42,
+    "2026-10-05": 69,
+    "2026-10-06": 65,
+    "2026-10-07": 65,
+    "2026-10-08": 61,
+    "2026-10-09": 57,
+    "2026-10-10": 57,
+    "2026-10-11": 53,
+    "2026-10-12": 49,
+    "2026-10-13": 49,
+    "2026-10-14": 45,
+    "2026-10-15": 41,
+    "2026-10-18": 68,
+    "2026-10-19": 64
+   },
+   "free_days": [],
+   "sick_days": [
+    "2026-10-22",
+    "2026-10-25"
+   ],
+   "simulate": null,
+   "days": [
+    {
+     "day": "2026-10-19",
+     "kind": "past",
+     "required": 13,
+     "credited": 64,
+     "assumed": 64,
+     "line": 832,
+     "target": 961,
+     "month_pages": 809,
+     "behind": 23,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-20",
+     "kind": "today",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 873,
+     "target": 961,
+     "month_pages": 873,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-21",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 873,
+     "target": 961,
+     "month_pages": 873,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-22",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 873,
+     "target": 961,
+     "month_pages": 873,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": true,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-23",
+     "kind": "future",
+     "required": 4,
+     "credited": 0,
+     "assumed": 4,
+     "line": 873,
+     "target": 961,
+     "month_pages": 873,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-24",
+     "kind": "future",
+     "required": 40,
+     "credited": 0,
+     "assumed": 40,
+     "line": 877,
+     "target": 961,
+     "month_pages": 877,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-25",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 917,
+     "target": 961,
+     "month_pages": 917,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": true,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-26",
+     "kind": "future",
+     "required": 3,
+     "credited": 0,
+     "assumed": 3,
+     "line": 917,
+     "target": 961,
+     "month_pages": 917,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-27",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 920,
+     "target": 961,
+     "month_pages": 920,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-28",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 920,
+     "target": 961,
+     "month_pages": 920,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-29",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 0,
+     "line": 920,
+     "target": 961,
+     "month_pages": 920,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-30",
+     "kind": "future",
+     "required": 2,
+     "credited": 0,
+     "assumed": 2,
+     "line": 920,
+     "target": 961,
+     "month_pages": 920,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-31",
+     "kind": "future",
+     "required": 40,
+     "credited": 0,
+     "assumed": 40,
+     "line": 922,
+     "target": 961,
+     "month_pages": 922,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-01",
+     "kind": "future",
+     "required": 56,
+     "credited": 0,
+     "assumed": 56,
+     "line": 0,
+     "target": 999,
+     "month_pages": 0,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-02",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 56,
+     "target": 999,
+     "month_pages": 56,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-03",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 90,
+     "target": 999,
+     "month_pages": 90,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-04",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 107,
+     "target": 999,
+     "month_pages": 107,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-05",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 124,
+     "target": 999,
+     "month_pages": 124,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-06",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 141,
+     "target": 999,
+     "month_pages": 141,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-07",
+     "kind": "future",
+     "required": 56,
+     "credited": 0,
+     "assumed": 56,
+     "line": 175,
+     "target": 999,
+     "month_pages": 175,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-08",
+     "kind": "future",
+     "required": 56,
+     "credited": 0,
+     "assumed": 56,
+     "line": 231,
+     "target": 999,
+     "month_pages": 231,
+     "behind": 0,
+     "carried_debt": 0,
+     "carried_credit": 1,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    }
+   ]
+  },
+  {
+   "name": "sick-weekend-with-debt",
+   "note": "behind: the debt skips the sick Saturday; 12 read on it count",
+   "today": "2026-10-15",
+   "credits": {
+    "2026-10-02": 44,
+    "2026-10-03": 53,
+    "2026-10-04": 47,
+    "2026-10-07": 69,
+    "2026-10-08": 17,
+    "2026-10-15": 22
+   },
+   "free_days": [],
+   "sick_days": [
+    "2026-10-17"
+   ],
+   "simulate": {
+    "day": "2026-10-17",
+    "delta": 12
+   },
+   "days": [
+    {
+     "day": "2026-10-15",
+     "kind": "today",
+     "required": 17,
+     "credited": 22,
+     "assumed": 22,
+     "line": 436,
+     "target": 945,
+     "month_pages": 252,
+     "behind": 184,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-16",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 453,
+     "target": 945,
+     "month_pages": 252,
+     "behind": 201,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-17",
+     "kind": "future",
+     "required": 0,
+     "credited": 0,
+     "assumed": 12,
+     "line": 486,
+     "target": 945,
+     "month_pages": 286,
+     "behind": 200,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": true,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-18",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 486,
+     "target": 945,
+     "month_pages": 298,
+     "behind": 188,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-19",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 542,
+     "target": 945,
+     "month_pages": 358,
+     "behind": 184,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-20",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 576,
+     "target": 945,
+     "month_pages": 392,
+     "behind": 184,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-21",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 592,
+     "target": 945,
+     "month_pages": 409,
+     "behind": 183,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-22",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 609,
+     "target": 945,
+     "month_pages": 426,
+     "behind": 183,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-23",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 626,
+     "target": 945,
+     "month_pages": 443,
+     "behind": 183,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-24",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 660,
+     "target": 945,
+     "month_pages": 477,
+     "behind": 183,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-25",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 715,
+     "target": 945,
+     "month_pages": 537,
+     "behind": 178,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-26",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 771,
+     "target": 945,
+     "month_pages": 597,
+     "behind": 174,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-27",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 805,
+     "target": 945,
+     "month_pages": 631,
+     "behind": 174,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-28",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 822,
+     "target": 945,
+     "month_pages": 648,
+     "behind": 174,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-29",
+     "kind": "future",
+     "required": 17,
+     "credited": 0,
+     "assumed": 17,
+     "line": 838,
+     "target": 945,
+     "month_pages": 665,
+     "behind": 173,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-30",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 855,
+     "target": 945,
+     "month_pages": 682,
+     "behind": 173,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-31",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 889,
+     "target": 945,
+     "month_pages": 716,
+     "behind": 173,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-01",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 0,
+     "target": 1085,
+     "month_pages": 0,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-02",
+     "kind": "future",
+     "required": 37,
+     "credited": 0,
+     "assumed": 37,
+     "line": 60,
+     "target": 1085,
+     "month_pages": 60,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-03",
+     "kind": "future",
+     "required": 19,
+     "credited": 0,
+     "assumed": 19,
+     "line": 97,
+     "target": 1085,
+     "month_pages": 97,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-04",
+     "kind": "future",
+     "required": 19,
+     "credited": 0,
+     "assumed": 19,
+     "line": 116,
+     "target": 1085,
+     "month_pages": 116,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-05",
+     "kind": "future",
+     "required": 19,
+     "credited": 0,
+     "assumed": 19,
+     "line": 135,
+     "target": 1085,
+     "month_pages": 135,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-06",
+     "kind": "future",
+     "required": 37,
+     "credited": 0,
+     "assumed": 37,
+     "line": 154,
+     "target": 1085,
+     "month_pages": 154,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-07",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 191,
+     "target": 1085,
+     "month_pages": 191,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-08",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 251,
+     "target": 1085,
+     "month_pages": 251,
+     "behind": 0,
+     "carried_debt": 85,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    }
+   ]
+  },
+  {
+   "name": "sick-last-month",
+   "note": "October's sick shares stay out of November's carry",
+   "today": "2026-11-10",
+   "credits": {
+    "2026-10-02": 30,
+    "2026-10-03": 30,
+    "2026-10-04": 26,
+    "2026-10-05": 22,
+    "2026-10-06": 22,
+    "2026-10-07": 49,
+    "2026-10-11": 41,
+    "2026-10-12": 37,
+    "2026-10-13": 33,
+    "2026-10-14": 33,
+    "2026-10-15": 29,
+    "2026-10-16": 25,
+    "2026-10-17": 25,
+    "2026-10-18": 21,
+    "2026-10-19": 21,
+    "2026-10-20": 48,
+    "2026-10-21": 44,
+    "2026-10-22": 44,
+    "2026-10-23": 40,
+    "2026-10-24": 36,
+    "2026-10-25": 36,
+    "2026-10-26": 32,
+    "2026-10-27": 28,
+    "2026-10-31": 20,
+    "2026-11-01": 47,
+    "2026-11-02": 47,
+    "2026-11-03": 43,
+    "2026-11-04": 39,
+    "2026-11-05": 39,
+    "2026-11-06": 35,
+    "2026-11-07": 31,
+    "2026-11-08": 31,
+    "2026-11-09": 27
+   },
+   "free_days": [],
+   "sick_days": [
+    "2026-10-21",
+    "2026-10-27"
+   ],
+   "simulate": null,
+   "days": [
+    {
+     "day": "2026-10-19",
+     "kind": "past",
+     "required": 35,
+     "credited": 21,
+     "assumed": 21,
+     "line": 589,
+     "target": 966,
+     "month_pages": 423,
+     "behind": 166,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-20",
+     "kind": "past",
+     "required": 18,
+     "credited": 48,
+     "assumed": 48,
+     "line": 623,
+     "target": 966,
+     "month_pages": 444,
+     "behind": 179,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-21",
+     "kind": "past",
+     "required": 0,
+     "credited": 44,
+     "assumed": 44,
+     "line": 640,
+     "target": 966,
+     "month_pages": 492,
+     "behind": 148,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": true,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-22",
+     "kind": "past",
+     "required": 18,
+     "credited": 44,
+     "assumed": 44,
+     "line": 640,
+     "target": 966,
+     "month_pages": 536,
+     "behind": 104,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-23",
+     "kind": "past",
+     "required": 35,
+     "credited": 40,
+     "assumed": 40,
+     "line": 658,
+     "target": 966,
+     "month_pages": 580,
+     "behind": 78,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-24",
+     "kind": "past",
+     "required": 60,
+     "credited": 36,
+     "assumed": 36,
+     "line": 692,
+     "target": 966,
+     "month_pages": 620,
+     "behind": 72,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-25",
+     "kind": "past",
+     "required": 60,
+     "credited": 36,
+     "assumed": 36,
+     "line": 749,
+     "target": 966,
+     "month_pages": 656,
+     "behind": 93,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-26",
+     "kind": "past",
+     "required": 35,
+     "credited": 32,
+     "assumed": 32,
+     "line": 806,
+     "target": 966,
+     "month_pages": 692,
+     "behind": 114,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-27",
+     "kind": "past",
+     "required": 0,
+     "credited": 28,
+     "assumed": 28,
+     "line": 840,
+     "target": 966,
+     "month_pages": 724,
+     "behind": 116,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": true,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-28",
+     "kind": "past",
+     "required": 18,
+     "credited": 0,
+     "assumed": 0,
+     "line": 840,
+     "target": 966,
+     "month_pages": 752,
+     "behind": 88,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-29",
+     "kind": "past",
+     "required": 18,
+     "credited": 0,
+     "assumed": 0,
+     "line": 858,
+     "target": 966,
+     "month_pages": 752,
+     "behind": 106,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-30",
+     "kind": "past",
+     "required": 35,
+     "credited": 0,
+     "assumed": 0,
+     "line": 875,
+     "target": 966,
+     "month_pages": 752,
+     "behind": 123,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-10-31",
+     "kind": "past",
+     "required": 60,
+     "credited": 20,
+     "assumed": 20,
+     "line": 909,
+     "target": 966,
+     "month_pages": 752,
+     "behind": 157,
+     "carried_debt": 0,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-01",
+     "kind": "past",
+     "required": 60,
+     "credited": 47,
+     "assumed": 47,
+     "line": 0,
+     "target": 1097,
+     "month_pages": 0,
+     "behind": 0,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-02",
+     "kind": "past",
+     "required": 38,
+     "credited": 47,
+     "assumed": 47,
+     "line": 60,
+     "target": 1097,
+     "month_pages": 47,
+     "behind": 13,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-03",
+     "kind": "past",
+     "required": 19,
+     "credited": 43,
+     "assumed": 43,
+     "line": 98,
+     "target": 1097,
+     "month_pages": 94,
+     "behind": 4,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-04",
+     "kind": "past",
+     "required": 18,
+     "credited": 39,
+     "assumed": 39,
+     "line": 137,
+     "target": 1097,
+     "month_pages": 137,
+     "behind": 0,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-05",
+     "kind": "past",
+     "required": 17,
+     "credited": 39,
+     "assumed": 39,
+     "line": 176,
+     "target": 1097,
+     "month_pages": 176,
+     "behind": 0,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-06",
+     "kind": "past",
+     "required": 34,
+     "credited": 35,
+     "assumed": 35,
+     "line": 215,
+     "target": 1097,
+     "month_pages": 215,
+     "behind": 0,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-07",
+     "kind": "past",
+     "required": 60,
+     "credited": 31,
+     "assumed": 31,
+     "line": 250,
+     "target": 1097,
+     "month_pages": 250,
+     "behind": 0,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-08",
+     "kind": "past",
+     "required": 60,
+     "credited": 31,
+     "assumed": 31,
+     "line": 310,
+     "target": 1097,
+     "month_pages": 281,
+     "behind": 29,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-09",
+     "kind": "past",
+     "required": 34,
+     "credited": 27,
+     "assumed": 27,
+     "line": 370,
+     "target": 1097,
+     "month_pages": 312,
+     "behind": 58,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-10",
+     "kind": "today",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 404,
+     "target": 1097,
+     "month_pages": 339,
+     "behind": 65,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-11",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 419,
+     "target": 1097,
+     "month_pages": 354,
+     "behind": 65,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-12",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 434,
+     "target": 1097,
+     "month_pages": 369,
+     "behind": 65,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-13",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 448,
+     "target": 1097,
+     "month_pages": 384,
+     "behind": 64,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-14",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 482,
+     "target": 1097,
+     "month_pages": 418,
+     "behind": 64,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-15",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 542,
+     "target": 1097,
+     "month_pages": 478,
+     "behind": 64,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-16",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 602,
+     "target": 1097,
+     "month_pages": 538,
+     "behind": 64,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-17",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 635,
+     "target": 1097,
+     "month_pages": 572,
+     "behind": 63,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-18",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 650,
+     "target": 1097,
+     "month_pages": 587,
+     "behind": 63,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-19",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 665,
+     "target": 1097,
+     "month_pages": 602,
+     "behind": 63,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-20",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 680,
+     "target": 1097,
+     "month_pages": 617,
+     "behind": 63,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-21",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 713,
+     "target": 1097,
+     "month_pages": 651,
+     "behind": 62,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-22",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 773,
+     "target": 1097,
+     "month_pages": 711,
+     "behind": 62,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-23",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 833,
+     "target": 1097,
+     "month_pages": 771,
+     "behind": 62,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-24",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 866,
+     "target": 1097,
+     "month_pages": 805,
+     "behind": 61,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-25",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 881,
+     "target": 1097,
+     "month_pages": 820,
+     "behind": 61,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-26",
+     "kind": "future",
+     "required": 15,
+     "credited": 0,
+     "assumed": 15,
+     "line": 896,
+     "target": 1097,
+     "month_pages": 835,
+     "behind": 61,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-27",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 911,
+     "target": 1097,
+     "month_pages": 850,
+     "behind": 61,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-28",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 944,
+     "target": 1097,
+     "month_pages": 884,
+     "behind": 60,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-29",
+     "kind": "future",
+     "required": 60,
+     "credited": 0,
+     "assumed": 60,
+     "line": 1004,
+     "target": 1097,
+     "month_pages": 944,
+     "behind": 60,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
+     "old_rule": false
+    },
+    {
+     "day": "2026-11-30",
+     "kind": "future",
+     "required": 34,
+     "credited": 0,
+     "assumed": 34,
+     "line": 1064,
+     "target": 1097,
+     "month_pages": 1004,
+     "behind": 60,
+     "carried_debt": 97,
+     "carried_credit": 0,
+     "free": false,
+     "sick": false,
      "old_rule": false
     }
    ]

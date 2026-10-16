@@ -30,11 +30,16 @@ Nothing here is stored. Every run re-derives, from the credits alone:
 * **today's requirement** = today's quota after the moves plus, on a
   weekend, today's debt share, fixed at the start of the day and rounded up.
   Reaching it earns the day's bonus (:mod:`book_guard._bonus`).
+* **sick day** (``sickdays``) = asks nothing and its share is dropped, not
+  re-split: the month's target falls by exactly that day's quota and every
+  other day asks what it would have (:mod:`book_guard._plan`). The share
+  stays out of the year balance too. Reading on it still earns the bonus at
+  the requirement the day would have had (:attr:`Ask.bonus_at`).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from fractions import Fraction
 import math
@@ -75,7 +80,7 @@ class Pace:
     """This month's share of the pages read ahead in earlier months."""
     pages_today: int = 0
     days_left: int = 0
-    """Counted (non-free) days left in the month, today included."""
+    """Counted (non-free, non-sick) days left in the month, today included."""
     ask: Ask = field(default_factory=Ask)
     """Today's requirement (the bonus threshold) and the debt's spread."""
 
@@ -152,15 +157,19 @@ def _share(balance: int, months: int) -> int:
     return share if balance >= 0 else -share
 
 
+@dataclass(frozen=True)
+class _Calendar:
+    """Which days are free (out of the split) and sick (in it, asking nothing)."""
+
+    is_free: Callable[[date], bool]
+    sick: frozenset[date]
+
+
 def _plan(
-    ledger: Ledger,
-    first: date,
-    is_free: Callable[[date], bool],
-    carry: int,
-    until: date,
+    ledger: Ledger, first: date, cal: _Calendar, carry: int, until: date
 ) -> tuple[MonthPlan, MonthInput, int, int]:
     """The month's plan through ``until``: plan, its input, books, base."""
-    counted = _counted(first, is_free)
+    counted = _counted(first, cal.is_free)
     quotas = {d: _quota(d) for d in counted}
     total = sum(quotas.values())
     base = MONTHLY_PAGES if first >= MONTHLY_GOAL_START else total
@@ -173,26 +182,47 @@ def _plan(
         target=base + max(carry, 0),
         credit=Fraction(max(-carry, 0)),
         pages_on=pages_on,
+        sick=cal.sick,
     )
     switch = QUOTA_SWITCH_DATE if _next_month(first) > QUOTA_SWITCH_DATE else None
     return plan_month(month, until, switch), month, finished, base
 
 
-def compute_pace(ledger: Ledger, today: date, is_free: Callable[[date], bool]) -> Pace:
-    """The pace position for ``today``'s month."""
-    current = month_start(today)
+def _balance(ledger: Ledger, cal: _Calendar, current: date) -> int:
+    """Every month before ``current``: its base minus the pages read in it."""
     first = month_start(PACE_START_DATE)
     balance = 0
     while first < current:
         month_end = _next_month(first) - timedelta(days=1)
-        _, done, _, base = _plan(ledger, first, is_free, 0, month_end)
-        balance += base - sum(done.pages_on.values())
+        done, month, _, base = _plan(ledger, first, cal, 0, month_end)
+        # A sick day's share is owed by nobody, so it never reaches the
+        # balance either (rounded so the remainder is still owed).
+        owed = math.ceil(base - sum(done.excused.values(), Fraction(0)))
+        balance += owed - sum(month.pages_on.values())
         first = _next_month(first)
+    return balance
 
-    carry = _share(balance, _months_left(current))
-    plan, month, finished, _ = _plan(ledger, current, is_free, carry, today)
+
+def compute_pace(
+    ledger: Ledger,
+    today: date,
+    is_free: Callable[[date], bool],
+    *,
+    sick: frozenset[date],
+) -> Pace:
+    """The pace position for ``today``'s month; ``sick``: the sick days."""
+    cal = _Calendar(is_free, sick)
+    current = month_start(today)
+    carry = _share(_balance(ledger, cal, current), _months_left(current))
+    plan, month, finished, _ = _plan(ledger, current, cal, carry, today)
     pages = sum(month.pages_on.values())
     required = math.ceil(plan.line_before(today))
+    ask = today_ask(ledger, plan, month, today, max(0, required - pages))
+    if today in sick:
+        # The bonus is earned at the requirement the day would have had:
+        # being sick changes what is owed, not what earns the hour.
+        well = compute_pace(ledger, today, is_free, sick=sick - {today})
+        ask = replace(ask, bonus_at=well.ask.required)
     return Pace(
         month=current,
         target=math.ceil(plan.target),
@@ -202,6 +232,6 @@ def compute_pace(ledger: Ledger, today: date, is_free: Callable[[date], bool]) -
         finished_books=finished,
         carried_credit=max(-carry, 0),
         pages_today=month.pages_on.get(today, 0),
-        days_left=sum(1 for d in month.counted if d >= today),
-        ask=today_ask(ledger, plan, month, today, max(0, required - pages)),
+        days_left=sum(1 for d in month.counted if d >= today and d not in sick),
+        ask=ask,
     )

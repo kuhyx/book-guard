@@ -87,6 +87,8 @@ def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     # itself runs (and is covered) without downloading a model.
     monkeypatch.setattr(_embed, "TextEmbedding", lambda *_a, **_k: FakeEmbedder())
     monkeypatch.setattr("freedays.is_free_day", lambda *_a, **_k: False)
+    # The shared sick-day pool is kuhy's real file: no test may read it.
+    monkeypatch.setattr("sickdays.sick_days", lambda *_a, **_k: frozenset())
     monkeypatch.setattr("shutil.which", lambda _name: None)
     # The morning carrot reads bg_paths.morning_session (under tmp_path), and
     # a production-mode test must never wait 30 real seconds for it.

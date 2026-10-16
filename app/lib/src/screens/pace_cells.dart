@@ -33,12 +33,14 @@ const _months = [
 List<String> get weekdayInitials => [for (final d in _weekdays) d[0]];
 
 /// What a cell shows under the date: `22/17` (credited/required), `34`
-/// (future: required), `free`, `old 53` (before the switch), or `-`; the
-/// simulated day shows its simulated total, `27/17` (the cell is bold).
+/// (future: required), `free`, `sick`, `old 53` (before the switch), or
+/// `-`; the simulated day shows its simulated total, `27/17` (the cell is
+/// bold).
 String cellText(DayView v) {
   if (v.beforeQuotas) return '-';
   if (v.simulated != 0) return '${v.assumed}/${v.required}';
   if (v.free) return 'free';
+  if (v.sick) return 'sick';
   if (v.oldRule) return 'old ${v.credited}';
   if (v.kind == DayKind.future) return '${v.required}';
   return '${v.credited}/${v.required}';
@@ -74,6 +76,8 @@ List<String> dayLines(DayView v) {
     '${shortDay(v.day)}, $when',
     if (v.free)
       'Free day: asks nothing'
+    else if (v.sick)
+      "Sick day: asks nothing, its share is off the month's target"
     else if (v.kind == DayKind.future)
       'Requirement: ${v.required} pages'
     else
@@ -118,6 +122,7 @@ class DayCell extends StatelessWidget {
     final missed =
         v.kind == DayKind.past &&
         !v.free &&
+        !v.sick &&
         !v.oldRule &&
         !v.beforeQuotas &&
         !met(v);
@@ -131,7 +136,7 @@ class DayCell extends StatelessWidget {
         : v.kind == DayKind.today
         ? status.info
         : theme.dividerColor;
-    final muted = v.kind == DayKind.future || v.free;
+    final muted = v.kind == DayKind.future || v.free || v.sick;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xs),
       child: InkWell(

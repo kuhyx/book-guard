@@ -12,6 +12,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 import freedays
+import sickdays
 
 from book_guard import _ledger, _photos
 from book_guard._books import Book, book_at, current
@@ -67,11 +68,17 @@ class Snapshot:
     sessions: list[SessionView]
     open_start: PhotoRecord | None
     pace: Pace
-    free_today: bool
+    sick_days: frozenset[date]
+    """The shared sick-day pool as read for this snapshot (empty if unreadable)."""
     escaped_today: bool
     escapes_left: int
     locked: bool
     reason: str
+
+    @property
+    def sick_today(self) -> bool:
+        """Today is a sick day: the gate stands down and today asks nothing."""
+        return self.today in self.sick_days
 
     def with_status(self, *statuses: str) -> list[SessionView]:
         """Sessions currently in any of ``statuses``."""
@@ -94,9 +101,15 @@ def _session_views(
     return views
 
 
-def _verdict(today: date, pace: Pace, *, free: bool, escaped: bool) -> tuple[bool, str]:
+def _verdict(
+    today: date, pace: Pace, *, sick: bool, free: bool, escaped: bool
+) -> tuple[bool, str]:
     if today < GATE_START_DATE:
         return False, f"book-guard starts on {GATE_START_DATE}"
+    if sick:
+        # First, so the reason names it even when on pace: the gate stands
+        # down for the whole day, and the day's share is dropped (_plan).
+        return False, "today is a sick day"
     if not pace.behind:
         # Reading caught up: that is the reason it is open, whatever else
         # happened today (an escape used this morning no longer matters).
@@ -108,10 +121,15 @@ def _verdict(today: date, pace: Pace, *, free: bool, escaped: bool) -> tuple[boo
             f"{pace.pages_today} pages read today "
             f"(still {pace.behind} behind the pace line)"
         )
-    if free:
-        return False, "today is a free day"
-    if escaped:
-        return False, "today's lock was skipped with the escape hatch"
+    excuse = (
+        "today is a free day"
+        if free
+        else "today's lock was skipped with the escape hatch"
+        if escaped
+        else None
+    )
+    if excuse is not None:
+        return False, excuse
     short = DAILY_PASS_PAGES - pace.pages_today
     return True, (
         f"{pace.behind} pages behind the pace line; {short} more "
@@ -124,29 +142,35 @@ def snapshot(
     *,
     today: date | None = None,
     is_free: Callable[[date], bool] | None = None,
+    sick: frozenset[date] | None = None,
 ) -> Snapshot:
     """Read the ledger and photo cache and derive the full state.
+
+    ``sick`` defaults to the shared pool (``sickdays``), which reads as no
+    sick day at all when it is unreadable: the gate fails closed.
 
     Raises:
         ValueError: The ledger or photo cache is corrupt.
     """
     day = today or datetime.now().astimezone().date()
     free_check = is_free or freedays.is_free_day
+    sick_days = sickdays.sick_days() if sick is None else sick
     ledger = _ledger.load(paths.ledger, paths.key_file)
     records = _photos.load(paths.photos)
-    pace = compute_pace(ledger, day, free_check)
+    pace = compute_pace(ledger, day, free_check, sick=sick_days)
     month = day.isoformat()[:7]
     escapes = [e for e in ledger.of_kind(ESCAPE) if e.day.startswith(month)]
     escaped = any(e.day == day.isoformat() for e in escapes)
-    free = free_check(day)
-    locked, reason = _verdict(day, pace, free=free, escaped=escaped)
+    locked, reason = _verdict(
+        day, pace, sick=day in sick_days, free=free_check(day), escaped=escaped
+    )
     return Snapshot(
         today=day,
         book=current(ledger),
         sessions=_session_views(ledger, records, load_times(paths.session_times)),
         open_start=open_start(_photos.usable_pages(records)),
         pace=pace,
-        free_today=free,
+        sick_days=sick_days,
         escaped_today=escaped,
         escapes_left=max(0, ESCAPES_PER_MONTH - len(escapes)),
         locked=locked,

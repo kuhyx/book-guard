@@ -20,6 +20,7 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 import freedays
+import sickdays
 
 from book_guard._constants import (
     BONUS_MIN_MINUTES,
@@ -55,17 +56,27 @@ def is_on_pace(ledger: Ledger, credit: Entry) -> bool:
     """
     kept = [e for e in ledger.entries if not (e.kind == CREDIT and e.day > credit.day)]
     pace = compute_pace(
-        Ledger([*kept, credit]), date.fromisoformat(credit.day), freedays.is_free_day
+        Ledger([*kept, credit]),
+        date.fromisoformat(credit.day),
+        freedays.is_free_day,
+        sick=sickdays.sick_days(),
     )
     return pace.behind == 0
 
 
 def day_requirement(ledger: Ledger, day: date) -> int:
-    """What ``day`` asks, judged from the credits dated before it."""
+    """The pages that earn ``day``'s hour, judged from the credits before it.
+
+    The day's requirement -- on a sick day the one it would have had
+    (:attr:`Ask.bonus_at`): a sick day asks nothing, but its hour is not free.
+    """
     kept = [
         e for e in ledger.entries if not (e.kind == CREDIT and e.day >= day.isoformat())
     ]
-    return compute_pace(Ledger(kept), day, freedays.is_free_day).ask.required
+    pace = compute_pace(
+        Ledger(kept), day, freedays.is_free_day, sick=sickdays.sick_days()
+    )
+    return pace.ask.bonus_at
 
 
 def reaches_requirement(ledger: Ledger, credit: Entry) -> bool:

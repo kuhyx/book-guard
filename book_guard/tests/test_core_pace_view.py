@@ -85,7 +85,7 @@ def test_spans_and_cache() -> None:
 
 def test_past_today_and_future() -> None:
     ledger = _ledger({date(2026, 10, 13): 20, TODAY_D: 5})
-    found = views(ledger, TODAY_D, week_of(TODAY_D), _never)
+    found = views(ledger, TODAY_D, week_of(TODAY_D), (_never, frozenset()))
     assert [v.kind for v in found] == [PAST] * 3 + [TODAY] + [FUTURE] * 3
     tuesday, today, friday = found[1], found[3], found[4]
     assert (tuesday.credited, tuesday.assumed) == (20, 20)
@@ -97,21 +97,23 @@ def test_past_today_and_future() -> None:
 
 
 def test_only_past_days_and_no_days() -> None:
-    assert views(_ledger({}), TODAY_D, [], _never) == []
-    (view,) = views(_ledger({}), TODAY_D, [date(2026, 10, 5)], _never)
+    assert views(_ledger({}), TODAY_D, [], (_never, frozenset())) == []
+    (view,) = views(_ledger({}), TODAY_D, [date(2026, 10, 5)], (_never, frozenset()))
     assert (view.kind, view.old_rule) == (PAST, True)
 
 
 def test_simulation_moves_later_days() -> None:
     days = week_of(TODAY_D)
-    base = views(_ledger({}), TODAY_D, days, _never)
+    base = views(_ledger({}), TODAY_D, days, (_never, frozenset()))
     sim = Simulation(date(2026, 10, 16), 30)
-    moved = views(_ledger({}), TODAY_D, days, _never, sim)
+    moved = views(_ledger({}), TODAY_D, days, (_never, frozenset()), sim)
     friday = moved[4]
     assert (friday.simulated, friday.assumed) == (30, base[4].required + 30)
     # the surplus eases what the weekend cannot hold
     assert moved[5].pace.ask.debt_unplaced < base[5].pace.ask.debt_unplaced
-    gone = views(_ledger({}), TODAY_D, days, _never, Simulation(TODAY_D, -999))
+    gone = views(
+        _ledger({}), TODAY_D, days, (_never, frozenset()), Simulation(TODAY_D, -999)
+    )
     assert gone[3].assumed == 0
 
 
@@ -120,7 +122,9 @@ def test_simulation_moves_later_days() -> None:
 
 def test_pace_inputs_carry_credits_rules_and_free_days() -> None:
     ledger = _ledger({date(2026, 9, 1): 99, date(2026, 10, 3): 10, TODAY_D: 5})
-    found = _pace_inputs.pace_inputs(ledger, TODAY_D, lambda d: d.day == 1)
+    sick = frozenset({date(2026, 10, 20), date(2030, 1, 1)})
+    found = _pace_inputs.pace_inputs(ledger, TODAY_D, lambda d: d.day == 1, sick)
+    assert found["sick_days"] == ["2026-10-20"]
     assert found["today"] == "2026-10-15"
     assert found["credits"] == {"2026-10-03": 10, "2026-10-15": 5}
     assert found["free_days"][0] == "2026-10-01"

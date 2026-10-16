@@ -60,10 +60,10 @@ def test_before_the_gate_starts(bg_paths: Paths) -> None:
 
 def test_free_day(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY, is_free=lambda d: d == LOCKED_DAY)
-    assert (snap.locked, snap.reason, snap.free_today) == (
+    assert (snap.locked, snap.reason, snap.sick_today) == (
         False,
         "today is a free day",
-        True,
+        False,
     )
 
 

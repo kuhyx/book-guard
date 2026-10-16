@@ -37,6 +37,7 @@ class PaceInputs {
     required this.rules,
     required this.credits,
     required this.freeDays,
+    this.sickDays = const {},
   });
 
   /// Parses `pace_inputs`; null from a PC that predates it.
@@ -62,6 +63,9 @@ class PaceInputs {
       freeDays: {
         for (final d in json['free_days'] as List? ?? const []) ?parseDay('$d'),
       },
+      sickDays: {
+        for (final d in json['sick_days'] as List? ?? const []) ?parseDay('$d'),
+      },
     );
   }
 
@@ -76,6 +80,9 @@ class PaceInputs {
 
   /// Declared free days.
   final Set<DateTime> freeDays;
+
+  /// Sick days: they ask nothing and their share is dropped, not re-split.
+  final Set<DateTime> sickDays;
 }
 
 /// One deviation: `delta` pages more (or fewer) than assumed on `day`.
@@ -91,6 +98,7 @@ class DayView {
     required this.credited,
     required this.assumed,
     required this.free,
+    required this.sick,
     required this.oldRule,
     required this.beforeQuotas,
     this.simulated = 0,
@@ -114,6 +122,9 @@ class DayView {
   /// A declared free day.
   final bool free;
 
+  /// A sick day: asks nothing.
+  final bool sick;
+
   /// Before the switch: no daily requirement, the old bonus rule.
   final bool oldRule;
 
@@ -133,7 +144,7 @@ List<DayView> dayViews(
   List<DateTime> days, {
   PaceSimulation? sim,
 }) {
-  final PaceInputs(:today, :rules, :credits, :freeDays) = inputs;
+  final PaceInputs(:today, :rules, :credits, :freeDays, :sickDays) = inputs;
   bool isFree(DateTime d) => freeDays.contains(d);
   DayView view(DayKind kind, DayPace pace, DateTime d, int got, int assumed) =>
       DayView(
@@ -143,6 +154,7 @@ List<DayView> dayViews(
         credited: got,
         assumed: assumed,
         free: isFree(d),
+        sick: sickDays.contains(d),
         oldRule: d.isBefore(rules.quotaSwitch),
         beforeQuotas: d.isBefore(rules.paceStart),
         simulated: sim != null && sim.day == d ? sim.delta : 0,
@@ -155,7 +167,13 @@ List<DayView> dayViews(
     };
     final got = credits[d] ?? 0;
     out.add(
-      view(DayKind.past, computePace(rules, before, d, isFree), d, got, got),
+      view(
+        DayKind.past,
+        computePace(rules, before, d, isFree, sick: sickDays),
+        d,
+        got,
+        got,
+      ),
     );
   }
   if (days.isEmpty || days.last.isBefore(today)) return out;
@@ -165,7 +183,7 @@ List<DayView> dayViews(
       if (!e.key.isAfter(today)) e.key: e.value,
   };
   for (final d in daySpan(today, days.last)) {
-    final pace = computePace(rules, rows, d, isFree);
+    final pace = computePace(rules, rows, d, isFree, sick: sickDays);
     final real = d == today ? credits[d] ?? 0 : 0;
     final delta = sim != null && sim.day == d ? sim.delta : 0;
     final assumed = math.max(math.max(real, pace.required) + delta, 0);

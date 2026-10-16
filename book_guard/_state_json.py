@@ -4,9 +4,11 @@
 Schema version 1. Every field the app shows comes from here; the app never
 derives pace or session state itself, so the PC stays the only authority.
 
-``pace.today_required`` is the day's requirement (its quota after surplus
-moves, plus its weekend debt share): the day's credited pages reaching it
-earn the +1h bonus; ``pace.bonus_today`` says a credit today already has it.
+``pace.today_required`` is what earns the +1h bonus: the day's requirement
+(its quota after surplus moves, plus its weekend debt share), or on a sick
+day the requirement it would have had; ``pace.bonus_today`` says a credit
+today already has it. ``sick_today`` is a sick day (``sickdays``): never
+locked, and ``pace.today_quota`` (what the day asks) is 0.
 ``pace.debt_per_day`` is the debt asked of each of the ``debt_days_left``
 remaining weekend days (Sat/Sun, at most 60 a day with the base quota);
 ``debt_unplaced`` fits on no day and carries into next month.
@@ -14,7 +16,7 @@ remaining weekend days (Sat/Sun, at most 60 a day with the base quota);
 ``index_job`` is the last dropped book file's indexing (``_indexjob``):
 ``{file, stage, done, total, error, updated_at}``, or null.
 
-``pace_inputs`` (credits per day, free days, the plan's constants) feeds the
+``pace_inputs`` (credits per day, free and sick days, the plan's constants) feeds the
 app's port of the plan (``app/lib/src/pace_plan.dart``) -- the one place the
 app does derive pace, for the week/month/any-day/simulation views, offline.
 """
@@ -134,6 +136,7 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         "today": snap.today.isoformat(),
         "locked": snap.locked,
         "reason": snap.reason,
+        "sick_today": snap.sick_today,
         "book": None
         if book is None
         else {
@@ -160,7 +163,8 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
             "debt_per_day": pace.ask.debt_per_day,
             "debt_days_left": pace.ask.debt_days,
             "debt_unplaced": pace.ask.debt_unplaced,
-            "today_required": pace.ask.required,
+            "today_required": pace.ask.bonus_at,
+            "today_quota": pace.ask.required,
             "bonus_today": pace.ask.bonus,
         },
         "open_start": None
@@ -173,6 +177,9 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         "claude_down_since": claude_down_since(paths),
         "index_job": _indexjob.load(paths),
         "pace_inputs": pace_inputs(
-            load_ledger(paths.ledger, paths.key_file), snap.today, freedays.is_free_day
+            load_ledger(paths.ledger, paths.key_file),
+            snap.today,
+            freedays.is_free_day,
+            snap.sick_days,
         ),
     }

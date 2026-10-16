@@ -7,7 +7,9 @@ bonus the moment a periodic run (the inbox pass, the lock gate) sees it: one
 signed zero-page ``credit`` row, ``bonus:auto:<day>``, with ``bonus == "1"``
 and ``ended_at`` = now, so the consumers' ``reading_match`` counts it for
 that day. It moves no pace or debt (no pages), is written once per day, and
-not at all on a day that already has a bonus.
+not at all on a day that already has a bonus. A sick day asks nothing but
+is judged by the requirement it would have had
+(:func:`book_guard._bonus.day_requirement`), so being sick never grants it.
 """
 
 from __future__ import annotations

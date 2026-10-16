@@ -48,6 +48,7 @@ def _view(
     credited: int = 10,
     assumed: int = 10,
     free: bool = False,
+    sick: bool = False,
     simulated: int = 0,
     pace: Pace | None = None,
 ) -> DayView:
@@ -60,7 +61,7 @@ def _view(
         finished_books=0,
         ask=Ask(required=17),
     )
-    return DayView(day, kind, pace, credited, assumed, free, simulated)
+    return DayView(day, kind, pace, credited, assumed, free, sick, simulated)
 
 
 def test_rows() -> None:

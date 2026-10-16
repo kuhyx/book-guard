@@ -3,6 +3,8 @@
 
 Today's line shows the day's requirement (reaching it earns the +1h bonus)
 apart from the 20-page lock pass, which clears the lock and earns nothing.
+On a sick day it says so: nothing is asked, and the pages that would have
+been asked still earn the bonus.
 """
 
 from __future__ import annotations
@@ -66,8 +68,14 @@ def todo_lines(snap: Snapshot) -> list[str]:
     return lines
 
 
-def _today_line(p: Pace) -> str:
+def _today_line(p: Pace, *, sick: bool) -> str:
     """Today's requirement and whether its +1h bonus is in."""
+    if sick:
+        earned = "bonus earned" if p.ask.bonus else f"{p.ask.bonus_at} earn the +1h"
+        return (
+            f"Today is a sick day: no pages asked, its share is dropped "
+            f"({p.pages_today} read; {earned})"
+        )
     if not p.ask.required and p.ask.bonus:
         return "Today asks no pages: the +1h bonus is granted without reading"
     return (
@@ -104,7 +112,7 @@ def status_lines(snap: Snapshot, *, recent: int = 6) -> list[str]:
             f"{f'carried credit {p.carried_credit}; ' if p.carried_credit else ''}"
             f"books finished {p.finished_books})"
         ),
-        _today_line(p),
+        _today_line(p, sick=snap.sick_today),
         (
             f"Lock pass: {p.pages_today}/{DAILY_PASS_PAGES} pages "
             f"({'passed' if p.passed_today else 'not yet'}: "

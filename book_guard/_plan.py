@@ -16,6 +16,12 @@ instead: the split is 15:30:50 with weekends capped, and a surplus comes off
 the remaining Mon-Fri days only. The switch month walks the old rules up to
 the switch, then re-splits what is left of its target over the days from the
 switch on -- the line at the switch is the old line exactly.
+
+A **sick day** (``sickdays``) is not a free day: it keeps its place and its
+weight in the split and in every surplus cut, so every other day's quota is
+exactly what it would be without it -- but it asks nothing. Its quota after
+the moves is taken off the line and the target (:attr:`MonthPlan.excused`),
+never re-split over the other days; pages read on it count like any others.
 """
 
 from __future__ import annotations
@@ -49,6 +55,9 @@ class MonthPlan:
     leftover: Fraction = Fraction(0)
     unspread: Fraction = Fraction(0)
     """Debt in a month with no counted day: owed, but on no day's line."""
+    excused: dict[date, Fraction] = field(default_factory=dict)
+    """Sick days' quotas after the moves: off the line, the target and
+    :attr:`quotas`, owed by nobody."""
 
     def line_before(self, day: date) -> Fraction:
         """Pages the plan expects by the start of ``day``."""
@@ -85,12 +94,14 @@ class MonthInput:
 
     Attributes:
         days: Every day of the month, in order.
-        counted: The days the target spreads over (paced, not free).
+        counted: The days the target spreads over (paced, not free; sick
+            days included, so they keep their share of the split).
         weights: Each counted day's share of the month's base.
         target: The base plus carried debt; the base split by weight, the
             debt evenly over the counted days.
         credit: Surplus carried in from earlier months, spent from day one.
-        pages_on: Pages credited on each day (free days included).
+        pages_on: Pages credited on each day (free and sick days included).
+        sick: Sick days: no quota of their own, see :attr:`MonthPlan.excused`.
     """
 
     days: list[date]
@@ -99,6 +110,7 @@ class MonthInput:
     target: int
     credit: Fraction
     pages_on: Mapping[date, int]
+    sick: frozenset[date] = frozenset()
 
 
 def _opening_plan(month: MonthInput) -> MonthPlan:
@@ -134,11 +146,13 @@ def _walk(
 ) -> Fraction:
     """Walk ``days``, moving each surplus off later days; return read - planned.
 
-    ``start`` is read - planned before the first of ``days``.
+    ``start`` is read - planned before the first of ``days``. A sick day
+    plans nothing: not reading on it is no deficit, reading on it is surplus.
     """
     ahead = start
     for day in days:
-        ahead += month.pages_on.get(day, 0) - plan.quotas.get(day, Fraction(0))
+        planned = Fraction(0) if day in month.sick else plan.quotas.get(day, 0)
+        ahead += month.pages_on.get(day, 0) - planned
         if ahead <= 0:
             continue
         moved = cut(plan.quotas, [d for d in month.counted if d > day], ahead)
@@ -167,6 +181,7 @@ def plan_month(month: MonthInput, until: date, switch: date | None = None) -> Mo
             new = [d for d in known if d >= switch]
             ahead = _walk(plan, month, new, cut_weekdays, ahead)
     plan.leftover += max(ahead, Fraction(0))
+    plan.excused = {d: plan.quotas.pop(d) for d in month.sick if d in plan.quotas}
     return plan
 
 
@@ -176,7 +191,7 @@ def day_requirement(plan: MonthPlan, month: MonthInput, day: date) -> Fraction:
     Fixed at the start of the day: the debt is the line minus the pages read
     before ``day``, spread over the month's remaining weekend days
     (:func:`book_guard._quotas.fill_weekends`), so only a weekend carries it.
-    A day with no quota (free, or before the quotas) asks nothing.
+    A day with no quota (free, sick, or before the quotas) asks nothing.
     """
     if day not in plan.quotas:
         return Fraction(0)
@@ -196,5 +211,7 @@ def debt_at(plan: MonthPlan, month: MonthInput, day: date) -> Fraction:
 
 
 def weekend_days(month: MonthInput, day: date) -> list[date]:
-    """The month's counted weekend days from ``day`` on, ``day`` included."""
-    return [d for d in month.counted if d >= day and is_weekend(d)]
+    """The month's counted, non-sick weekend days from ``day`` on, ``day`` included."""
+    return [
+        d for d in month.counted if d >= day and is_weekend(d) and d not in month.sick
+    ]

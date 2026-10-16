@@ -3,7 +3,7 @@
 Locks the PC while this month's **paper-book** reading is behind pace. Sixth
 sibling of `screen-locker`, `leetcode-guard`, `diet-guard` and `wake-alarm`,
 on the same [`gatelock`](https://github.com/kuhyx/utils/tree/main/gatelock)
-lock window, HMAC key and free-day pool.
+lock window, HMAC key, free-day pool and sick-day pool.
 
 ## How reading is proven
 
@@ -72,6 +72,7 @@ page falls back the same way, to `qwen3-vl:30b-a3b-instruct`.
 | Debt | pages behind the line go onto the month's remaining Sat/Sun days, evenly, none past 60; what fits nowhere (or is still short at month end) goes into the year balance |
 | Today's requirement | today's quota after those moves plus, on a weekend, its debt share, rounded up and fixed at the start of the day |
 | Lock | behind the line at login, 10:00, 14:00, 18:00 -- until caught up, or until 20 pages are credited that day (by the day the reading ended; clears the lock only, no bonus) |
+| Sick day | a date in the shared `sickdays` pool (not a free day): the gate stands down all day and the day asks nothing. Its share is dropped, not re-split: the month's target falls by exactly that day's quota and every other day's quota is what it would have been. Debt that already existed keeps its weekend rules (it skips a sick Sat/Sun). The share stays out of the year balance; pages read on it count as usual. An unreadable pool reads as no sick day (the gate applies) |
 | Escape | 2 per month; forgives the day, credits no pages |
 | Summary | a fail lists what to add; rewrite as often as needed, judged on that; Claude down: graded locally (ollama); ungraded credit after 5 min with no grader at all |
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |
@@ -84,7 +85,10 @@ screen-locker and **+1h** of gaming in steam-backlog-enforcer, once per day;
 the credit row that gets there carries the flag. A day that asks no pages
 (a free day, or a weekday reading ahead already emptied) earns it without
 reading: the next periodic run writes a zero-page `bonus:auto:<day>` row,
-once. Before 2026-10-12 it was one
+once. A sick day asks nothing but is no free hour: its bonus takes the
+requirement the day would have had without being sick (`status --json`
+`pace.today_required`; `pace.today_quota` is 0 and `sick_today` is true,
+also in the MCP `get_status`). Before 2026-10-12 it was one
 session of 15+ pages and 15+ minutes, or 10+ and 10+ when on pace. A day
 that qualifies only later (a late-graded session lowered its requirement)
 gets a zero-page bonus row from `book_guard regrant` (signed rows are never

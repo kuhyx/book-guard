@@ -1,8 +1,8 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """What the app's port of the plan runs on, and a day's numbers as JSON.
 
-``state.json``'s ``pace_inputs`` carries the credits per day, the free days
-and the plan's constants, so the app computes any day's view offline
+``state.json``'s ``pace_inputs`` carries the credits per day, the free days,
+the sick days and the plan's constants, so the app computes any day's view offline
 (``app/lib/src/pace_*.dart``). ``scripts/pace_goldens.py`` writes
 :func:`view_json` for many scenarios; the Dart port must match every number.
 """
@@ -79,12 +79,16 @@ def rules() -> dict[str, Any]:
 
 
 def pace_inputs(
-    ledger: Ledger, today: date, is_free: Callable[[date], bool]
+    ledger: Ledger,
+    today: date,
+    is_free: Callable[[date], bool],
+    sick: frozenset[date],
 ) -> dict[str, Any]:
     """Everything the app needs to compute any day offline (state.json).
 
     Free days run from the first paced month to the end of next year, so a
-    picked day or a simulation in that range is exact.
+    picked day or a simulation in that range is exact. Sick days are the
+    whole pool, in the same range.
     """
     first = month_start(PACE_START_DATE)
     last = date(today.year + 1, 12, 31)
@@ -94,6 +98,7 @@ def pace_inputs(
         "rules": rules(),
         "credits": credits_by_day(ledger),
         "free_days": [d.isoformat() for d in _span(first, last) if check(d)],
+        "sick_days": sorted(d.isoformat() for d in sick if first <= d <= last),
     }
 
 
@@ -113,6 +118,7 @@ def view_json(view: DayView) -> dict[str, Any]:
         "carried_debt": p.carried_debt,
         "carried_credit": p.carried_credit,
         "free": view.free,
+        "sick": view.sick,
         "old_rule": view.old_rule,
     }
 
