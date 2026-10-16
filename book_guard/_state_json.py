@@ -7,8 +7,9 @@ derives pace or session state itself, so the PC stays the only authority.
 ``pace.today_required`` is what earns the +1h bonus: the day's requirement
 (its quota after surplus moves, plus its weekend debt share), or on a sick
 day the requirement it would have had; ``pace.bonus_today`` says a credit
-today already has it. ``sick_today`` is a sick day (``sickdays``): never
-locked, and ``pace.today_quota`` (what the day asks) is 0.
+today already has it. ``sick_today`` is a sick day (``sickdays``) that does
+not keep ``book``: never locked, and ``pace.today_quota`` (what the day asks)
+is 0. A sick day that keeps ``book`` reads as a normal day here.
 ``pace.debt_per_day`` is the debt asked of each of the ``debt_days_left``
 remaining weekend days (Sat/Sun, at most 60 a day with the base quota);
 ``debt_unplaced`` fits on no day and carries into next month.
