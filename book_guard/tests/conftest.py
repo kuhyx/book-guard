@@ -11,7 +11,9 @@ Autouse, so no test can forget them:
 * embeddings come from a tiny deterministic fake instead of fastembed;
 * the background index unit is never started (``systemctl --user start``
   raises unless a test installs its own fake);
-* the free-day pool is empty.
+* the free-day pool is empty, and the sick-day pool is the per-test
+  :func:`sick_pool` dict (empty unless a test marks a day): every sickdays
+  read is answered from it, so kuhy's real pool is never read.
 """
 
 from __future__ import annotations
@@ -21,13 +23,18 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+import sickdays
 
 from book_guard import _embed, _http, _openlibrary, _paths
 from book_guard._paths import Paths
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from datetime import date
     from pathlib import Path
+
+type SickPool = dict[date, frozenset[str]]
+"""A sick day -> the lockers it keeps (``sickdays.LOCKER_*``)."""
 
 
 class FakeEmbedder:
@@ -58,8 +65,42 @@ def bg_paths(tmp_path: Path) -> Paths:
     )
 
 
+@pytest.fixture
+def sick_pool() -> SickPool:
+    """This test's sick-day pool: add ``{day: frozenset(kept lockers)}``."""
+    return {}
+
+
+def _fake_sick_pool(monkeypatch: pytest.MonkeyPatch, pool: SickPool) -> None:
+    """Answer every sickdays read the gate makes from ``pool``."""
+
+    def stands_down(locker: str, day: date, **_k: object) -> bool:
+        if locker not in sickdays.LOCKERS:
+            msg = f"unknown locker {locker!r}"
+            raise ValueError(msg)
+        return day in pool and locker not in pool[day]
+
+    monkeypatch.setattr("sickdays.sick_days", lambda **_k: frozenset(pool))
+    monkeypatch.setattr("sickdays.is_sick_day", lambda day, **_k: day in pool)
+    monkeypatch.setattr(
+        "sickdays.kept_lockers", lambda day, **_k: pool.get(day, frozenset())
+    )
+    monkeypatch.setattr("sickdays.stands_down", stands_down)
+
+    def no_pool_write(*_a: object, **_k: object) -> object:
+        msg = "test tried to write the real sick-day pool: use sick_pool"
+        raise AssertionError(msg)
+
+    # book-guard never writes the pool; a test that tried would reach the
+    # real file (the writers resolve their paths in sickdays' own modules).
+    for writer in ("add_sick_day", "set_kept_lockers", "remove_sick_day", "sync"):
+        monkeypatch.setattr(f"sickdays.{writer}", no_pool_write)
+
+
 @pytest.fixture(autouse=True)
-def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _hermetic(
+    bg_paths: Paths, sick_pool: SickPool, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
     _paths.set_override(bg_paths)
 
     def no_claude(*_args: object, **_kwargs: object) -> object:
@@ -88,7 +129,7 @@ def _hermetic(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     monkeypatch.setattr(_embed, "TextEmbedding", lambda *_a, **_k: FakeEmbedder())
     monkeypatch.setattr("freedays.is_free_day", lambda *_a, **_k: False)
     # The shared sick-day pool is kuhy's real file: no test may read it.
-    monkeypatch.setattr("sickdays.sick_days", lambda *_a, **_k: frozenset())
+    _fake_sick_pool(monkeypatch, sick_pool)
     monkeypatch.setattr("shutil.which", lambda _name: None)
     # The morning carrot reads bg_paths.morning_session (under tmp_path), and
     # a production-mode test must never wait 30 real seconds for it.

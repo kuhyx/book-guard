@@ -20,8 +20,8 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 import freedays
-import sickdays
 
+from book_guard import _sick
 from book_guard._constants import (
     BONUS_MIN_MINUTES,
     BONUS_MIN_PAGES,
@@ -59,7 +59,7 @@ def is_on_pace(ledger: Ledger, credit: Entry) -> bool:
         Ledger([*kept, credit]),
         date.fromisoformat(credit.day),
         freedays.is_free_day,
-        sick=sickdays.sick_days(),
+        sick=_sick.standing_down(),
     )
     return pace.behind == 0
 
@@ -74,7 +74,7 @@ def day_requirement(ledger: Ledger, day: date) -> int:
         e for e in ledger.entries if not (e.kind == CREDIT and e.day >= day.isoformat())
     ]
     pace = compute_pace(
-        Ledger(kept), day, freedays.is_free_day, sick=sickdays.sick_days()
+        Ledger(kept), day, freedays.is_free_day, sick=_sick.standing_down()
     )
     return pace.ask.bonus_at
 

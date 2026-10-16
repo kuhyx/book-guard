@@ -18,23 +18,22 @@ from book_guard._state_json import to_json
 from book_guard.tests._flow_helpers import LOCKED_DAY, make_pace, make_snap
 
 if TYPE_CHECKING:
-    import pytest
-
     from book_guard._paths import Paths
+    from book_guard.tests.conftest import SickPool
 
 TUE = date(2026, 10, 13)
 NOON = datetime(2026, 10, 13, 10, 0, tzinfo=UTC).timestamp()
 
 
-def _sick(monkeypatch: pytest.MonkeyPatch, *days: date) -> None:
-    monkeypatch.setattr("sickdays.sick_days", lambda *_a, **_k: frozenset(days))
+def _sick(pool: SickPool, *days: date) -> None:
+    pool.update(dict.fromkeys(days, frozenset()))
 
 
 def test_a_sick_day_never_locks_and_says_why(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+    bg_paths: Paths, sick_pool: SickPool
 ) -> None:
     assert snapshot(bg_paths, today=LOCKED_DAY).locked
-    _sick(monkeypatch, LOCKED_DAY)
+    _sick(sick_pool, LOCKED_DAY)
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert (snap.locked, snap.reason, snap.sick_today) == (
         False,
@@ -52,10 +51,8 @@ def test_the_reason_names_the_sick_day_even_on_pace(bg_paths: Paths) -> None:
     assert snap.reason == "today is a sick day"
 
 
-def test_state_json_tells_sick_from_free(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _sick(monkeypatch, LOCKED_DAY)
+def test_state_json_tells_sick_from_free(bg_paths: Paths, sick_pool: SickPool) -> None:
+    _sick(sick_pool, LOCKED_DAY)
     doc = to_json(bg_paths, snapshot(bg_paths, today=LOCKED_DAY))
     assert doc["sick_today"] is True
     assert (doc["pace"]["today_quota"], doc["pace"]["today_required"]) == (0, 18)
@@ -64,9 +61,9 @@ def test_state_json_tells_sick_from_free(
 
 
 def test_a_sick_day_gets_no_hour_without_reading(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+    bg_paths: Paths, sick_pool: SickPool
 ) -> None:
-    _sick(monkeypatch, TUE)
+    _sick(sick_pool, TUE)
     assert auto_grant(bg_paths, today=TUE, now=NOON) is None
     ledger = _ledger.load(bg_paths.ledger, bg_paths.key_file)
     assert _bonus.day_requirement(ledger, TUE) == 18

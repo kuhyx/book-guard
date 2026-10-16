@@ -16,8 +16,8 @@ import sys
 from typing import TYPE_CHECKING, Final
 
 import freedays
-import sickdays
 
+from book_guard import _sick
 from book_guard._ledger import load
 from book_guard._pace_text import detail, row
 from book_guard._pace_view import month_of, parse_simulation, views, week_of
@@ -61,7 +61,7 @@ def cmd_ask(args: argparse.Namespace) -> int:
         return 2
     head = [] if sim is None else [f"Simulation: {sim.delta:+d} pages on {sim.day}"]
     ledger = load(active.ledger, active.key_file)
-    calendar = (freedays.is_free_day, sickdays.sick_days())
+    calendar = (freedays.is_free_day, _sick.standing_down())
     if args.week or args.month:
         days = month_of(day) if args.month else week_of(day)
         found = views(ledger, today, days, calendar, sim)

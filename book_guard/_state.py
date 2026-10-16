@@ -12,9 +12,8 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 import freedays
-import sickdays
 
-from book_guard import _ledger, _photos
+from book_guard import _ledger, _photos, _sick
 from book_guard._books import Book, book_at, current
 from book_guard._constants import DAILY_PASS_PAGES, ESCAPES_PER_MONTH, GATE_START_DATE
 from book_guard._ledger import ESCAPE
@@ -69,7 +68,8 @@ class Snapshot:
     open_start: PhotoRecord | None
     pace: Pace
     sick_days: frozenset[date]
-    """The shared sick-day pool as read for this snapshot (empty if unreadable)."""
+    """The sick days book-guard stands down on (:func:`_sick.standing_down`:
+    a sick day that keeps ``book`` is not one), as read for this snapshot."""
     escaped_today: bool
     escapes_left: int
     locked: bool
@@ -146,15 +146,16 @@ def snapshot(
 ) -> Snapshot:
     """Read the ledger and photo cache and derive the full state.
 
-    ``sick`` defaults to the shared pool (``sickdays``), which reads as no
-    sick day at all when it is unreadable: the gate fails closed.
+    ``sick`` defaults to the shared pool's days that do not keep ``book``
+    (:func:`_sick.standing_down`), which reads as no sick day at all when it
+    is unreadable: the gate fails closed.
 
     Raises:
         ValueError: The ledger or photo cache is corrupt.
     """
     day = today or datetime.now().astimezone().date()
     free_check = is_free or freedays.is_free_day
-    sick_days = sickdays.sick_days() if sick is None else sick
+    sick_days = _sick.standing_down() if sick is None else sick
     ledger = _ledger.load(paths.ledger, paths.key_file)
     records = _photos.load(paths.photos)
     pace = compute_pace(ledger, day, free_check, sick=sick_days)

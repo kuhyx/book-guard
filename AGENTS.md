@@ -78,7 +78,11 @@ Read README.md first. These are the invariants that are easy to break.
   but plans 0 in the walk; its quota goes to `MonthPlan.excused` -- off the
   line, the target and the year balance, never re-split. The gate's verdict
   checks it first ("today is a sick day"). Every `compute_pace` caller
-  passes `sick=` explicitly; the Dart port mirrors it (goldens).
+  passes `sick=` explicitly; the Dart port mirrors it (goldens). "Sick"
+  here means `sickdays.stands_down(LOCKER_BOOK, day)`: a sick day that
+  *keeps* `book` is a normal day, past or today (quota, debt, lock, bonus).
+  `_sick.standing_down()` is the one read of the pool; never call
+  `sickdays.sick_days()` elsewhere, or the gate and the bonus disagree.
 - **Photos always first: indexing never runs in the photo pass.** A book
   file in `Reading/books/` is only marked `uploaded` by `process`, which
   starts `book-guard-index.service` (idle CPU/IO, resumable checkpoints)

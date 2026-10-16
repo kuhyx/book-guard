@@ -30,8 +30,9 @@ Nothing here is stored. Every run re-derives, from the credits alone:
 * **today's requirement** = today's quota after the moves plus, on a
   weekend, today's debt share, fixed at the start of the day and rounded up.
   Reaching it earns the day's bonus (:mod:`book_guard._bonus`).
-* **sick day** (``sickdays``) = asks nothing and its share is dropped, not
-  re-split: the month's target falls by exactly that day's quota and every
+* **sick day** (``sickdays``, one that does not keep ``book``:
+  :func:`book_guard._sick.standing_down`) = asks nothing and its share is
+  dropped, not re-split: the month's target falls by exactly that day's quota and every
   other day asks what it would have (:mod:`book_guard._plan`). The share
   stays out of the year balance too. Reading on it still earns the bonus at
   the requirement the day would have had (:attr:`Ask.bonus_at`).

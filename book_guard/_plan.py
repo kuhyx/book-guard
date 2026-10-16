@@ -17,9 +17,10 @@ the remaining Mon-Fri days only. The switch month walks the old rules up to
 the switch, then re-splits what is left of its target over the days from the
 switch on -- the line at the switch is the old line exactly.
 
-A **sick day** (``sickdays``) is not a free day: it keeps its place and its
-weight in the split and in every surplus cut, so every other day's quota is
-exactly what it would be without it -- but it asks nothing. Its quota after
+A **sick day** (``sickdays``, one that does not keep ``book``) is not a free
+day: it keeps its place and its weight in the split and in every surplus cut,
+so every other day's quota is exactly what it would be without it -- but it
+asks nothing. Its quota after
 the moves is taken off the line and the target (:attr:`MonthPlan.excused`),
 never re-split over the other days; pages read on it count like any others.
 """

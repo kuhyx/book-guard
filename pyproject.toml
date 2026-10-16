@@ -5,13 +5,14 @@ description = "Tkinter/systemd gate that locks the PC until a month's paper-book
 requires-python = ">=3.14"
 # gatelock: shared lock-window/arbiter/HMAC backend (all five lockers).
 # freedays: the shared free-day pool every gate consults.
-# sickdays: the shared sick-day pool (gate stands down, share dropped).
+# sickdays: the shared sick-day pool (gate stands down, share dropped,
+# unless the day keeps book).
 # pillow: EXIF capture time + downscaling before the vision call.
 # fastembed: multilingual embeddings that anchor photos in the ebook file.
 dependencies = [
     "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.9.0#subdirectory=gatelock",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.0#subdirectory=freedays",
-    "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.1.0#subdirectory=sickdays",
+    "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.2.0#subdirectory=sickdays",
     "fastembed==0.9.0",
     "pillow==12.3.0",
 ]
