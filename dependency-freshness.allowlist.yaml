@@ -1,0 +1,13 @@
+# book-guard's own additions to the fleet-wide allowlist
+# (~/src/utils/dependency-freshness.allowlist.yaml).
+
+exceptions:
+  - ecosystem: pypi
+    package: pillow
+    pinned: "12.3.0"
+    latest_known: "13.0.0"
+    reason: >-
+      fastembed 0.9.0 -- itself the latest release -- declares
+      `pillow<13.0,>=12.0.0`, and book-guard pins both. The suite passes on
+      pillow 13 (checked 2026-10-17), so this lifts the day fastembed allows it.
+    blocked_by: "transitive:fastembed@0.9.0"
