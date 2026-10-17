@@ -70,9 +70,16 @@ Read README.md first. These are the invariants that are easy to break.
   reaches old rows only via `regrant` (zero-page `bonus:<id>` row).
   Changing that contract means changing both consumers in the same session.
 - **Quotas** (`_quotas.py`, `_plan.py`): from the switch Tue-Thu 15, Mon/Fri
-  30, Sat/Sun 50, weekends capped at 60 (debt included); surplus comes off
-  Mon-Fri only, debt goes onto weekends only. The switch month keeps the old
-  plan's line at the switch exactly -- never re-split the days before it.
+  30, Sat/Sun 50, weekends capped at 60. From `RESPLIT_DATE` (2026-10-18)
+  **one number a day**: each morning re-splits what is left of the month by
+  weight over the days left (`_resplit_mornings`); today's share is the
+  requirement, the lock and the bonus alike. Days before it replay the old
+  rules exactly (surplus off Mon-Fri, debt onto weekends, the 20-page pass)
+  -- never re-split the days before a switch.
+- **The lock asks one question** (`_state._one_number`, `_pace.kept`): did
+  yesterday keep its number? Missed -> locked until today's number is in.
+  Kept = asked 0, read it, or carries the bonus. The timer only fires at the
+  day boundary and the morning-carrot expiry; never add daytime hours.
 - **Sick days are not free days** (`sickdays` pool, `_plan.py`): a sick day
   stays in `counted` (keeps its weight in the split and every surplus cut)
   but plans 0 in the walk; its quota goes to `MonthPlan.excused` -- off the

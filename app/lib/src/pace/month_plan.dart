@@ -5,10 +5,12 @@
 /// month walks the old rules up to the switch and re-splits the rest.
 /// A sick day keeps its weight and its place in every cut but asks nothing:
 /// its quota after the moves goes to [MonthPlan.excused], never re-split.
+/// From the resplit each morning splits what is left over the days left.
 library;
 
 import 'package:book_guard_app/src/pace/quotas.dart';
 import 'package:book_guard_app/src/pace/rational.dart';
+import 'package:book_guard_app/src/pace/resplit.dart';
 import 'package:book_guard_app/src/pace/rules.dart';
 
 /// The plan as of some day.
@@ -32,6 +34,10 @@ class MonthPlan {
 
   /// Sick days' quotas after the moves: off the line and the target.
   final Quotas excused = {};
+
+  /// The first morning re-split, when the plan has one: from it a day asks
+  /// its quota alone.
+  DateTime? resplit;
 
   /// Pages the plan expects by the start of [day].
   Rational lineBefore(DateTime day) =>
@@ -157,14 +163,24 @@ Rational _walk(
 }
 
 /// Walk [m] through [until] (inclusive), moving every surplus; [useSwitch]
-/// applies the rules' switch (false: old rules only).
+/// applies the rules' switch (false: old rules only), [useResplit] their
+/// morning re-split.
 MonthPlan planMonth(
   MonthInput m,
   DateTime until,
   PlanRules rules, {
   required bool useSwitch,
+  bool useResplit = false,
 }) {
-  final known = m.days.where((d) => !d.isAfter(until)).toList();
+  final resplit = rules.resplit;
+  if (useResplit && !resplit.isAfter(m.days.first)) {
+    final plan = MonthPlan({});
+    resplitMornings(plan, m, rules, m.days.first, until);
+    return plan;
+  }
+  final known = m.days
+      .where((d) => !d.isAfter(until) && (!useResplit || d.isBefore(resplit)))
+      .toList();
   final change = rules.quotaSwitch;
   Rational newCut(Quotas q, List<DateTime> d, Rational a) =>
       cutWeekdays(rules, q, d, a);
@@ -190,6 +206,9 @@ MonthPlan planMonth(
     final quota = plan.quotas.remove(d);
     if (quota != null) plan.excused[d] = quota;
   }
+  if (useResplit && m.days.contains(resplit) && !resplit.isAfter(until)) {
+    resplitMornings(plan, m, rules, resplit, until);
+  }
   return plan;
 }
 
@@ -202,7 +221,11 @@ Rational dayRequirement(
 ) {
   final quota = plan.quotas[day];
   if (quota == null) return Rational.zero;
-  if (!rules.isWeekend(day)) return quota;
+  final resplit = plan.resplit;
+  if ((resplit != null && !day.isBefore(resplit)) || !rules.isWeekend(day)) {
+    // From the resplit a debt is in the morning's split already.
+    return quota;
+  }
   final weekends = m.counted
       .where(
         (d) => !d.isBefore(day) && rules.isWeekend(d) && !m.sick.contains(d),

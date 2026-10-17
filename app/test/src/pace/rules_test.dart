@@ -45,8 +45,19 @@ void main() {
       expect(r.weekendCap, 60);
     });
 
+    test('the resplit defaults to the constant, a sent one wins', () {
+      expect(rules().resplit, utcDay(2026, 10, 18));
+      final older = rulesJson()..remove('resplit');
+      expect(PlanRules.fromJson(older)?.resplit, defaultResplit);
+      final sent = {...rulesJson(), 'resplit': '2026-11-02'};
+      expect(PlanRules.fromJson(sent)?.resplit, utcDay(2026, 11, 2));
+      final broken = {...rulesJson(), 'resplit': 'oops'};
+      expect(PlanRules.fromJson(broken), isNull);
+    });
+
     test('anything missing or mistyped is null', () {
-      for (final key in rulesJson().keys) {
+      // An older PC sends no resplit: that one falls back to the default.
+      for (final key in rulesJson().keys.where((k) => k != 'resplit')) {
         final missing = rulesJson()..remove(key);
         expect(PlanRules.fromJson(missing), isNull, reason: 'no $key');
       }

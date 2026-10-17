@@ -8,14 +8,20 @@ this one object, so they can never disagree about what is owed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import freedays
 
 from book_guard import _ledger, _photos, _sick
 from book_guard._books import Book, book_at, current
-from book_guard._constants import DAILY_PASS_PAGES, ESCAPES_PER_MONTH, GATE_START_DATE
+from book_guard._constants import (
+    DAILY_PASS_PAGES,
+    ESCAPES_PER_MONTH,
+    GATE_START_DATE,
+    RESPLIT_DATE,
+)
+from book_guard._daily_lock import kept, one_number
 from book_guard._ledger import ESCAPE
 from book_guard._pace import Pace, compute_pace
 from book_guard._quiz import credited
@@ -137,6 +143,26 @@ def _verdict(
     )
 
 
+@dataclass(frozen=True)
+class _Calendar:
+    """Which days are free and which stand down sick."""
+
+    is_free: Callable[[date], bool]
+    sick: frozenset[date]
+
+
+def _decide(
+    ledger: _ledger.Ledger, day: date, pace: Pace, cal: _Calendar, *, escaped: bool
+) -> tuple[bool, str]:
+    """Locked or not, and why: the one-number rule from the resplit."""
+    flags = {"sick": day in cal.sick, "free": cal.is_free(day), "escaped": escaped}
+    if day < RESPLIT_DATE:
+        return _verdict(day, pace, **flags)
+    yesterday = day - timedelta(days=1)
+    kept_yesterday = kept(ledger, yesterday, cal.is_free, sick=cal.sick)
+    return one_number(pace, kept_yesterday=kept_yesterday, **flags)
+
+
 def snapshot(
     paths: Paths,
     *,
@@ -162,8 +188,8 @@ def snapshot(
     month = day.isoformat()[:7]
     escapes = [e for e in ledger.of_kind(ESCAPE) if e.day.startswith(month)]
     escaped = any(e.day == day.isoformat() for e in escapes)
-    locked, reason = _verdict(
-        day, pace, sick=day in sick_days, free=free_check(day), escaped=escaped
+    locked, reason = _decide(
+        ledger, day, pace, _Calendar(free_check, sick_days), escaped=escaped
     )
     return Snapshot(
         today=day,

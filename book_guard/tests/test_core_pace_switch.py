@@ -10,6 +10,7 @@ import math
 from book_guard import _pace, _plan
 from book_guard._constants import QUOTA_SWITCH_DATE
 from book_guard._ledger import Ledger
+from book_guard._quotas import split
 from book_guard.tests.test_core_pace import _credit, _never
 
 OCT = date(2026, 10, 1)
@@ -87,50 +88,28 @@ def test_february_hits_the_weekend_cap() -> None:
     assert plan.target == 1000
 
 
-def test_carried_debt_is_inside_the_rescale() -> None:
+def test_carried_debt_is_inside_the_morning_split() -> None:
     ledger = Ledger([_credit("2026-10-05", 100)])
-    # November carries 450: 1450 caps the weekends at 60 and Mon-Fri share
-    # the other 910 (450 units): Mon/Fri 60.67, Tue-Thu 30.33.
+    # November carries 450; Nov 1 read nothing, so Monday's morning splits
+    # all 1450 over Nov 2-30.
     monday = _pace.compute_pace(ledger, date(2026, 11, 2), _never, sick=frozenset())
-    assert (monday.target, monday.required) == (1450, 60)
-    assert monday.ask.required == math.ceil(Fraction(30 * 910, 450))
-    wednesday = _pace.compute_pace(ledger, date(2026, 11, 4), _never, sick=frozenset())
-    assert wednesday.required == math.ceil(60 + Fraction(45 * 910, 450))
-
-
-def test_surplus_comes_off_mon_fri_only() -> None:
-    ledger = Ledger([OCT_DONE, _credit("2026-11-01", 100)])
-    plan, _, _, _ = _pace._plan(
-        ledger, NOV, _pace._Calendar(_never, frozenset()), 0, NOV
+    days = [date(2026, 11, d) for d in range(2, 31)]
+    asked = math.ceil(split(Fraction(1450), days)[0][date(2026, 11, 2)])
+    assert (monday.target, monday.required, monday.ask.required) == (
+        1450,
+        asked,
+        asked,
     )
-    cut = (100 - Fraction(500, 9)) / 21
-    assert plan.quotas[date(2026, 11, 2)] == Fraction(100, 3) - cut
-    assert plan.quotas[date(2026, 11, 4)] == Fraction(50, 3) - cut
-    assert plan.quotas[date(2026, 11, 7)] == Fraction(500, 9)
-    tuesday = _pace.compute_pace(ledger, date(2026, 11, 3), _never, sick=frozenset())
-    assert tuesday.ask.required == math.ceil(Fraction(50, 3) - cut)
 
 
-def test_debt_goes_to_weekends_only() -> None:
-    # Nothing read: Tuesday asks its quota alone, the debt waits for Saturday.
-    tuesday = _pace.compute_pace(
-        Ledger([OCT_DONE]), date(2026, 11, 3), _never, sick=frozenset()
-    )
-    assert tuesday.behind > 0
-    assert tuesday.ask.required == math.ceil(Fraction(50, 3))
-    # Sat Nov 7: 172.2 behind; 8 weekend days left, each with room 4.44.
-    saturday = _pace.compute_pace(
-        Ledger([OCT_DONE]), date(2026, 11, 7), _never, sick=frozenset()
-    )
-    assert saturday.ask.required == 60
-    assert (saturday.ask.debt_per_day, saturday.ask.debt_days) == (5, 8)
-    assert saturday.ask.debt_unplaced == math.ceil(173 - 8 * (60 - Fraction(500, 9)))
-
-
-def test_debt_no_weekend_holds_carries_into_next_month() -> None:
+def test_the_last_day_asks_what_is_left() -> None:
     last = _pace.compute_pace(Ledger(), date(2026, 11, 30), _never, sick=frozenset())
-    assert (last.ask.debt_per_day, last.ask.debt_days) == (0, 0)
-    assert last.ask.debt_unplaced == last.behind > 0
+    assert last.ask.required == last.target
+    assert (last.ask.debt_per_day, last.ask.debt_days, last.ask.debt_unplaced) == (
+        0,
+        0,
+        0,
+    )
     december = _pace.compute_pace(Ledger(), date(2026, 12, 1), _never, sick=frozenset())
     assert december.carried_debt == 2000
 
@@ -139,7 +118,7 @@ def test_a_free_day_asks_nothing() -> None:
     day = date(2026, 11, 7)
     pace = _pace.compute_pace(Ledger(), day, lambda d: d == day, sick=frozenset())
     assert pace.ask.required == 0
-    assert pace.ask.debt_days == 7
+    assert pace.ask.debt_days == 0
 
 
 def test_before_the_switch_the_debt_is_spread_over_every_day() -> None:

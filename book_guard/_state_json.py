@@ -167,6 +167,8 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
             "today_required": pace.ask.bonus_at,
             "today_quota": pace.ask.required,
             "bonus_today": pace.ask.bonus,
+            "excused": pace.ask.excused,
+            "daily": pace.ask.daily,
         },
         "open_start": None
         if start is None

@@ -2,9 +2,11 @@
 """What today asks beyond the line: its requirement, and where the debt goes.
 
 Pure, from a month's plan (:mod:`book_guard._plan`). From
-:data:`QUOTA_SWITCH_DATE` the debt goes onto the month's remaining weekend
-days, none past :data:`WEEKEND_CAP_PAGES`; before it, evenly over every
-remaining counted day.
+:data:`RESPLIT_DATE` the morning's split already holds the debt, so no day
+takes a share on top; only what the split could not place is left. From
+:data:`QUOTA_SWITCH_DATE` to it the debt went onto the month's remaining
+weekend days, none past :data:`WEEKEND_CAP_PAGES`; before it, evenly over
+every remaining counted day.
 """
 
 from __future__ import annotations
@@ -49,12 +51,21 @@ class Ask:
     """Credited pages today that earn the +1h: :attr:`required`, except on a
     sick day, which asks nothing yet earns at the requirement it would have
     had without being sick."""
+    daily: bool = False
+    """From the plan's resplit: one number a day -- :attr:`required` alone is
+    what today asks, and reading it opens the lock and earns the hour."""
+    excused: int = 0
+    """Pages the month's sick days were excused so far (off the target),
+    rounded up."""
 
 
 def _spread(
     plan: MonthPlan, month: MonthInput, today: date, behind: int
 ) -> tuple[int, int, int]:
     """``behind`` spread on: pages a day, over how many days, what fits nowhere."""
+    if plan.resplit is not None and today >= plan.resplit:
+        # The morning's split holds every debt it can; no day takes more.
+        return 0, 0, math.ceil(plan.unspread)
     if today < QUOTA_SWITCH_DATE:
         days = sum(1 for d in month.counted if d >= today and d not in month.sick)
         return (math.ceil(behind / days), days, 0) if days else (0, 0, behind)
@@ -75,6 +86,8 @@ def today_ask(
     per_day, days, unplaced = _spread(plan, month, today, behind)
     required = math.ceil(day_requirement(plan, month, today))
     return Ask(
+        daily=plan.resplit is not None and today >= plan.resplit,
+        excused=math.ceil(sum(plan.excused.values(), Fraction(0))),
         required=required,
         bonus_at=required,
         bonus=any(

@@ -89,7 +89,9 @@ def test_pages_read_on_a_sick_day_count() -> None:
     idle = _pace.compute_pace(READ, day, _never, sick=sick)
     read = Ledger([*READ.entries, _credit(WED.isoformat(), 30)])
     pace = _pace.compute_pace(read, day, _never, sick=sick)
-    assert (pace.pages, pace.behind) == (idle.pages + 30, idle.behind - 30)
+    assert pace.pages == idle.pages + 30
+    # The 30 are surplus: the next morning's split asks less of the day.
+    assert pace.ask.required < idle.ask.required
 
 
 def test_a_sick_day_earns_at_the_requirement_it_would_have_had() -> None:

@@ -42,6 +42,9 @@ List<DateTime> daySpan(DateTime first, DateTime last) => [
 List<DateTime> monthDays(DateTime first) =>
     daySpan(monthStart(first), addDays(nextMonth(monthStart(first)), -1));
 
+/// `_constants.RESPLIT_DATE`, for a PC whose rules do not send `resplit`.
+final DateTime defaultResplit = utcDay(2026, 10, 18);
+
 /// The plan's constants.
 class PlanRules {
   /// Creates the rules.
@@ -50,6 +53,7 @@ class PlanRules {
     required this.monthlyGoalStart,
     required this.monthlyPages,
     required this.quotaSwitch,
+    required this.resplit,
     required this.workdayPages,
     required this.offdayPages,
     required this.workdays,
@@ -93,7 +97,12 @@ class PlanRules {
       days('midweek_days'),
       days('weekend_days'),
     );
+    // Optional: the PC's rules predate the key; its constant is the default.
+    final resplit = json.containsKey('resplit')
+        ? day('resplit')
+        : defaultResplit;
     if (paceStart == null || goal == null || change == null) return null;
+    if (resplit == null) return null;
     if (work == null || mid == null || end == null || numbers.contains(null)) {
       return null;
     }
@@ -105,6 +114,7 @@ class PlanRules {
       monthlyGoalStart: goal,
       monthlyPages: monthly,
       quotaSwitch: change,
+      resplit: resplit,
       workdayPages: workday,
       offdayPages: offday,
       workdays: work,
@@ -128,6 +138,10 @@ class PlanRules {
 
   /// The first day of the 15:30:50 plan.
   final DateTime quotaSwitch;
+
+  /// The first morning re-split: from it each morning splits what is left
+  /// of the month over the days left, and that share is the day's number.
+  final DateTime resplit;
 
   /// Before the switch: a workday's weight.
   final int workdayPages;

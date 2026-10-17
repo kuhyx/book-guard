@@ -52,7 +52,7 @@ def test_free_days_are_not_days_left() -> None:
     )
     # No counted day left: the debt carries into November instead.
     assert (last.days_left, last.ask.debt_per_day) == (0, 0)
-    assert last.behind > 0
+    assert (last.behind, last.ask.debt_unplaced) == (0, last.target)
 
 
 def test_on_pace_owes_nothing_a_day() -> None:

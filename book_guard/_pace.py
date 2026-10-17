@@ -30,6 +30,11 @@ Nothing here is stored. Every run re-derives, from the credits alone:
 * **today's requirement** = today's quota after the moves plus, on a
   weekend, today's debt share, fixed at the start of the day and rounded up.
   Reaching it earns the day's bonus (:mod:`book_guard._bonus`).
+* **from** :data:`RESPLIT_DATE` the line, the debt and the requirement are
+  one number: each morning re-splits what is left over the days left, today's
+  share is today's number, and :attr:`Pace.required` is the line at the end
+  of today -- the pages read before it plus that number. The lock and the
+  bonus both read it (:func:`kept`, :mod:`book_guard._state`).
 * **sick day** (``sickdays``, one that does not keep ``book``:
   :func:`book_guard._sick.standing_down`) = asks nothing and its share is
   dropped, not re-split: the month's target falls by exactly that day's quota and every
@@ -55,6 +60,7 @@ from book_guard._constants import (
     OFFDAY_PAGES,
     PACE_START_DATE,
     QUOTA_SWITCH_DATE,
+    RESPLIT_DATE,
     WORKDAY_PAGES,
 )
 from book_guard._ledger import CREDIT
@@ -186,7 +192,8 @@ def _plan(
         sick=cal.sick,
     )
     switch = QUOTA_SWITCH_DATE if _next_month(first) > QUOTA_SWITCH_DATE else None
-    return plan_month(month, until, switch), month, finished, base
+    resplit = RESPLIT_DATE if _next_month(first) > RESPLIT_DATE else None
+    return plan_month(month, until, switch, resplit), month, finished, base
 
 
 def _balance(ledger: Ledger, cal: _Calendar, current: date) -> int:
@@ -219,6 +226,10 @@ def compute_pace(
     pages = sum(month.pages_on.values())
     required = math.ceil(plan.line_before(today))
     ask = today_ask(ledger, plan, month, today, max(0, required - pages))
+    if ask.daily:
+        # The line at the morning is the pages read before it: the day's
+        # line is that plus the day's own number.
+        required += ask.required
     if today in sick:
         # The bonus is earned at the requirement the day would have had:
         # being sick changes what is owed, not what earns the hour.

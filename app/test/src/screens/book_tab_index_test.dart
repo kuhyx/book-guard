@@ -13,13 +13,17 @@ import '../../support/states.dart';
 
 final _epub = Uint8List.fromList([0x50, 0x4b]);
 
+/// [minutes] from the real clock: the panel judges staleness on `now`.
+String _at(int minutes) =>
+    DateTime.now().toUtc().add(Duration(minutes: minutes)).toIso8601String();
+
 Map<String, dynamic> _job(
   String stage, {
   String file = 'a.epub',
   int done = 0,
   int total = 0,
   String error = '',
-  String updatedAt = '2026-10-15T10:00:00Z',
+  String? updatedAt,
 }) => {
   'index_job': {
     'file': file,
@@ -27,7 +31,7 @@ Map<String, dynamic> _job(
     'done': done,
     'total': total,
     'error': error,
-    'updated_at': updatedAt,
+    'updated_at': updatedAt ?? _at(0),
   },
 };
 
@@ -170,15 +174,8 @@ void main() {
     ) async {
       final gate = Completer<void>();
       final follow = _FollowApi([
-        sampleState(
-          _job(
-            'embedding',
-            done: 3,
-            total: 10,
-            updatedAt: '2026-10-15T10:01:00Z',
-          ),
-        ),
-        sampleState(_job('done', total: 10, updatedAt: '2026-10-15T10:02:00Z')),
+        sampleState(_job('embedding', done: 3, total: 10, updatedAt: _at(1))),
+        sampleState(_job('done', total: 10, updatedAt: _at(2))),
       ], gate);
       await pump(
         tester,
@@ -194,7 +191,7 @@ void main() {
     });
 
     testWidgets('the job of an earlier upload does not count', (tester) async {
-      final stale = _job('done', total: 4, updatedAt: '2026-10-14T10:00:00Z');
+      final stale = _job('done', total: 4, updatedAt: _at(-24 * 60));
       api.awaited = sampleState(stale);
       await pump(
         tester,

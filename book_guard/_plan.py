@@ -17,6 +17,11 @@ the remaining Mon-Fri days only. The switch month walks the old rules up to
 the switch, then re-splits what is left of its target over the days from the
 switch on -- the line at the switch is the old line exactly.
 
+From :data:`RESPLIT_DATE` there are no moves: every morning re-splits what
+is left of the target by the same weights over the days left
+(:mod:`book_guard._resplit`), so a surplus lowers and a debt raises every
+later day alike, and the morning's own share is the day's one number.
+
 A **sick day** (``sickdays``, one that does not keep ``book``) is not a free
 day: it keeps its place and its weight in the split and in every surplus cut,
 so every other day's quota is exactly what it would be without it -- but it
@@ -34,6 +39,7 @@ from typing import TYPE_CHECKING
 import freedays
 
 from book_guard._quotas import cut_weekdays, drain, fill_weekends, is_weekend, split
+from book_guard._resplit import resplit_mornings
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -59,6 +65,9 @@ class MonthPlan:
     excused: dict[date, Fraction] = field(default_factory=dict)
     """Sick days' quotas after the moves: off the line, the target and
     :attr:`quotas`, owed by nobody."""
+    resplit: date | None = None
+    """The first morning re-split (:func:`plan_month`'s ``resplit``), when
+    the plan has one: from it a day asks its quota alone."""
 
     def line_before(self, day: date) -> Fraction:
         """Pages the plan expects by the start of ``day``."""
@@ -163,13 +172,23 @@ def _walk(
     return ahead
 
 
-def plan_month(month: MonthInput, until: date, switch: date | None = None) -> MonthPlan:
+def plan_month(
+    month: MonthInput,
+    until: date,
+    switch: date | None = None,
+    resplit: date | None = None,
+) -> MonthPlan:
     """Walk ``month`` through ``until`` (inclusive), moving every surplus.
 
     ``until`` is the last day whose reading is known: today, or month end.
-    ``switch`` is the first day of the new rules (``None``: old rules only).
+    ``switch`` is the first day of the weekday rules, ``resplit`` the first
+    day of the morning re-split (``None``: not in force for this month).
     """
-    known = [d for d in month.days if d <= until]
+    if resplit is not None and resplit <= month.days[0]:
+        plan = MonthPlan({})
+        resplit_mornings(plan, month, month.days[0], until)
+        return plan
+    known = [d for d in month.days if d <= until and (resplit is None or d < resplit)]
     if switch is not None and switch <= month.days[0]:
         plan = _weekday_opening(month)
         ahead = _walk(plan, month, known, cut_weekdays, Fraction(0))
@@ -183,6 +202,8 @@ def plan_month(month: MonthInput, until: date, switch: date | None = None) -> Mo
             ahead = _walk(plan, month, new, cut_weekdays, ahead)
     plan.leftover += max(ahead, Fraction(0))
     plan.excused = {d: plan.quotas.pop(d) for d in month.sick if d in plan.quotas}
+    if resplit is not None and resplit in month.days and resplit <= until:
+        resplit_mornings(plan, month, resplit, until)
     return plan
 
 
@@ -197,7 +218,8 @@ def day_requirement(plan: MonthPlan, month: MonthInput, day: date) -> Fraction:
     if day not in plan.quotas:
         return Fraction(0)
     quota = plan.quotas[day]
-    if not is_weekend(day):
+    if (plan.resplit is not None and day >= plan.resplit) or not is_weekend(day):
+        # From the resplit a debt is in the morning's split already.
         return quota
     shares, _ = fill_weekends(
         plan.quotas, weekend_days(month, day), debt_at(plan, month, day)

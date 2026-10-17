@@ -165,8 +165,11 @@ class Pace {
     required this.behind,
     required this.carriedDebt,
     this.todayRequired,
+    this.todayQuota,
     this.pagesToday = 0,
     this.bonusToday = false,
+    this.excused = 0,
+    this.daily = false,
   });
 
   /// Parses the `pace` object.
@@ -178,8 +181,11 @@ class Pace {
     behind: _int(json['behind']) ?? 0,
     carriedDebt: _int(json['carried_debt']) ?? 0,
     todayRequired: _int(json['today_required']),
+    todayQuota: _int(json['today_quota']),
     pagesToday: _int(json['pages_today']) ?? 0,
     bonusToday: json['bonus_today'] == true,
+    excused: _int(json['excused']) ?? 0,
+    daily: json['daily'] == true,
   );
 
   /// `YYYY-MM`.
@@ -204,11 +210,22 @@ class Pace {
   /// Null from a PC that predates it: then no bonus is promised.
   final int? todayRequired;
 
+  /// What today asks: [todayRequired] except on a sick day, which asks 0
+  /// while its [todayRequired] still earns the +1h. Null from an older PC.
+  final int? todayQuota;
+
   /// Pages credited today, by the day the reading ended.
   final int pagesToday;
 
   /// A credit today already carries the bonus.
   final bool bonusToday;
+
+  /// Pages the month's sick days were excused (off the target).
+  final int excused;
+
+  /// One number a day (the PC's resplit rule): [todayRequired] alone opens
+  /// the lock and earns the hour, and [required] is the line tonight.
+  final bool daily;
 
   /// Whether [pages] more credited today would earn the day's +1h.
   bool earnsBonus(int pages) => switch (todayRequired) {

@@ -56,6 +56,23 @@ void main() {
     expect(state.needCheck, isEmpty);
   });
 
+  test('parses the one-number pace, defaulting for an older PC', () {
+    final pace = GuardState.fromJson(const {
+      'pace': {
+        'daily': true,
+        'excused': 45,
+        'today_required': 30,
+        'today_quota': 0,
+      },
+    }).pace;
+    expect([pace.daily, pace.excused], [true, 45]);
+    expect([pace.todayRequired, pace.todayQuota], [30, 0]);
+    final old = GuardState.fromJson(const {
+      'pace': {'daily': 'yes', 'excused': 'some'},
+    }).pace;
+    expect([old.daily, old.excused, old.todayQuota], [false, 0, null]);
+  });
+
   test('wrong shapes are ignored rather than thrown', () {
     final state = GuardState.fromJson({
       'book': 'none',

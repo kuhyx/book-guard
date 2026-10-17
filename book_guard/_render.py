@@ -108,19 +108,29 @@ def status_lines(snap: Snapshot, *, recent: int = 6) -> list[str]:
         f"Book: {book}{last}",
         (
             f"{p.month:%B %Y}: {p.pages}/{p.target} pages "
-            f"(pace line today: {p.required}; carried debt {p.carried_debt}; "
+            f"({'line tonight' if p.ask.daily else 'pace line today'}: {p.required}; "
+            f"carried debt {p.carried_debt}; "
             f"{f'carried credit {p.carried_credit}; ' if p.carried_credit else ''}"
             f"books finished {p.finished_books})"
         ),
         _today_line(p, sick=snap.sick_today),
-        (
+    ]
+    if p.ask.excused:
+        lines.append(f"Sick days excused: {p.ask.excused} pages off the target")
+    if p.ask.daily:
+        if p.ask.debt_unplaced:
+            lines.append(
+                f"Debt: {p.ask.debt_unplaced} pages no day left can hold, "
+                "carried into next month"
+            )
+    else:
+        lines.append(
             f"Lock pass: {p.pages_today}/{DAILY_PASS_PAGES} pages "
             f"({'passed' if p.passed_today else 'not yet'}: "
             f"{DAILY_PASS_PAGES} pages a day open the lock even when behind)"
-        ),
-    ]
-    if p.behind:
-        lines.append(_debt_line(p))
+        )
+        if p.behind:
+            lines.append(_debt_line(p))
     lines.append(f"Escapes left this month: {snap.escapes_left}")
     todo = todo_lines(snap)
     if todo:

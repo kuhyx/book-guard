@@ -37,7 +37,8 @@ class DayPace {
   /// Pages credited in the month (in the credits given).
   final int pages;
 
-  /// The pace line at the start of the day.
+  /// The pace line at the start of the day; from the resplit, at its end
+  /// (the pages read before it plus the day's own number).
   final int line;
 
   /// The day's requirement (quota after moves plus weekend debt share).
@@ -96,7 +97,15 @@ int _share(int balance, int months) {
     sick: sick,
   );
   final useSwitch = nextMonth(first).isAfter(rules.quotaSwitch);
-  return (planMonth(month, until, rules, useSwitch: useSwitch), month, base);
+  final useResplit = nextMonth(first).isAfter(rules.resplit);
+  final plan = planMonth(
+    month,
+    until,
+    rules,
+    useSwitch: useSwitch,
+    useResplit: useResplit,
+  );
+  return (plan, month, base);
 }
 
 /// The pace position for [today]'s month, from [credits] (pages per day).
@@ -159,13 +168,16 @@ DayPace computePace(
     carry,
     today,
   );
+  final required = dayRequirement(plan, month, today, rules).ceil();
+  final line = plan.lineBefore(today).ceil();
   return DayPace(
     month: current,
     target: plan.target.ceil(),
     carriedDebt: carry > 0 ? carry : 0,
     carriedCredit: carry < 0 ? -carry : 0,
     pages: month.pagesOn.values.fold(0, (a, b) => a + b),
-    line: plan.lineBefore(today).ceil(),
-    required: dayRequirement(plan, month, today, rules).ceil(),
+    // From the resplit the line is the morning's plus the day's own number.
+    line: today.isBefore(rules.resplit) ? line : line + required,
+    required: required,
   );
 }

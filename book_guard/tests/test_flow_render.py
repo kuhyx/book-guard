@@ -158,3 +158,27 @@ def test_status_lines_show_carried_credit() -> None:
     assert (
         "carried debt 5; carried credit 80; books finished 1" in (status_lines(snap)[2])
     )
+
+
+def test_status_lines_one_number_drop_the_pass_and_show_excused() -> None:
+    pace = dataclasses.replace(
+        make_snap().pace,
+        required=470,
+        pages=466,
+        pages_today=29,
+        ask=Ask(required=33, bonus_at=33, debt_unplaced=12, daily=True, excused=33),
+    )
+    lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
+    assert "(line tonight: 470; carried debt 5;" in lines[2]
+    assert lines[3:6] == [
+        "Today: 29/33 pages, today's requirement (reaching it earns the +1h bonus)",
+        "Sick days excused: 33 pages off the target",
+        "Debt: 12 pages no day left can hold, carried into next month",
+    ]
+    assert not any(line.startswith("Lock pass") for line in lines)
+
+
+def test_status_lines_one_number_without_debt() -> None:
+    pace = dataclasses.replace(make_snap().pace, ask=Ask(daily=True))
+    lines = status_lines(dataclasses.replace(make_snap(), pace=pace))
+    assert lines[4] == "Escapes left this month: 2"
