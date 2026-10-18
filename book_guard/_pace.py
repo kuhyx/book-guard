@@ -36,11 +36,12 @@ Nothing here is stored. Every run re-derives, from the credits alone:
   of today -- the pages read before it plus that number. The lock and the
   bonus both read it (:func:`kept`, :mod:`book_guard._state`).
 * **sick day** (``sickdays``, one that does not keep ``book``:
-  :func:`book_guard._sick.standing_down`) = asks nothing and its share is
-  dropped, not re-split: the month's target falls by exactly that day's quota and every
-  other day asks what it would have (:mod:`book_guard._plan`). The share
-  stays out of the year balance too. Reading on it still earns the bonus at
-  the requirement the day would have had (:attr:`Ask.bonus_at`).
+  :func:`book_guard._sick.standing_down`) = asks nothing and has no weight
+  in the morning split, so its share moves to the days left: the month's
+  target and the year balance never shrink for it (:mod:`book_guard._resplit`;
+  before the resplit the old rules dropped it, owed again from the resplit).
+  Reading on it still earns the bonus at the requirement the day would have
+  had (:attr:`Ask.bonus_at`).
 """
 
 from __future__ import annotations
@@ -202,11 +203,8 @@ def _balance(ledger: Ledger, cal: _Calendar, current: date) -> int:
     balance = 0
     while first < current:
         month_end = _next_month(first) - timedelta(days=1)
-        done, month, _, base = _plan(ledger, first, cal, 0, month_end)
-        # A sick day's share is owed by nobody, so it never reaches the
-        # balance either (rounded so the remainder is still owed).
-        owed = math.ceil(base - sum(done.excused.values(), Fraction(0)))
-        balance += owed - sum(month.pages_on.values())
+        _, month, _, base = _plan(ledger, first, cal, 0, month_end)
+        balance += base - sum(month.pages_on.values())
         first = _next_month(first)
     return balance
 

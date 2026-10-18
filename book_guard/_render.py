@@ -73,7 +73,7 @@ def _today_line(p: Pace, *, sick: bool) -> str:
     if sick:
         earned = "bonus earned" if p.ask.bonus else f"{p.ask.bonus_at} earn the +1h"
         return (
-            f"Today is a sick day: no pages asked, its share is dropped "
+            f"Today is a sick day: no pages asked, its share moves to the days left "
             f"({p.pages_today} read; {earned})"
         )
     if not p.ask.required and p.ask.bonus:

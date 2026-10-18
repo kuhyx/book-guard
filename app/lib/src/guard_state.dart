@@ -220,7 +220,8 @@ class Pace {
   /// A credit today already carries the bonus.
   final bool bonusToday;
 
-  /// Pages the month's sick days were excused (off the target).
+  /// Pages the month's sick days were excused (off the target): only before
+  /// the resplit, 0 from it on.
   final int excused;
 
   /// One number a day (the PC's resplit rule): [todayRequired] alone opens

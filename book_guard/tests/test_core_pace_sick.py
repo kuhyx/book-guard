@@ -1,13 +1,14 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
-"""A sick day asks nothing and its share is dropped -- never re-split."""
+"""A sick day asks nothing: before the resplit its share was dropped, from it
+the days left owe it."""
 
 from __future__ import annotations
 
 from datetime import date
-import math
 from typing import TYPE_CHECKING
 
 from book_guard import _pace
+from book_guard._constants import RESPLIT_DATE
 from book_guard._ledger import Ledger
 from book_guard._pace_view import DayView, month_of, views
 from book_guard._plan import day_requirement, weekend_days
@@ -51,20 +52,22 @@ def test_a_sick_weekday_drops_exactly_its_share() -> None:
         assert sick.line_before(day) == base.line_before(day) - drop
 
 
-def test_every_other_day_asks_what_it_would_have() -> None:
+def test_the_days_left_carry_the_sick_days_share() -> None:
     base, sick = _views(READ, NONE), _views(READ, frozenset({WED}))
     assert (sick[WED].required, sick[WED].sick, base[WED].sick) == (0, True, False)
     assert sick[WED].assumed == 0
     for day, view in base.items():
         if day == WED:
             continue
-        # The projection reads each day's requirement rounded up, so the
-        # baseline's sick Wednesday pays a fraction of a page of debt the
-        # sick plan does not: a weekend's debt share may round one higher.
-        slack = 1 if day.weekday() >= 5 else 0
-        assert 0 <= sick[day].required - view.required <= slack
-        # Not reading on the sick day left no debt behind it.
-        assert 0 <= sick[day].pace.behind - view.pace.behind <= 1
+        if day < RESPLIT_DATE:
+            # The old rules: a weekend's debt share may round one higher.
+            slack = 1 if day.weekday() >= 5 else 0
+            assert 0 <= sick[day].required - view.required <= slack
+        else:
+            assert sick[day].required >= view.required
+            assert sick[day].pace.target == view.pace.target == 1000
+    after = [d for d in base if d > RESPLIT_DATE and d != WED]
+    assert any(sick[d].required > base[d].required for d in after)
 
 
 def test_a_sick_weekend_keeps_every_quota_and_skips_the_debt() -> None:
@@ -102,14 +105,12 @@ def test_a_sick_day_earns_at_the_requirement_it_would_have_had() -> None:
     assert pace.days_left == well.days_left - 1
 
 
-def test_last_months_sick_share_stays_out_of_the_carry() -> None:
+def test_last_months_sick_share_is_still_owed() -> None:
     sick = frozenset({WED})
-    oct_plan = _plan(sick, until=date(2026, 10, 31))
-    owed = math.ceil(1000 - oct_plan.excused[WED]) - 500
+    assert not _plan(sick, until=date(2026, 10, 31)).excused
     nov = _pace.compute_pace(READ, date(2026, 11, 3), _never, sick=sick)
     well = _pace.compute_pace(READ, date(2026, 11, 3), _never, sick=NONE)
-    assert nov.carried_debt == _pace._share(owed, 2)
-    assert nov.carried_debt < well.carried_debt == _pace._share(500, 2)
+    assert nov.carried_debt == well.carried_debt == _pace._share(500, 2)
 
 
 def test_before_the_switch_the_debt_skips_the_sick_day() -> None:

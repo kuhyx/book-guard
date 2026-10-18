@@ -134,11 +134,13 @@ def test_pace_inputs_carry_credits_rules_and_free_days() -> None:
 
 
 def test_pace_goldens_are_current(tmp_path: Path, capsys: Out) -> None:
-    """A stale fixture fails: rerun scripts/pace_goldens.py after a plan change."""
+    """A stale fixture fails: rerun python -m scripts.pace_goldens after a plan change."""
     fresh = tmp_path / "goldens.json"
     assert pace_goldens.main([str(fresh)]) == 0
     capsys.readouterr()
     assert json.loads(fresh.read_text(encoding="utf-8")) == json.loads(
         FIXTURE.read_text(encoding="utf-8")
-    ), "app/test/fixtures/pace_goldens.json is stale: rerun scripts/pace_goldens.py"
+    ), (
+        "app/test/fixtures/pace_goldens.json is stale: rerun python -m scripts.pace_goldens"
+    )
     assert fresh.read_bytes() == FIXTURE.read_bytes()

@@ -71,7 +71,7 @@ def detail(view: DayView) -> list[str]:
         lines.append("  free day: asks nothing")
     elif view.sick:
         lines.append(
-            "  sick day: asks nothing, its share is off the month's target "
+            "  sick day: asks nothing, its share moves to the days left "
             f"(reading {view.pace.ask.bonus_at} pages still earns the +1h)"
         )
     else:

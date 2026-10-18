@@ -22,12 +22,13 @@ is left of the target by the same weights over the days left
 (:mod:`book_guard._resplit`), so a surplus lowers and a debt raises every
 later day alike, and the morning's own share is the day's one number.
 
-A **sick day** (``sickdays``, one that does not keep ``book``) is not a free
-day: it keeps its place and its weight in the split and in every surplus cut,
-so every other day's quota is exactly what it would be without it -- but it
-asks nothing. Its quota after
-the moves is taken off the line and the target (:attr:`MonthPlan.excused`),
-never re-split over the other days; pages read on it count like any others.
+A **sick day** (``sickdays``, one that does not keep ``book``) asks nothing.
+Under the rules before the resplit it kept its place and its weight in the
+split and in every surplus cut, and its quota after the moves was taken off
+the line and the target (:attr:`MonthPlan.excused`). From the resplit it has
+no weight: its share moves to the days left, and what the old rules excused
+is owed again (:mod:`book_guard._resplit`). Pages read on it count like any
+others.
 """
 
 from __future__ import annotations
@@ -63,8 +64,8 @@ class MonthPlan:
     unspread: Fraction = Fraction(0)
     """Debt in a month with no counted day: owed, but on no day's line."""
     excused: dict[date, Fraction] = field(default_factory=dict)
-    """Sick days' quotas after the moves: off the line, the target and
-    :attr:`quotas`, owed by nobody."""
+    """Before the resplit, sick days' quotas after the moves: off the line,
+    the target and :attr:`quotas`. Empty from the resplit's morning on."""
     resplit: date | None = None
     """The first morning re-split (:func:`plan_month`'s ``resplit``), when
     the plan has one: from it a day asks its quota alone."""
@@ -105,7 +106,7 @@ class MonthInput:
     Attributes:
         days: Every day of the month, in order.
         counted: The days the target spreads over (paced, not free; sick
-            days included, so they keep their share of the split).
+            days included -- the resplit leaves them out of its split).
         weights: Each counted day's share of the month's base.
         target: The base plus carried debt; the base split by weight, the
             debt evenly over the counted days.

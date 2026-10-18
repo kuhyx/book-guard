@@ -23,7 +23,7 @@ Read README.md first. These are the invariants that are easy to break.
   `adb push` it to `/sdcard/Android/data/com.kuhy.book_guard_app/files/page_truth/`,
   `touch .../run` (chmod 666), launch the app, read `page_truth {...}` lines
   from logcat (the app's own files are not adb-readable).
-- `scripts/pace_goldens.py` writes `app/test/fixtures/pace_goldens.json`,
+- `python -m scripts.pace_goldens` writes `app/test/fixtures/pace_goldens.json`,
   the answers the app's Dart port of the plan must match. Re-run it after
   touching `_quotas.py`, `_plan.py`, `_pace*.py` or `_ask.py`, and commit
   the fixture with the change (`test_pace_goldens_are_current` fails on a
@@ -80,10 +80,12 @@ Read README.md first. These are the invariants that are easy to break.
   yesterday keep its number? Missed -> locked until today's number is in.
   Kept = asked 0, read it, or carries the bonus. The timer only fires at the
   day boundary and the morning-carrot expiry; never add daytime hours.
-- **Sick days are not free days** (`sickdays` pool, `_plan.py`): a sick day
-  stays in `counted` (keeps its weight in the split and every surplus cut)
-  but plans 0 in the walk; its quota goes to `MonthPlan.excused` -- off the
-  line, the target and the year balance, never re-split. The gate's verdict
+- **Sick days never shrink the target** (`sickdays` pool, `_resplit.py`): a
+  sick day asks 0 and never locks, and from `RESPLIT_DATE` it has no weight
+  in the morning split, so its share moves to the days left; the month's
+  target (1000) and the year balance stay whole, and what the old rules put
+  in `MonthPlan.excused` (days before the resplit) is owed again from its
+  morning. Never change the days before the resplit. The gate's verdict
   checks it first ("today is a sick day"). Every `compute_pace` caller
   passes `sick=` explicitly; the Dart port mirrors it (goldens). "Sick"
   here means `sickdays.stands_down(LOCKER_BOOK, day)`: a sick day that

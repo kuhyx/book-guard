@@ -140,23 +140,7 @@ DayPace computePace(
     final read = credits.entries
         .where((e) => e.key.year == first.year && e.key.month == first.month)
         .fold(0, (a, e) => a + e.value);
-    // A sick day's share is owed by nobody (Python: the month's plan).
-    final owed = days.any(sick.contains)
-        ? (Rational.of(base) -
-                  sumQ(
-                    _plan(
-                      rules,
-                      credits,
-                      first,
-                      isFree,
-                      sick,
-                      0,
-                      days.last,
-                    ).$1.excused.values,
-                  ))
-              .ceil()
-        : base;
-    balance += owed - read;
+    balance += base - read;
   }
   final carry = _share(balance, _monthsLeft(current));
   final (plan, month, _) = _plan(

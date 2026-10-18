@@ -3,9 +3,10 @@
 /// Before the switch: the 20:40 weights, surplus off workdays then Fri-Mon.
 /// From it: 15:30:50 with weekends capped, surplus off Mon-Fri. The switch
 /// month walks the old rules up to the switch and re-splits the rest.
-/// A sick day keeps its weight and its place in every cut but asks nothing:
-/// its quota after the moves goes to [MonthPlan.excused], never re-split.
-/// From the resplit each morning splits what is left over the days left.
+/// Before the resplit a sick day keeps its weight and its place in every cut
+/// but asks nothing: its quota after the moves goes to [MonthPlan.excused].
+/// From the resplit each morning splits what is left over the days left
+/// that are not sick, and what was excused is owed again.
 library;
 
 import 'package:book_guard_app/src/pace/quotas.dart';

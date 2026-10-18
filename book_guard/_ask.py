@@ -56,7 +56,7 @@ class Ask:
     what today asks, and reading it opens the lock and earns the hour."""
     excused: int = 0
     """Pages the month's sick days were excused so far (off the target),
-    rounded up."""
+    rounded up: only before the resplit; 0 from it on (still in state.json)."""
 
 
 def _spread(

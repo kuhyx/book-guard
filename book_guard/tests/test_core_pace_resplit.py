@@ -80,22 +80,66 @@ def test_a_month_read_ahead_asks_nothing() -> None:
     assert (pace.ask.required, pace.behind) == (0, 0)
 
 
-def test_a_sick_day_is_excused_and_not_resplit() -> None:
+def test_a_sick_days_share_spreads_over_the_days_left() -> None:
     sick = frozenset({_SUN})
     pace = _pace_on(_read_before(900), _SUN, sick)
-    assert pace.ask.required == 0
+    assert (pace.ask.required, pace.ask.excused) == (0, 0)
     assert pace.ask.bonus_at == 13
-    # Monday splits 100 - Sunday's excused 100*50/410 over 360 units.
+    # Monday splits all 100 left over Oct 19-31 (360 units): nothing excused.
     monday = _pace_on(_read_before(900), _MON, sick)
-    left = 100 - Fraction(100 * 50, 410)
-    assert monday.ask.required == math.ceil(left * 30 / 360) == 8
-    assert monday.target == math.ceil(1000 - Fraction(100 * 50, 410))
+    assert monday.ask.required == math.ceil(Fraction(100 * 30, 360)) == 9
+    assert monday.target == 1000
 
 
-def test_the_target_is_the_month_less_its_sick_days() -> None:
+def test_a_future_sick_day_has_no_weight() -> None:
+    wed = date(2026, 10, 21)
+    cal = _pace._Calendar(_never, frozenset({wed}))
+    plan, _, _, _ = _pace._plan(_read_before(900), _SUN.replace(day=1), cal, 0, _SUN)
+    assert wed not in plan.quotas
+    assert not plan.excused
+    rest = [d for d in _days(_SUN, _OCT_END) if d != wed]
+    assert sum(plan.quotas[d] for d in rest) == 100
+    assert plan.quotas == split(Fraction(100), rest)[0] | {
+        d: q for d, q in plan.quotas.items() if d < _SUN
+    }
+
+
+def test_the_target_is_the_whole_month_with_a_sick_day() -> None:
     ledger = Ledger([_credit("2026-10-05", 300), _credit("2026-10-17", 200)])
-    for day in (_SUN, _MON, _OCT_END):
-        assert _pace_on(ledger, day).target == 1000
+    for sick in (frozenset(), frozenset({_MON}), frozenset({_OCT_END})):
+        for day in (_SUN, _MON, _OCT_END):
+            assert _pace_on(ledger, day, sick).target == 1000
+
+
+def test_a_sick_day_before_the_resplit_comes_back_on_its_morning() -> None:
+    ledger = Ledger(
+        [
+            _credit("2026-10-05", 300),
+            _credit("2026-10-14", 100),
+            _credit("2026-10-17", 29),
+        ]
+    )
+    sick = frozenset({date(2026, 10, 16)})
+    seen = {
+        d: (p.target, p.required, p.ask.required, p.ask.bonus_at, p.ask.excused)
+        for d in (16, 17, 18)
+        for p in [_pace_on(ledger, date(2026, 10, d), sick)]
+    }
+    # The days before the resplit replay the old rules exactly.
+    assert seen[16] == (972, 527, 0, 29, 29)
+    assert seen[17] == (972, 527, 60, 60, 29)
+    # From the resplit the excused share is owed again, by the days left.
+    assert seen[18][0] == 1000
+    assert seen[18][4] == 0
+    well = _pace_on(ledger, _MON, frozenset())
+    assert _pace_on(ledger, _MON, sick).ask.required == well.ask.required
+
+
+def test_a_month_ending_sick_carries_its_share() -> None:
+    ledger = _read_before(500)
+    sick = frozenset(_days(_SUN, _OCT_END))
+    nov = _pace_on(ledger, date(2026, 11, 3), sick)
+    assert nov.carried_debt == _pace._share(500, 2) == 250
 
 
 def test_days_before_the_resplit_are_untouched() -> None:

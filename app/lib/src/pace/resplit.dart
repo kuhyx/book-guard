@@ -10,9 +10,11 @@ import 'package:book_guard_app/src/pace/rules.dart';
 /// From [start] through [until]: each morning splits what is left.
 ///
 /// What is left is the target net of carried credit, less the pages read
-/// before that morning and the sick days excused so far; it is split by
-/// weight over the counted days from that morning on (weekends capped), and
-/// the morning's own share is the day's requirement. Each day then absorbs
+/// before that morning; it is split by weight over the counted days from
+/// that morning on that are not sick (weekends capped), and the morning's
+/// own share is the day's requirement. A sick day asks nothing and has no
+/// weight, so the days left carry its share; what the old rules excused
+/// before [start] is owed again. Each day then absorbs
 /// its own deviation ([MonthPlan.extra]: read minus asked), so the line at
 /// every morning is exactly the pages read. The days after [until] keep the
 /// last morning's split. Mid-month the old plan's line meets the pages at
@@ -34,28 +36,22 @@ void resplitMornings(
     plan.extra[before] =
         (plan.extra[before] ?? Rational.zero) + Rational.of(read) - line;
   }
-  for (final later in [plan.quotas, plan.excused]) {
-    later.removeWhere((d, _) => !d.isBefore(start));
-  }
-  var excused = sumQ(plan.excused.values);
+  plan.quotas.removeWhere((d, _) => !d.isBefore(start));
+  plan.excused.clear();
   final net = Rational.of(m.target) - m.credit;
   var quotas = <DateTime, Rational>{};
   for (final day in daySpan(start, until).where(m.days.contains)) {
-    final left = net - Rational.of(read) - excused;
-    final rest = m.counted.where((d) => !d.isBefore(day)).toList();
+    final left = net - Rational.of(read);
+    final rest = m.counted
+        .where((d) => !d.isBefore(day) && !m.sick.contains(d))
+        .toList();
     final (morning, unspread) = split(rules, maxQ(left, Rational.zero), rest);
     quotas = morning;
     plan
       ..unspread = unspread
       ..leftover = maxQ(-left, Rational.zero);
-    var ask = quotas[day] ?? Rational.zero;
-    if (m.sick.contains(day)) {
-      plan.excused[day] = ask;
-      excused += ask;
-      ask = Rational.zero;
-    } else if (quotas.containsKey(day)) {
-      plan.quotas[day] = ask;
-    }
+    final ask = quotas[day] ?? Rational.zero;
+    if (quotas.containsKey(day)) plan.quotas[day] = ask;
     final pages = m.pagesOn[day] ?? 0;
     if (day.isBefore(until)) plan.extra[day] = Rational.of(pages) - ask;
     read += pages;

@@ -29,8 +29,8 @@ of October's target is re-split over Oct 12-31, nothing jumps."""
 
 RESPLIT_DATE: Final = date(2026, 10, 18)
 """From this day (a Sunday) one number per day decides everything: each
-morning what is left of the month's target (less the pages read and the sick
-days excused) is re-split by weight over the days left, today included, so a
+morning what is left of the month's target (less the pages read) is re-split
+by weight over the days left that are not sick, today included, so a
 surplus lowers and a debt raises every later day alike, weekends capped.
 Today's share is today's requirement: reading it is on pace, opens the lock
 and earns the hour. The lock goes on only for a day whose yesterday missed

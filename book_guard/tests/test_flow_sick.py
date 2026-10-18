@@ -74,7 +74,7 @@ def test_status_says_sick_and_what_still_earns_the_hour() -> None:
     pace = dataclasses.replace(make_pace(), pages_today=4, ask=Ask(bonus_at=30))
     lines = status_lines(dataclasses.replace(snap, pace=pace))
     assert lines[3] == (
-        "Today is a sick day: no pages asked, its share is dropped "
+        "Today is a sick day: no pages asked, its share moves to the days left "
         "(4 read; 30 earn the +1h)"
     )
     earned = dataclasses.replace(pace, ask=Ask(bonus_at=30, bonus=True))
@@ -87,6 +87,6 @@ def test_ask_shows_a_sick_day() -> None:
     view = DayView(date(2026, 10, 15), TODAY, pace, 6, 6, free=False, sick=True)
     assert row(view).endswith("sick day, read 6")
     assert detail(view)[1] == (
-        "  sick day: asks nothing, its share is off the month's target "
+        "  sick day: asks nothing, its share moves to the days left "
         "(reading 17 pages still earns the +1h)"
     )

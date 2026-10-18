@@ -114,7 +114,7 @@ def _verdict(
         return False, f"book-guard starts on {GATE_START_DATE}"
     if sick:
         # First, so the reason names it even when on pace: the gate stands
-        # down for the whole day, and the day's share is dropped (_plan).
+        # down for the whole day; its share moves to the days left (_resplit).
         return False, "today is a sick day"
     if not pace.behind:
         # Reading caught up: that is the reason it is open, whatever else
