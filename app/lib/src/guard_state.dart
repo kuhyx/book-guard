@@ -24,6 +24,7 @@ class GuardState {
     required this.generatedAt,
     this.photos = const [],
     this.claudeDownSince,
+    this.claudeDownUntil,
     this.indexJob,
     this.paceInputs,
   });
@@ -46,6 +47,7 @@ class GuardState {
       openStart: start is Map<String, dynamic> ? _int(start['page']) : null,
       generatedAt: DateTime.tryParse('${json['generated_at']}'),
       claudeDownSince: DateTime.tryParse('${json['claude_down_since']}'),
+      claudeDownUntil: DateTime.tryParse('${json['claude_down_until']}'),
       paceInputs: PaceInputs.fromJson(json['pace_inputs']),
       photos: [
         for (final p in json['photos'] as List? ?? const [])
@@ -84,6 +86,9 @@ class GuardState {
 
   /// Since when the PC's Claude calls (the summary grader) fail, if they do.
   final DateTime? claudeDownSince;
+
+  /// When that outage ends by the CLI's own word ("resets 4:40pm"), if known.
+  final DateTime? claudeDownUntil;
 
   /// The last dropped book file's indexing, if any.
   final IndexJob? indexJob;

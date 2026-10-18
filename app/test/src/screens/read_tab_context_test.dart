@@ -1,6 +1,7 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
+import 'package:book_guard_app/src/summary_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -134,7 +135,7 @@ void main() {
     expect(find.text('Page 51?'), findsOneWidget);
   });
 
-  testWidgets('a Claude outage is explained next to the summary', (
+  testWidgets('a Claude outage is explained next to a summary that waits', (
     tester,
   ) async {
     final state = GuardState.fromJson({
@@ -149,7 +150,16 @@ void main() {
       ],
     });
     await pump(tester, FakeReader(null), state: state);
-    expect(find.textContaining('unavailable since 12:27'), findsOneWidget);
+    await settle(tester);
+    expect(find.textContaining('unavailable since'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await api.markGrading('session:q'); // sent, no verdict yet
+    await pump(tester, FakeReader(null), state: state);
+    await settle(tester);
+    expect(
+      find.textContaining('unavailable since 03.10 12:27'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('photos the PC has not read yet are counted', (tester) async {

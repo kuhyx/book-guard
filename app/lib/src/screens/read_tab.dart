@@ -189,7 +189,7 @@ class _ReadTabState extends State<ReadTab> {
             key: ValueKey(quiz.first.id),
             api: widget.api,
             session: quiz.first,
-            grader: graderNote(state),
+            state: state,
             pace: state?.pace,
             onChanged: widget.onChanged,
           ),

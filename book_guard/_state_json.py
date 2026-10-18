@@ -14,6 +14,14 @@ is 0. A sick day that keeps ``book`` reads as a normal day here.
 remaining weekend days (Sat/Sun, at most 60 a day with the base quota);
 ``debt_unplaced`` fits on no day and carries into next month.
 
+``claude_down_since`` is when the current Claude outage began (null when
+there is none, or it is over); ``claude_down_until`` (added 2026-10-18) is
+when it ends by the CLI's own word ("resets 4:40pm"), or null when the error
+named no time. Both go null the instant the flag stops being true: a grade
+went through (Claude or the local model), or ``until`` passed -- the app
+compares ``until`` with its own clock too, so its note goes on time
+without a fresh state.json.
+
 ``index_job`` is the last dropped book file's indexing (``_indexjob``):
 ``{file, stage, done, total, error, updated_at}``, or null.
 
@@ -32,7 +40,7 @@ import freedays
 from book_guard import _indexjob
 from book_guard import _photos as _photo_cache
 from book_guard._bookindex import index_path
-from book_guard._errlog import claude_down_since
+from book_guard._errlog import claude_outage
 from book_guard._ledger import load as load_ledger
 from book_guard._pace_inputs import pace_inputs
 from book_guard._render import todo_lines
@@ -131,9 +139,11 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
     book = snap.book
     pace = snap.pace
     start = snap.open_start
+    now = datetime.now(tz=UTC)
+    outage = claude_outage(paths, now)
     return {
         "schema": SCHEMA,
-        "generated_at": datetime.now(tz=UTC).isoformat(),
+        "generated_at": now.isoformat(),
         "today": snap.today.isoformat(),
         "locked": snap.locked,
         "reason": snap.reason,
@@ -177,7 +187,8 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         "sessions": [_session(v) for v in snap.sessions],
         "escapes_left": snap.escapes_left,
         "photos": _photos(paths),
-        "claude_down_since": claude_down_since(paths),
+        "claude_down_since": None if outage is None else outage.since,
+        "claude_down_until": None if outage is None else outage.until,
         "index_job": _indexjob.load(paths),
         "pace_inputs": pace_inputs(
             load_ledger(paths.ledger, paths.key_file),

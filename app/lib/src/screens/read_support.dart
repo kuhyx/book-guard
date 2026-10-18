@@ -82,18 +82,6 @@ Future<ReviewResult?> reviewPhoto(
   );
 }
 
-/// Why the summary waits, when the PC's grader (Claude) is down.
-String? graderNote(GuardState? state) {
-  final since = state?.claudeDownSince?.toLocal();
-  if (since == null) return null;
-  final hhmm =
-      '${since.hour.toString().padLeft(2, '0')}:'
-      '${since.minute.toString().padLeft(2, '0')}';
-  return 'The grader (Claude on the PC) has been unavailable since $hhmm. '
-      'Your summary is kept and graded automatically once it is back - '
-      'nothing is lost.';
-}
-
 /// The summary box for [session].
 class SummarySection extends StatelessWidget {
   /// Creates the section.

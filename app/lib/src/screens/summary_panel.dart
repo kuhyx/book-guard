@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/grader_note.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:book_guard_app/src/summary_store.dart';
@@ -31,7 +32,7 @@ class SummaryPanel extends StatefulWidget {
     required this.session,
     required this.onChanged,
     super.key,
-    this.grader,
+    this.state,
     this.pace,
   });
 
@@ -44,8 +45,9 @@ class SummaryPanel extends StatefulWidget {
   /// Refetch after grading.
   final Future<void> Function() onChanged;
 
-  /// Why grading may wait (Claude down), if it may.
-  final String? grader;
+  /// The PC's last state: whether Claude is down, for the note beside a
+  /// sent summary.
+  final GuardState? state;
 
   /// The month's pace, for the bonus hint (today's requirement).
   final Pace? pace;
@@ -59,11 +61,14 @@ class _SummaryPanelState extends State<SummaryPanel> {
   DateTime? _sentAt;
   String? _verdict;
   bool? _passed;
+  Timer? _expiry;
+  DateTime? _lapsed;
 
   @override
   void initState() {
     super.initState();
     unawaited(_restore());
+    _arm();
     _text.addListener(
       () => unawaited(widget.api.saveDraft(widget.session.id, _text.text)),
     );
@@ -82,7 +87,25 @@ class _SummaryPanelState extends State<SummaryPanel> {
   }
 
   @override
+  void didUpdateWidget(SummaryPanel old) {
+    super.didUpdateWidget(old);
+    _arm();
+  }
+
+  /// Rebuilds the instant the outage's reset time comes, so the note goes
+  /// then even if no fresher state.json arrives.
+  void _arm() {
+    _expiry?.cancel();
+    final until = widget.state?.claudeDownUntil;
+    if (until == null) return;
+    _expiry = Timer(until.difference(DateTime.now()), () {
+      if (mounted) setState(() => _lapsed = until);
+    });
+  }
+
+  @override
   void dispose() {
+    _expiry?.cancel();
     _text.dispose();
     super.dispose();
   }
@@ -135,6 +158,12 @@ class _SummaryPanelState extends State<SummaryPanel> {
     final sentAt = _sentAt;
     final verdict = _verdict;
     final retry = widget.session.retry;
+    final (now, lapsed) = (DateTime.now(), _lapsed);
+    final grader = graderNote(
+      widget.state,
+      waiting: sentAt != null && _passed == null,
+      now: lapsed != null && lapsed.isAfter(now) ? lapsed : now,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -159,7 +188,7 @@ class _SummaryPanelState extends State<SummaryPanel> {
           session: widget.session,
           controller: _text,
           enabled: sentAt == null,
-          grader: widget.grader,
+          grader: grader,
           times: SessionTimes(
             api: widget.api,
             session: widget.session,

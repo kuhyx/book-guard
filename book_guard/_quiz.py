@@ -15,7 +15,7 @@ from dataclasses import dataclass, replace
 import logging
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _ledger, _local
+from book_guard import _errlog, _ledger, _local, _paths
 from book_guard._bonus import earns, qualifies
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
 from book_guard._ledger import CREDIT, REJECT, Entry
@@ -94,6 +94,8 @@ def grade(
         rewrite = bool(context and context.checklist)
         local_prompt = prompt + ("" if rewrite else LOCAL_REMINDER)
         answers = [_local.ask_local(SYSTEM, local_prompt) for _ in range(GRADER_VOTES)]
+        # Graded after all: nothing waits on Claude, so the app stops saying so.
+        _errlog.claude_ok(_paths.paths())
     votes = [_vote(a) for a in answers]
     passed = sum(v.passed for v in votes) * 2 > len(votes)
     chosen = next(v for v in votes if v.passed == passed)

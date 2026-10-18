@@ -21,7 +21,7 @@ void main() {
 
   setUp(() => api = FakeApi());
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {GuardState? state}) async {
     await pumpTab(
       tester,
       SingleChildScrollView(
@@ -29,6 +29,7 @@ void main() {
           api: api,
           session: _session,
           onChanged: () async {},
+          state: state,
         ),
       ),
     );
@@ -72,5 +73,18 @@ void main() {
     await api.doneGrading(_session.id);
     expect(await api.loadDraft(_session.id), '');
     expect(await api.gradingSince(_session.id), isNull);
+  });
+
+  testWidgets('the outage note goes when the reset time comes', (tester) async {
+    final until = DateTime.now().add(const Duration(minutes: 1));
+    final state = GuardState.fromJson({
+      'claude_down_since': DateTime.now().toIso8601String(),
+      'claude_down_until': until.toIso8601String(),
+    });
+    await api.markGrading(_session.id);
+    await pump(tester, state: state);
+    expect(find.textContaining('local model'), findsOneWidget);
+    await tester.pump(const Duration(minutes: 1, seconds: 1));
+    expect(find.textContaining('local model'), findsNothing);
   });
 }
