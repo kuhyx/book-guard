@@ -9,7 +9,7 @@ import subprocess
 import time
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _ledger
+from book_guard import _ebook, _ledger
 from book_guard._app_handlers import HANDLERS
 from book_guard._autogrant import auto_grant
 from book_guard._books import current, normalise_chapters, register
@@ -91,6 +91,10 @@ def process(
         _logger.info("%s: today asks no pages, bonus granted", grant.day)
     snap = snapshot(paths)
     write_next_file(paths, snap)
+    # After the photo pass is published: a new page photo moves the
+    # in-app reader's page map (~0.1 s; nothing when no input changed).
+    if _ebook.refresh(paths):
+        write_next_file(paths, snap)
     if result.read:
         notify(todo_lines(snap))
     return result, snap

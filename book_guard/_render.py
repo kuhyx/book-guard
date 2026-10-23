@@ -13,10 +13,11 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard._constants import DAILY_PASS_PAGES, WEEKEND_CAP_PAGES
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
-from book_guard._state import CREDITED
+from book_guard._state import CREDITED, OVERLAP
 
 if TYPE_CHECKING:
     from book_guard._pace import Pace
+    from book_guard._sessions import Session
     from book_guard._state import SessionView, Snapshot
 
 
@@ -25,10 +26,16 @@ _STATUS_TEXT: Final = {
     NEEDS_QUIZ: "write the summary at the PC (book-guard quiz)",
     TOO_FAST: "not counted: under 50 s per page",
     CREDITED: "credited",
+    OVERLAP: "not counted: read in the app at the same time",
 }
 
 
 _EARN: Final = "reaching it earns the +1h bonus"
+
+
+def _pages(s: Session) -> str:
+    """``p. 40-65``; ``≈ p. 40-65`` when read in the app (an estimate)."""
+    return f"{'≈ ' if s.estimated else ''}p. {s.start.page}-{s.end.page}"
 
 
 def session_line(view: SessionView) -> str:
@@ -38,7 +45,7 @@ def session_line(view: SessionView) -> str:
     action = _STATUS_TEXT.get(view.status, view.status).format(check=s.check_page)
     if view.status == NEEDS_QUIZ and view.verdicts:
         action = "summary failed: rewrite it (book-guard quiz)"
-    span = f"p. {s.start.page}-{s.end.page} ({s.pages} p, {s.minutes} min)"
+    span = f"{_pages(s)} ({s.pages} p, {s.minutes} min)"
     return f"{span} {when} -- {action}"
 
 
@@ -51,7 +58,7 @@ def todo_lines(snap: Snapshot) -> list[str]:
     ]
     lines += [
         f"{'REWRITE THE' if v.verdicts else 'WRITE A'} SUMMARY at the PC for "
-        f"p. {v.session.start.page}-{v.session.end.page}"
+        f"{_pages(v.session)}"
         for v in snap.with_status(NEEDS_QUIZ)
     ]
     if snap.open_start is not None:

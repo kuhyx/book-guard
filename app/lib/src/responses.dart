@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_response.dart';
 
+/// Where `GuardApi.collectAnswers` marks a queued request the PC refused
+/// (`refused/<id>`), so whatever queued it -- an in-app session -- can tell.
+const refusedPrefix = 'refused/';
+
 /// The PC's answers in `Reading/responses/`, one file per request id, each
 /// taken (read and deleted) once.
 class Responses {

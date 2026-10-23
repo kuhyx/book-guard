@@ -17,6 +17,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
+from book_guard._prompt_ebook import ebook_prompt
+from book_guard._prompt_parts import (
+    ANSWER,
+    MISSING,
+    UNVERIFIABLE,
+    rewrite_rules,
+)
+
 if TYPE_CHECKING:
     from book_guard._books import Book
     from book_guard._sessions import Session
@@ -31,29 +39,6 @@ SYSTEM: Final = (
     "You check whether a person really read a stretch of a printed book, "
     "from their own short summary. You are fair but not gullible. You "
     "answer with one JSON object and nothing else."
-)
-
-MAX_MISSING: Final = 3
-
-_MISSING: Final = (
-    f'On a FAIL, list in "missing" 1-{MAX_MISSING} things from THESE pages'
-    " whose mention would make you accept it: main events, not small details."
-    ' Name each as a topic (e.g. "what he did after arriving in the village"),'
-    " never the answer itself. Leave it empty only if no addition could rescue"
-    " the summary (it describes another book or another part of it)."
-)
-
-_ANSWER: Final = (
-    'Answer ONLY with JSON: {"passed": true|false, "feedback": "<one or two'
-    ' sentences addressed to the reader>", "missing": ["<topic>", ...]}'
-)
-
-_UNVERIFIABLE: Final = (
-    " Anything in the summary you cannot check against the text above is NEVER"
-    " a reason to fail -- it is expected, it comes from pages you were not"
-    " given, and it counts FOR the reader. Your own memory of the book is not"
-    " evidence against them either. Never call a claim 'unsupported',"
-    " 'unverified' or 'not in the pages' as a reason to fail."
 )
 
 
@@ -79,6 +64,8 @@ def build_prompt(
     grading asked for, not afresh.
     """
     context = context or Context()
+    if session.estimated:
+        return ebook_prompt(book, session, summary, context)
     title = book.label if book else "an unregistered book"
     last_read = int(session.end.page or 0) - 1
     lines = [
@@ -115,11 +102,11 @@ def build_prompt(
         "---",
         _seen(session, has_text=bool(context.span)),
         *(
-            _rewrite_rules(context.checklist)
+            rewrite_rules(context.checklist)
             if context.checklist
             else _rules(has_text=bool(context.span))
         ),
-        _ANSWER,
+        ANSWER,
     ]
     return "\n".join(lines)
 
@@ -138,7 +125,7 @@ def _seen(session: Session, *, has_text: bool) -> str:
             f" the {session.pages} pages the reader read: most of what a real"
             " reader remembers is on pages you have not seen."
         )
-    return shown + _UNVERIFIABLE
+    return shown + UNVERIFIABLE
 
 
 def _rules(*, has_text: bool) -> list[str]:
@@ -187,33 +174,7 @@ def _rules(*, has_text: bool) -> list[str]:
             " imperfect recall, typos, an informal tone and any language"
             " (e.g. Polish) are fine."
         ),
-        _MISSING,
-    ]
-
-
-def _rewrite_rules(checklist: tuple[str, ...]) -> list[str]:
-    """How a rewrite is judged: the previous grading's promise, nothing new."""
-    return [
-        (
-            "This is a REWRITE. The previous summary failed, and the grader"
-            " promised to accept it once it also covered:"
-        ),
-        *(f"- {item}" for item in checklist),
-        (
-            "PASS if the rewrite says something about what happens for each"
-            " point -- a sentence is enough, in the reader's own words, any"
-            " language. Judge it generously: this is not a quiz with one right"
-            " answer, and partial, imprecise or misremembered details still"
-            " cover a point. Do not add requirements beyond this list, never"
-            " judge pace, time or the stop page, and never fail for anything"
-            " you cannot verify."
-        ),
-        (
-            "A point is NOT covered when the rewrite only names it (e.g. 'I"
-            " also read about X') without saying anything about what happens."
-            ' FAIL only then, and list in "missing" exactly the points still'
-            " missing."
-        ),
+        MISSING,
     ]
 
 

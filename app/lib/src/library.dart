@@ -122,10 +122,12 @@ class LibrarySession {
     this.endedAt,
     this.attempts = const [],
     this.photos = const [],
+    this.estimated = false,
   });
 
   /// Parses one `sessions[]` entry.
   factory fromJson(Map<String, dynamic> json) => LibrarySession(
+    estimated: json['estimated'] == true,
     id: '${json['id'] ?? ''}',
     status: '${json['status'] ?? ''}',
     startPage: _int(json['start_page']),
@@ -158,6 +160,9 @@ class LibrarySession {
 
   /// `credited`, `needs-quiz`, ...
   final String status;
+
+  /// Read in the app: the pages are the PC's estimate.
+  final bool estimated;
 
   /// First page.
   final int? startPage;

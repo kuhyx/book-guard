@@ -29,7 +29,7 @@ class SessionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('p. ${session.startPage}-${session.endPage}')),
+    appBar: AppBar(title: Text(session.span)),
     body: FutureBuilder<Map<String, dynamic>?>(
       future: _load(),
       builder: (context, snapshot) {

@@ -170,6 +170,9 @@ class GuardApi {
       if (response == null) continue;
       final what = utf8.decode(await store.read(name) ?? const []);
       await store.delete(name);
+      if (!response.ok) {
+        await store.write('$refusedPrefix$id', Uint8List.fromList(const [1]));
+      }
       found.add((what: what, response: response));
     }
     return found;

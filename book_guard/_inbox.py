@@ -27,7 +27,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _ledger, _photos
+from book_guard import _ebook_sessions, _ledger, _photos
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import MAX_UPLOAD_DELAY, UPLOAD_SETTLE_SECONDS
 from book_guard._errlog import log_error
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from book_guard._pagenum import Box, Context
     from book_guard._paths import Paths
     from book_guard._photo import PhotoFile
+    from book_guard._sessions import Session
     from book_guard._vision import Reading
 
     Reader = Callable[[Path, Context, Box | None], Reading]
@@ -130,9 +131,9 @@ def _record(
     path: Path,
     uploaded: datetime,
     reader: Reader,
-    known: tuple[dict[str, PhotoRecord], Ledger],
+    known: tuple[dict[str, PhotoRecord], Ledger, list[Session]],
 ) -> tuple[PhotoRecord, int]:
-    """Classify one photo against the ``known`` photo cache and ledger.
+    """Classify one photo against the ``known`` photo cache, ledger, app sessions.
 
     Returns the record and the turn that makes it upright (for the thumb).
     """
@@ -141,10 +142,10 @@ def _record(
     if uploaded - photo.taken_at > MAX_UPLOAD_DELAY:
         reason = "uploaded more than 7 days after it was taken"
         return _rejected(photo, path, uploaded, reason), 0
-    records, ledger = known
+    records, ledger, app = known
     note = read_sidecar(path)
     context = replace(
-        context_for(path.name, photo.taken_at, records, ledger), hint=note.hint
+        context_for(path.name, photo.taken_at, records, ledger, app), hint=note.hint
     )
     reading = reader(path, context, note.box)
     record = PhotoRecord(
@@ -176,7 +177,12 @@ def process_inbox(
     """
     clock = time.time() if now is None else now
     records = _photos.load(paths.photos)
-    ledger = _ledger.load(paths.ledger, paths.key_file)
+    # The ledger and the in-app sessions do not change during a pass.
+    known = (
+        records,
+        _ledger.load(paths.ledger, paths.key_file),
+        _ebook_sessions.sessions(paths),
+    )
     result = InboxResult()
     for path in _candidates(paths.inbox, clock):
         if not path.exists():
@@ -197,9 +203,7 @@ def process_inbox(
                 chapters = toc_reader(path, photo.jpeg_b64)
                 record = _contents_record(photo, path, uploaded, chapters)
             else:
-                record, rotation = _record(
-                    photo, path, uploaded, reader, (records, ledger)
-                )
+                record, rotation = _record(photo, path, uploaded, reader, known)
         except ClaudeUnavailableError as exc:
             _logger.warning("could not read %s (%s); retrying later", path.name, exc)
             result.deferred.append(path.name)

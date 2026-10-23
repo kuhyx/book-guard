@@ -21,6 +21,7 @@ class SessionInfo {
     this.photoStart,
     this.photoEnd,
     this.retry,
+    this.estimated = false,
   });
 
   /// Parses one `sessions[]` entry.
@@ -38,12 +39,14 @@ class SessionInfo {
     photoStart: DateTime.tryParse('${json['photo_start']}'),
     photoEnd: DateTime.tryParse('${json['photo_end']}'),
     retry: RetryInfo.fromJson(json['retry']),
+    estimated: json['estimated'] == true,
   );
 
   /// The session's detail file, relative to `Reading/`.
   final String detail;
 
-  /// Ledger id (`session:<hash>-<hash>`).
+  /// Ledger id (`session:<hash>-<hash>`, or `session:ebook-<id>` for a
+  /// session read in the app).
   final String id;
 
   /// First page.
@@ -79,6 +82,12 @@ class SessionInfo {
 
   /// The last failed grading, when a rewrite is awaited.
   final RetryInfo? retry;
+
+  /// Read in the app: its pages are the PC's page-map estimate.
+  final bool estimated;
+
+  /// `p. 40-52`, or `≈ p. 40-52` for an estimate.
+  String get span => '${estimated ? '≈ ' : ''}p. $startPage-$endPage';
 
   /// Graded at least once: its times are the ones it was graded on.
   bool get graded =>

@@ -110,8 +110,8 @@ Read README.md first. These are the invariants that are easy to break.
   the text it was given (often just three photographed pages). Re-run
   `scripts/grader_suite.py` after touching it.
 - **The PC never deletes the record**: the ledger, `Reading/processed/`,
-  `Reading/thumbs/`, `Reading/sessions/`, `notes.json` and
-  `summaries.json` (full summaries; the ledger row keeps `summary[:1000]`)
+  `Reading/thumbs/`, `Reading/sessions/`, `notes.json`, `ebook_sessions.json`
+  and `summaries.json` (full summaries; the ledger row keeps `summary[:1000]`)
   only grow. A note edit keeps the replaced text under `previous`; an empty
   edit is refused, never a delete. Only the phone prunes (its 40 newest
   photos); the Library shows older ones from the PC's thumbs.
@@ -123,6 +123,16 @@ Read README.md first. These are the invariants that are easy to break.
   to IFD0 DateTime + OffsetTime (what the Android camera intent writes).
 - **Never ship a penalty before its reward**: the 19:00 / 4h base cuts in the
   consumers are date-gated to `GATE_START_DATE`.
+- **In-app reading is credited in estimated paper pages** (`_ebook_map`,
+  `_ebook`, `_ebook_sessions`): the PC's private map
+  (`data_dir/ebook_maps/`) decides the pages, never the copy on the share
+  or the app's numbers; the session clock is wall-clock between the Start
+  and Stop taps; it never overlaps a countable paper session. The app's
+  `ebook_map.dart` floors exactly like `_ebook_map.page_coordinate`
+  (`app/test/fixtures/ebook_map_goldens.json`; regenerate with
+  `BOOK_GUARD_WRITE_GOLDENS=1` on `test_core_ebook_map.py`). Served text
+  offsets are Python code points = Dart UTF-16 units (astral -> U+FFFD).
+  The photo grading prompt is pinned byte for byte (`test_core_prompt_pin`).
 
 ## Layout
 

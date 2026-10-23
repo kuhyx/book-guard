@@ -27,11 +27,13 @@ from book_guard._photos import usable_pages
 from book_guard._sessions import build_sessions, open_start
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from datetime import datetime
     from pathlib import Path
 
     from book_guard._ledger import Ledger
     from book_guard._photos import PhotoRecord
+    from book_guard._sessions import Session
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -85,8 +87,13 @@ def context_for(
     taken: datetime,
     records: dict[str, PhotoRecord],
     ledger: Ledger,
+    app: Sequence[Session] = (),
 ) -> Context:
-    """What the page number of photo ``name`` (taken at ``taken``) must fit."""
+    """What the page number of photo ``name`` (taken at ``taken``) must fit.
+
+    ``app`` are the sessions read in the app: a start photo after one is
+    near where it stopped (an estimate, but the nearest there is).
+    """
     book = book_at(ledger, taken)
     last_page = book.pages if book else None
     label = _LABEL.match(name)
@@ -95,17 +102,24 @@ def context_for(
     if label.group(2):
         return Context(expected=int(label.group(2)), last_page=last_page)
     pages = usable_pages(records)
+    breaks = [s.start.taken for s in app]
     if label.group(1) == "stop":
-        start = open_start(pages)
+        start = open_start(pages, breaks)
         return Context(after=start.page if start else None, last_page=last_page)
     # Where the last session ended -- not the last photo: the check photo
     # (p. 19 of a p. 7-51 session) is taken after the stop photo.
     isbn = book.isbn if book else None
     ends = [
         s.end
-        for s in build_sessions(pages)
+        for s in build_sessions(pages, breaks)
         if s.end.taken <= taken
         and (b := book_at(ledger, s.end.taken))
         and b.isbn == isbn
     ]
-    return Context(near=ends[-1].page if ends else None, last_page=last_page)
+    ends += [
+        s.end
+        for s in app
+        if s.ebook is not None and s.ebook.isbn == isbn and s.end.taken <= taken
+    ]
+    last = max(ends, key=lambda e: e.taken, default=None)
+    return Context(near=last.page if last else None, last_page=last_page)

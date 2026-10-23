@@ -60,6 +60,29 @@ of 150+ characters credited without grading (`detail.graded == "0"`), bonus
 included, so Claude never makes the app useless. A photographed contents
 page falls back the same way, to `qwen3-vl:30b-a3b-instruct`.
 
+### Reading in the app
+
+A book with an attached ebook can also be read in the app (Read tab, "Read
+in app"), credited in **estimated paper pages** of the registered copy. The
+ebook is often another edition or translation, so the PC maps its text to
+paper pages through the pages already photographed: each photo's
+transcription is located in the text (idf-weighted word stems in
+1800-character windows), and the map is piecewise linear through those
+knots plus the story's two ends (the last one is the copy's last page). At
+least 3 located pages are needed; `book-guard ebook-map` rebuilds and
+prints it (knots and leave-one-out error in pages). The PC serves the text
+and the map as `Reading/ebooks/<isbn>.txt` / `.map.json`; the app keeps
+both and reads offline. "Start reading" is kept on the phone at the tap,
+"Stop reading" queues an `ebook_session` request through the outbox, and
+the time is plain wall-clock between the taps (closing the app in between
+changes nothing). The PC re-estimates the pages with its own copy of the
+map and stores the session append-only (`ebook_sessions.json`); from then
+on it is a session like any other -- 50 s a page, 6 h at most, no check
+page, the summary graded on exactly the text that was on screen, credit
+and bonus as usual -- shown as "≈ p." everywhere, with `detail.source ==
+"ebook"` and `detail.estimated == "1"` on its ledger row. It cannot overlap
+a paper session, and a paper session formed later across it does not count.
+
 ## The rules
 
 | | |

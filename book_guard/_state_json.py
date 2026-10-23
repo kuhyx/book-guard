@@ -22,6 +22,13 @@ went through (Claude or the local model), or ``until`` passed -- the app
 compares ``until`` with its own clock too, so its note goes on time
 without a fresh state.json.
 
+``book.ebook`` (added 2026-10-23) is the in-app reader -- where its text
+and page map are on the share, the text's sha256 and size -- or null when
+the book has no page map (no ebook, or fewer than three photographed pages
+located in it). ``book.latest_page`` is the newest page read, on paper or
+in the app (an estimate then). Each session's ``source`` is ``photos`` or
+``ebook``; ``estimated`` marks pages from the page map.
+
 ``index_job`` is the last dropped book file's indexing (``_indexjob``):
 ``{file, stage, done, total, error, updated_at}``, or null.
 
@@ -37,7 +44,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import freedays
 
-from book_guard import _indexjob
+from book_guard import _ebook, _indexjob
 from book_guard import _photos as _photo_cache
 from book_guard._bookindex import index_path
 from book_guard._errlog import claude_outage
@@ -64,6 +71,8 @@ def _session(view: SessionView) -> dict[str, Any]:
         "end_page": s.end.page,
         "check_page": s.check_page,
         "pages": s.pages,
+        "source": "ebook" if s.estimated else "photos",
+        "estimated": s.estimated,
         "minutes": s.minutes,
         "started_at": s.started_at.isoformat(),
         "ended_at": s.ended_at.isoformat(),
@@ -158,6 +167,8 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
             "has_file": index_path(paths, book.isbn).exists(),
             "chapters": [{"start": c.start, "title": c.title} for c in book.chapters],
             "chapter": _chapter(snap),
+            "latest_page": _latest_page(snap),
+            "ebook": _ebook.state_info(paths, book.isbn),
         },
         "pace": {
             "month": pace.month.isoformat()[:7],

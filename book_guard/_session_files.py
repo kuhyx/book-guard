@@ -40,8 +40,8 @@ def photo_ref(role: str, record: PhotoRecord | None) -> dict[str, Any] | None:
 
     Shared with the library, which lists the same photos.
     """
-    if record is None:
-        return None
+    if record is None or record.kind == "ebook":
+        return None  # an in-app session's ends are taps, not photos
     return {
         "role": role,
         "page": record.page,
@@ -59,6 +59,8 @@ def session_numbers(s: Session) -> dict[str, Any]:
         "minutes": s.minutes,
         "started_at": s.started_at.isoformat(),
         "ended_at": s.ended_at.isoformat(),
+        "source": "ebook" if s.estimated else "photos",
+        "estimated": s.estimated,
     }
 
 

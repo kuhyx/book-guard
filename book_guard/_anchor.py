@@ -45,6 +45,9 @@ MAX_CHARS_PER_PAGE: Final = 5_000
 MAX_SPAN_CHARS: Final = 150_000
 """What the grader is ever handed, whatever the page count."""
 
+EBOOK: Final = "read in the app"
+"""The span's reason for an in-app session: exactly the text on screen."""
+
 CANDIDATES: Final = 5
 """Top matches kept per photo: 5^3 = 125 chains, trivially cheap."""
 
@@ -68,10 +71,18 @@ def _refuse(reason: str, scores: tuple[float, ...] = ()) -> Span:
 
 
 def find_span(paths: Paths, isbn: str, session: Session) -> Span:
-    """Anchor ``session``'s photos in the book file indexed for ``isbn``."""
+    """Anchor ``session``'s photos in the book file indexed for ``isbn``.
+
+    A session read in the app needs no anchors: its span is the text
+    between its two offsets.
+    """
     index = load(paths, isbn) if isbn else None
     if index is None:
         return _refuse("no book file attached")
+    if session.ebook is not None:
+        # Read in the app: no anchoring, the offsets are the stretch itself.
+        a, b = session.ebook.start_offset, session.ebook.end_offset
+        return Span(text=index.text[a:b][:MAX_SPAN_CHARS], scores=(), reason=EBOOK)
     photos = session.evidence
     if any(len(p.text.strip()) < MIN_ANCHOR_CHARS for p in photos):
         return _refuse("a photographed page had too little legible text to anchor")

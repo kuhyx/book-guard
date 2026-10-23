@@ -16,6 +16,12 @@ Request types:
 * ``retry_book`` -- ``{"file": str}``: a failed book file, queued again
 * ``note`` -- ``{"note_id": str, "isbn": str, "text": str, "page": int | null,
   "chapter": str, "created_at": iso, "updated_at": iso}`` (upsert, ``_notes``)
+* ``ebook_session`` -- a session read in the app (``_ebook_sessions``)
+
+Requests whose type is in :data:`FIRST` are handled before the rest of a
+pass: the app queues an in-app session and then its summary, and request
+ids are random, so by name the summary could come first and find no
+session to grade.
 """
 
 from __future__ import annotations
@@ -40,6 +46,9 @@ _logger: Final = logging.getLogger(__name__)
 
 _ID: Final = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 """Request ids become file names: nothing that could climb out of the dir."""
+
+FIRST: Final = frozenset({"ebook_session"})
+"""Request types that create what later requests refer to."""
 
 
 @dataclass(frozen=True)
@@ -78,8 +87,9 @@ def handle_requests(
     next pass, exactly like an unreadable photo -- the app keeps polling.
     """
     answered = 0
-    for path in _pending(paths.requests):
-        request = _load(path)
+    loaded = [(path, _load(path)) for path in _pending(paths.requests)]
+    loaded.sort(key=lambda pair: (pair[1] or {}).get("type") not in FIRST)
+    for path, request in loaded:
         rid = str(request.get("id", "")) if request else ""
         if not request or not _ID.fullmatch(rid) or rid != path.stem:
             _logger.warning("dropping malformed request %s", path.name)

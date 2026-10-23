@@ -158,7 +158,10 @@ class _SessionTile extends StatelessWidget {
           >[];
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
-      title: Text('${dmy(s.endedAt)} - p. ${s.startPage}-${s.endPage}'),
+      title: Text(
+        '${dmy(s.endedAt)} - ${s.estimated ? '≈ ' : ''}'
+        'p. ${s.startPage}-${s.endPage}',
+      ),
       subtitle: Text(
         '${s.pages ?? '?'} pages, ${s.minutes ?? '?'} min - ${s.status}',
       ),

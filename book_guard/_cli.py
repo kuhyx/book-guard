@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 from typing import TYPE_CHECKING, Final, TextIO
 
-from book_guard import _ask_cli, _library_cli, _widen
+from book_guard import _ask_cli, _ebook, _ebook_cli, _library_cli, _widen
 from book_guard._actions import next_quiz, notify, process
 from book_guard._attach import attach
 from book_guard._bonus import regrant
@@ -80,6 +80,8 @@ def _cmd_index(_args: argparse.Namespace) -> int:
     if messages is None:
         _say("another index run is going; it picks up new files too")
         return 0
+    if messages and _ebook.refresh(paths()):
+        messages.append("in-app reader: page map ready")
     for message in messages:
         _say(message)
     notify(messages)
@@ -193,6 +195,7 @@ def _parser() -> argparse.ArgumentParser:
         ("attach", "attach the current book's ebook file (any format)", _cmd_attach),
         ("process", "read new photos from the inbox", _cmd_process),
         ("index", "index book files dropped into Reading/books", _cmd_index),
+        ("ebook-map", "the in-app reader's page map", _ebook_cli.cmd_ebook_map),
         ("status", "show pace, sessions and what to do next", _cmd_status),
         ("quiz", "write the summary for a finished session", _cmd_quiz),
         ("ask", "what any day asks: past, today, projected", _ask_cli.cmd_ask),

@@ -55,7 +55,8 @@ def _attempt_lines(attempt: dict[str, Any], indent: str) -> list[str]:
 
 def _session_head(s: dict[str, Any]) -> str:
     return (
-        f"{_day(s['ended_at'])}  p. {s['start_page']}-{s['end_page']} "
+        f"{_day(s['ended_at'])}  {'≈ ' if s.get('estimated') else ''}"
+        f"p. {s['start_page']}-{s['end_page']} "
         f"({s['pages']} p, {s['minutes']} min) {s['status']}"
     )
 

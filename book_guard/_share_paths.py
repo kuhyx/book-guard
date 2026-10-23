@@ -76,6 +76,11 @@ class SharePaths:
         return self.reading_dir / "books"
 
     @property
+    def ebooks(self) -> Path:
+        """The in-app reader's text and page map, per ISBN, for the app."""
+        return self.reading_dir / "ebooks"
+
+    @property
     def state_file(self) -> Path:
         """The app-readable snapshot (JSON twin of NEXT.txt)."""
         return self.reading_dir / "state.json"

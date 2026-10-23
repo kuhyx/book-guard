@@ -173,7 +173,7 @@ class StatusTab extends StatelessWidget {
           Builder(
             builder: (context) => ListTile(
               title: Text(
-                'p. ${session.startPage}-${session.endPage} '
+                '${session.span} '
                 '(${session.pages} p, ${session.minutes} min)',
               ),
               subtitle: Text(statusText(session)),

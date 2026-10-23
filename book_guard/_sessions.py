@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Final
 from book_guard._constants import MAX_SESSION, MIN_SECONDS_PER_PAGE
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from datetime import datetime
 
     from book_guard._photos import PhotoRecord
@@ -39,9 +40,28 @@ NEEDS_CHECK: Final = "needs-check-photo"
 NEEDS_QUIZ: Final = "needs-quiz"
 
 
+@dataclass(frozen=True)
+class EbookSpan:
+    """What was read in the app: the ebook text from one offset to another.
+
+    An in-app session (``_ebook_sessions``) is a :class:`Session` whose
+    start and end records are not photos: their ``page`` is the page map's
+    estimate and their ``taken`` the Start/Stop taps.
+    """
+
+    key: str
+    """The app's id for the session (its ledger id is ``session:ebook-<key>``)."""
+    isbn: str
+    start_offset: int
+    end_offset: int
+
+
 @dataclass
 class Session:
-    """A start/end photo pair and, once taken, its check photo."""
+    """A start/end photo pair and, once taken, its check photo.
+
+    Or a stretch read in the app (``ebook``): no photos, no check page.
+    """
 
     start: PhotoRecord
     end: PhotoRecord
@@ -51,6 +71,8 @@ class Session:
     """A later start the reader set (``_session_times``); never earlier."""
     ended: datetime | None = None
     """An earlier end the reader set; never later."""
+    ebook: EbookSpan | None = None
+    """Read in the app, not on paper: its pages are estimates."""
 
     @property
     def started_at(self) -> datetime:
@@ -64,7 +86,9 @@ class Session:
 
     @property
     def session_id(self) -> str:
-        """Stable ledger id: the two photos' hashes."""
+        """Stable ledger id: the two photos' hashes, or the app's id."""
+        if self.ebook is not None:
+            return f"session:ebook-{self.ebook.key}"
         return f"session:{self.start.sha[:16]}-{self.end.sha[:16]}"
 
     @property
@@ -92,8 +116,15 @@ class Session:
         return NEEDS_QUIZ
 
     @property
+    def estimated(self) -> bool:
+        """Its pages are the page map's estimate (read in the app)."""
+        return self.ebook is not None
+
+    @property
     def evidence(self) -> list[PhotoRecord]:
-        """The photos whose transcribed text the grader sees."""
+        """The photos whose transcribed text the grader sees (none in-app)."""
+        if self.ebook is not None:
+            return []
         return [p for p in (self.start, self.check, self.end) if p is not None]
 
 
@@ -120,12 +151,22 @@ def _claims_check(pending: list[Session], photo: PhotoRecord) -> bool:
     return False
 
 
-def build_sessions(pages: list[PhotoRecord]) -> list[Session]:
+def _broken(start: PhotoRecord, photo: PhotoRecord, breaks: Sequence[datetime]) -> bool:
+    """Reading moved to the app between ``start`` and ``photo``."""
+    return any(start.taken < moment < photo.taken for moment in breaks)
+
+
+def build_sessions(
+    pages: list[PhotoRecord], breaks: Sequence[datetime] = ()
+) -> list[Session]:
     """Every session the page photos form, oldest first.
 
     Args:
         pages: Accepted page photos in capture order
             (:func:`book_guard._photos.usable_pages`).
+        breaks: When in-app sessions started: a start photo taken before
+            one is closed by it, so the next photo is a new start (the
+            reader went back to paper), never its stop.
     """
     sessions: list[Session] = []
     pending: list[Session] = []
@@ -137,6 +178,7 @@ def build_sessions(pages: list[PhotoRecord]) -> list[Session]:
             start is None
             or int(photo.page or 0) <= int(start.page or 0)
             or photo.taken - start.taken > MAX_SESSION
+            or _broken(start, photo, breaks)
         ):
             start = photo
             continue
@@ -148,12 +190,22 @@ def build_sessions(pages: list[PhotoRecord]) -> list[Session]:
     return sessions
 
 
-def open_start(pages: list[PhotoRecord]) -> PhotoRecord | None:
-    """The start photo still waiting for its end photo, if any."""
+def open_start(
+    pages: list[PhotoRecord], breaks: Sequence[datetime] = ()
+) -> PhotoRecord | None:
+    """The start photo still waiting for its end photo, if any.
+
+    None once an in-app session started after it (``breaks``).
+    """
     consumed = {
-        p.sha for s in build_sessions(pages) for p in (s.start, s.end, s.check) if p
+        p.sha
+        for s in build_sessions(pages, breaks)
+        for p in (s.start, s.end, s.check)
+        if p
     }
     rest = [p for p in pages if p.sha not in consumed]
     if not rest or not pages or rest[-1].sha != pages[-1].sha:
+        return None
+    if any(rest[-1].taken < moment for moment in breaks):
         return None
     return rest[-1]

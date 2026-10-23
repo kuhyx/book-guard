@@ -5,9 +5,9 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
-import 'package:book_guard_app/src/screens/failed_photos.dart';
+import 'package:book_guard_app/src/screens/ebook_entry.dart';
 import 'package:book_guard_app/src/screens/photo_delivery.dart';
-import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/photo_history.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/session_buttons.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
@@ -214,6 +214,12 @@ class _ReadTabState extends State<ReadTab> {
           onPhoto: _busy ? null : _photo,
           onResume: _busy ? null : _resume,
         ),
+        EbookEntry(
+          api: widget.api,
+          state: state,
+          paperStart: reading,
+          onChanged: widget.onChanged,
+        ),
         if (_photoNote case final note?) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(note),
@@ -227,17 +233,13 @@ class _ReadTabState extends State<ReadTab> {
             pace: state?.pace,
             onChanged: widget.onChanged,
           ),
-        FailedPhotos(
+        PhotoHistory(
           api: widget.api,
           state: state,
           journal: widget.journal,
           reader: widget.reader,
           onChanged: widget.onChanged,
         ),
-        if (state != null && state.photos.isNotEmpty) ...[
-          const SectionHeader('Your photos'),
-          PhotoGallery(api: widget.api, photos: state.photos),
-        ],
       ],
     );
   }

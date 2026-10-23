@@ -73,7 +73,7 @@ class SessionTimes extends StatelessWidget {
       'session_id': session.id,
       'start': startAt.toIso8601String(),
       'end': onDayOf(startAt, newEnd).toIso8601String(),
-    }, 'Times for p. ${session.startPage}-${session.endPage}');
+    }, 'Times for ${session.span}');
     if (!context.mounted) return;
     response.ok
         ? showToast(context, response.message)

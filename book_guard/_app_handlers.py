@@ -12,6 +12,7 @@ from book_guard._attach import requeue
 from book_guard._bookindex import index_path
 from book_guard._books import current, normalise_chapters, register
 from book_guard._booktext import BookTextError
+from book_guard._ebook_sessions import record as record_ebook_session
 from book_guard._flock import exclusive
 from book_guard._grading import quiz_one, register_isbn
 from book_guard._http import UnavailableError
@@ -161,4 +162,5 @@ HANDLERS: dict[str, Callable[[Paths, dict[str, Any]], Response]] = {
     "session_times": set_times,
     "retry_book": _retry_book,
     "note": upsert_note,
+    "ebook_session": record_ebook_session,
 }

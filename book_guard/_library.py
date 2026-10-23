@@ -76,6 +76,8 @@ def _numbers(d: dict[str, str], s: Session | None) -> dict[str, Any]:
         "minutes": _int(d.get("minutes", "")),
         "started_at": _iso(d.get("started_at", "")),
         "ended_at": _iso(d.get("ended_at", "")),
+        "source": d.get("source", "photos"),
+        "estimated": d.get("estimated") == "1",
     }
 
 

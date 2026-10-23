@@ -123,7 +123,7 @@ class _SummaryPanelState extends State<SummaryPanel> {
       response = await widget.api.sendQueued('summary', {
         'session_id': session.id,
         'summary': _text.text.trim(),
-      }, 'Summary for p. ${session.startPage}-${session.endPage}');
+      }, 'Summary for ${session.span}');
     } on Exception catch (error) {
       unawaited(widget.api.errors.log('summary', '$error'));
       await widget.api.cancelGrading(session.id); // the draft stays

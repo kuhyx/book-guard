@@ -91,6 +91,16 @@ class Paths(SharePaths):
         return self.data_dir / "summaries.json"
 
     @property
+    def ebook_maps(self) -> Path:
+        """Each book's page map (private: the app's copy is never read back)."""
+        return self.data_dir / "ebook_maps"
+
+    @property
+    def ebook_sessions(self) -> Path:
+        """Sessions read in the app, append-only (never pruned)."""
+        return self.data_dir / "ebook_sessions.json"
+
+    @property
     def reports(self) -> Path:
         """Filed bug reports: each photo and what was made of it."""
         return self.data_dir / "reports"

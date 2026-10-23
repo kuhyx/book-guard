@@ -135,7 +135,7 @@ class SummarySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader('Summary for p. ${session.startPage}-${session.endPage}'),
+        SectionHeader('Summary for ${session.span}'),
         ?times,
         const Text(
           '3-5 sentences in your own words (Polish or English) about what '

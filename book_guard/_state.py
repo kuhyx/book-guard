@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING
 
 import freedays
 
-from book_guard import _ledger, _photos, _sick
-from book_guard._books import Book, book_at, current
+from book_guard import _ebook_sessions, _ledger, _photos, _sick
+from book_guard._books import Book, current
 from book_guard._constants import (
     DAILY_PASS_PAGES,
     ESCAPES_PER_MONTH,
@@ -22,6 +22,7 @@ from book_guard._constants import (
     RESPLIT_DATE,
 )
 from book_guard._daily_lock import kept, one_number
+from book_guard._ebook_overlap import book_of, breaks, clashes
 from book_guard._ledger import ESCAPE
 from book_guard._pace import Pace, compute_pace
 from book_guard._quiz import credited
@@ -48,6 +49,8 @@ if TYPE_CHECKING:
     from book_guard._photos import PhotoRecord
 
 CREDITED = "credited"
+OVERLAP = "overlaps-app-reading"
+"""A paper session whose hours were already read in the app: not counted."""
 
 
 @dataclass(frozen=True)
@@ -98,19 +101,24 @@ class Snapshot:
 
 
 def _session_views(
-    ledger: Ledger, records: dict[str, PhotoRecord], times: SessionTimes
+    ledger: Ledger,
+    records: dict[str, PhotoRecord],
+    times: SessionTimes,
+    app: list[Session],
 ) -> list[SessionView]:
+    """Photo sessions and in-app sessions, in the order they ended."""
     verdicts = ledger.verdicts()
     signed = widened(ledger)
     views = []
-    for session in build_sessions(_photos.usable_pages(records)):
+    paper = build_sessions(_photos.usable_pages(records), breaks(app))
+    for session in sorted([*paper, *app], key=lambda s: s.end.taken):
         apply_times(session, times)
         apply_widened(session, signed)
         found = verdicts.get(session.session_id, [])
-        status = session.state
+        status = OVERLAP if clashes(session, app) else session.state
         if credited(found):
             status = CREDITED
-        book = book_at(ledger, session.end.taken)
+        book = book_of(ledger, session)
         views.append(SessionView(session, book, status, tuple(found)))
     return views
 
@@ -171,6 +179,22 @@ def _decide(
     return one_number(pace, kept_yesterday=kept_yesterday, **flags)
 
 
+def _escapes_of_month(ledger: Ledger, day: date) -> list[Entry]:
+    """The escapes spent in ``day``'s month."""
+    month = day.isoformat()[:7]
+    return [e for e in ledger.of_kind(ESCAPE) if e.day.startswith(month)]
+
+
+def _reading(
+    paths: Paths, ledger: Ledger
+) -> tuple[list[SessionView], PhotoRecord | None]:
+    """Every session (paper and in-app) and the open paper start photo."""
+    records = _photos.load(paths.photos)
+    app = _ebook_sessions.sessions(paths)
+    views = _session_views(ledger, records, load_times(paths.session_times), app)
+    return views, open_start(_photos.usable_pages(records), breaks(app))
+
+
 def snapshot(
     paths: Paths,
     *,
@@ -191,10 +215,9 @@ def snapshot(
     free_check = is_free or freedays.is_free_day
     sick_days = _sick.standing_down() if sick is None else sick
     ledger = _ledger.load(paths.ledger, paths.key_file)
-    records = _photos.load(paths.photos)
+    sessions, started = _reading(paths, ledger)
     pace = compute_pace(ledger, day, free_check, sick=sick_days)
-    month = day.isoformat()[:7]
-    escapes = [e for e in ledger.of_kind(ESCAPE) if e.day.startswith(month)]
+    escapes = _escapes_of_month(ledger, day)
     escaped = any(e.day == day.isoformat() for e in escapes)
     locked, reason = _decide(
         ledger, day, pace, _Calendar(free_check, sick_days), escaped=escaped
@@ -202,8 +225,8 @@ def snapshot(
     return Snapshot(
         today=day,
         book=current(ledger),
-        sessions=_session_views(ledger, records, load_times(paths.session_times)),
-        open_start=open_start(_photos.usable_pages(records)),
+        sessions=sessions,
+        open_start=started,
         pace=pace,
         sick_days=sick_days,
         escaped_today=escaped,

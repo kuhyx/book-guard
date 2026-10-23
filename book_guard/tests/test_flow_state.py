@@ -145,6 +145,8 @@ def test_to_json_full(bg_paths: Paths) -> None:
         "has_file": True,
         "chapters": [],
         "chapter": None,
+        "latest_page": 50,
+        "ebook": None,
     }
     assert doc["pace"]["month"] == "2026-10"
     assert doc["pace"]["behind"] == 422

@@ -21,11 +21,11 @@ from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
 from book_guard._ledger import CREDIT, REJECT, Entry
 from book_guard._prompt import (
     LOCAL_REMINDER,
-    MAX_MISSING,
     SYSTEM,
     Context,
     build_prompt,
 )
+from book_guard._prompt_parts import MAX_MISSING
 
 if TYPE_CHECKING:
     from book_guard._books import Book
@@ -91,8 +91,9 @@ def grade(
         _logger.warning("Claude did not grade (%s); asking %s", exc, _local.LOCAL_MODEL)
         grader = f"local:{_local.LOCAL_MODEL}"
         # One after another: the card holds one copy of the model.
+        # The reminder is about photographed pages: an in-app session has none.
         rewrite = bool(context and context.checklist)
-        local_prompt = prompt + ("" if rewrite else LOCAL_REMINDER)
+        local_prompt = prompt + ("" if rewrite or session.estimated else LOCAL_REMINDER)
         answers = [_local.ask_local(SYSTEM, local_prompt) for _ in range(GRADER_VOTES)]
         # Graded after all: nothing waits on Claude, so the app stops saying so.
         _errlog.claude_ok(_paths.paths())
@@ -173,6 +174,18 @@ def record_verdict(
             "grader": verdict.grader,
         },
     )
+    if session.ebook is not None:
+        # Read in the app: the pages are the page map's estimate.
+        entry = replace(
+            entry,
+            detail={
+                **entry.detail,
+                "source": "ebook",
+                "estimated": "1",
+                "start_offset": str(session.ebook.start_offset),
+                "end_offset": str(session.ebook.end_offset),
+            },
+        )
     if verdict.passed and earns(session.pages, session.minutes, ledger, entry):
         entry = replace(entry, detail={**entry.detail, "bonus": "1"})
     _ledger.append(paths.ledger, paths.key_file, entry)
