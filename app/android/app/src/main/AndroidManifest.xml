@@ -3,7 +3,7 @@
          permission: without this line the APK cannot reach dufs at all. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Book Guard"
+        android:label="BookGuard"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
