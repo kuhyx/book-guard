@@ -72,29 +72,6 @@ void main() {
     return int.parse(label.substring(5).split(' ').first);
   }
 
-  group('pages', () {
-    test('screens start at paragraphs and cover the whole text', () {
-      final starts = screenStarts(ebookText, 2000);
-      expect(starts.first, 0);
-      for (final s in starts.skip(1)) {
-        expect(ebookText.substring(s - 2, s), '\n\n');
-      }
-      for (var i = 1; i < starts.length - 1; i++) {
-        expect(starts[i] - starts[i - 1], greaterThanOrEqualTo(2000));
-      }
-    });
-
-    test('a paragraph longer than two screens is cut at a space', () {
-      final text = 'word ' * 2000;
-      final starts = screenStarts(text, 1000);
-      expect(starts.length, greaterThan(5));
-      for (final s in starts.skip(1)) {
-        expect(text[s - 1], ' ');
-      }
-      expect(screenStarts('', 1000), [0]);
-    });
-  });
-
   testWidgets('opens where the paper reading stopped', (tester) async {
     await open(tester, latestPage: 20);
     expect(pageShown(tester), 20);
@@ -122,7 +99,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(closedWith, isNotNull);
     expect(closedWith!.startPage, 20);
-    expect(closedWith!.endPage, greaterThan(24));
+    expect(closedWith!.endPage, greaterThan(20)); // measured screens
     expect(await api.readingStart(ebookIsbn), isNull);
     expect((await api.appSessions()).single.key, start.id);
     expect(await api.store.list('outbox/'), isNotEmpty);
@@ -182,7 +159,7 @@ void main() {
     await open(tester, latestPage: 20);
     await tester.tap(find.text('Start reading here'));
     await tester.pumpAndSettle();
-    await next(tester, 3);
+    await next(tester, 6); // over a page on measured screens
     now = now.add(const Duration(minutes: 1));
     await tester.tap(find.text('Stop reading'));
     await tester.pumpAndSettle();

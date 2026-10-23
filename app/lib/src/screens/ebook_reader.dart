@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/ebook_store.dart';
 import 'package:book_guard_app/src/guard_api.dart';
+import 'package:book_guard_app/src/screens/ebook_fit.dart';
 import 'package:book_guard_app/src/screens/ebook_pages.dart';
 import 'package:book_guard_app/src/screens/ebook_reader_bar.dart';
+import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-export 'package:book_guard_app/src/screens/ebook_pages.dart' show screenStarts;
-
-/// The book, read in the app: its text a screen at a time, the estimated
+/// The book, read in the app: its text a screen at a time (measured: the
+/// next screen starts on the first line that did not fit), the estimated
 /// paper page ("≈ p. N"), and Start/Stop for a session the PC credits in
 /// paper pages. The Start tap is kept on the device at once; the time
 /// counted is plain wall-clock from that tap to Stop, whatever the app did
@@ -23,7 +24,6 @@ class EbookReaderScreen extends StatefulWidget {
     this.latestPage,
     this.paperStart,
     this.clock = DateTime.now,
-    this.screenChars = 2000,
   });
 
   /// The device store and the outbox.
@@ -46,26 +46,26 @@ class EbookReaderScreen extends StatefulWidget {
   /// Now; replaced in tests.
   final DateTime Function() clock;
 
-  /// Characters per screen.
-  final int screenChars;
-
   @override
   State<EbookReaderScreen> createState() => _EbookReaderScreenState();
 }
 
 class _EbookReaderScreenState extends State<EbookReaderScreen> {
-  late final List<int> _starts = screenStarts(
-    widget.ebook.text,
-    widget.screenChars,
-  );
-  PageController? _pages;
-  int _index = 0;
+  /// The first visible character; null until the position is loaded.
+  int? _at;
+
+  /// The screen starts paged forward from, to go back through exactly.
+  final List<int> _history = [];
+  final Map<int, int> _ends = {};
+  ScreenFit? _fit;
+  bool _atEnd = false;
   double _font = EbookStore.defaultFontSize;
   ReadingStart? _start;
 
   EbookMap get _map => widget.ebook.map;
+  String get _text => widget.ebook.text;
   String get _isbn => _map.isbn;
-  int get _offset => _starts[_index];
+  int get _offset => _at ?? 0;
 
   @override
   void initState() {
@@ -73,28 +73,12 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     unawaited(_load());
   }
 
-  @override
-  void dispose() {
-    _pages?.dispose();
-    super.dispose();
-  }
-
-  int _screenOf(int offset) {
-    var i = 0;
-    while (i + 1 < _starts.length && _starts[i + 1] <= offset) {
-      i++;
-    }
-    return i;
-  }
-
   /// The reader's own place, unless the paper reading is further on.
   int _resume(int? saved) {
     final latest = widget.latestPage;
-    if (latest != null && (saved == null || _map.pageAt(saved) < latest)) {
-      final i = _starts.indexWhere((s) => _map.pageAt(s) >= latest);
-      return i < 0 ? _starts.length - 1 : i;
-    }
-    return _screenOf(saved ?? _map.start);
+    final paper =
+        latest != null && (saved == null || _map.pageAt(saved) < latest);
+    return wordAfter(_text, paper ? _map.startOf(latest) : saved ?? _map.start);
   }
 
   Future<void> _load() async {
@@ -103,26 +87,58 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
     final font = await api.fontSize();
     final start = await api.readingStart(_isbn);
     if (!mounted) return;
-    final index = _resume(saved);
     setState(() {
-      _index = index;
+      _at = _resume(saved);
       _font = font;
       _start = start;
-      _pages = PageController(initialPage: index);
     });
   }
 
-  void _turned(int index) {
-    setState(() => _index = index);
-    unawaited(widget.api.savePosition(_isbn, _starts[index]));
+  int _endOf(ScreenFit fit, int from) => _ends[from] ??= fit.endOf(_text, from);
+
+  void _go(int delta) {
+    final fit = _fit;
+    if (fit == null) return;
+    final int to;
+    if (delta > 0) {
+      to = _endOf(fit, _offset);
+      if (to >= _text.length) return;
+      _history.add(_offset);
+    } else {
+      if (_offset <= firstVisible(_text, 0)) return;
+      to = _history.isNotEmpty
+          ? _history.removeLast()
+          : fit.startBefore(_text, _offset);
+    }
+    setState(() => _at = to);
+    unawaited(widget.api.savePosition(_isbn, to));
   }
 
-  Future<void> _go(int delta) async {
-    final target = (_index + delta).clamp(0, _starts.length - 1);
-    await _pages?.animateToPage(
-      target,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
+  /// The screen at the current offset, measured for [box]. A new font,
+  /// screen size or bar height re-fits from the same first character.
+  Widget _screen(BuildContext context, BoxConstraints box) {
+    final fit = ScreenFit.of(context, box, _font, AppSpacing.md);
+    if (fit != _fit) {
+      _fit = fit;
+      _history.clear();
+      _ends.clear();
+    }
+    if (_offset >= _text.length && _text.isNotEmpty) {
+      _at = fit.startBefore(_text, _text.length); // opened past the end
+    }
+    final end = _endOf(fit, _offset);
+    final atEnd = end >= _text.length;
+    if (atEnd != _atEnd) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _atEnd = atEnd);
+      });
+    }
+    return GestureDetector(
+      onHorizontalDragEnd: (drag) {
+        final v = drag.primaryVelocity ?? 0;
+        if (v != 0) _go(v < 0 ? 1 : -1);
+      },
+      child: EbookScreenText(text: _text, from: _offset, to: end, fit: fit),
     );
   }
 
@@ -191,7 +207,7 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = _pages;
+    final loading = _at == null;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -208,30 +224,20 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
           ),
         ],
       ),
-      body: pages == null
+      body: loading
           ? const Center(child: CircularProgressIndicator())
-          : PageView.builder(
-              controller: pages,
-              itemCount: _starts.length,
-              onPageChanged: _turned,
-              itemBuilder: (_, index) => EbookScreenText(
-                text: widget.ebook.text,
-                from: _starts[index],
-                to: index + 1 < _starts.length
-                    ? _starts[index + 1]
-                    : widget.ebook.text.length,
-                fontSize: _font,
-              ),
-            ),
-      bottomNavigationBar: pages == null
+          : LayoutBuilder(builder: _screen),
+      bottomNavigationBar: loading
           ? null
           : ReaderBar(
               map: _map,
               offset: _offset,
               start: _start,
               paperStart: widget.paperStart,
-              onPrevious: _index > 0 ? () => _go(-1) : null,
-              onNext: _index + 1 < _starts.length ? () => _go(1) : null,
+              onPrevious: _offset > firstVisible(_text, 0)
+                  ? () => _go(-1)
+                  : null,
+              onNext: _atEnd ? null : () => _go(1),
               onStart: _begin,
               onStop: _stop,
             ),

@@ -109,6 +109,20 @@ class EbookMap {
     return last != null && last > 0 ? min(page, last) : page;
   }
 
+  /// The first offset on [page] ([chars] when the text ends before it).
+  int startOf(int page) {
+    var (lo, hi) = (0, chars);
+    while (lo < hi) {
+      final mid = (lo + hi) ~/ 2;
+      if (pageAt(mid) >= page) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return lo;
+  }
+
   /// An offset on [page] (its middle); the nearest end outside the map.
   int offsetAt(int page) {
     final target = page + 0.5;
