@@ -25,7 +25,13 @@ from book_guard._daily_lock import kept, one_number
 from book_guard._ledger import ESCAPE
 from book_guard._pace import Pace, compute_pace
 from book_guard._quiz import credited
-from book_guard._session_times import SessionTimes, apply_times, load_times
+from book_guard._session_times import (
+    SessionTimes,
+    apply_times,
+    apply_widened,
+    load_times,
+    widened,
+)
 from book_guard._sessions import (
     NEEDS_CHECK,
     NEEDS_QUIZ,
@@ -95,9 +101,11 @@ def _session_views(
     ledger: Ledger, records: dict[str, PhotoRecord], times: SessionTimes
 ) -> list[SessionView]:
     verdicts = ledger.verdicts()
+    signed = widened(ledger)
     views = []
     for session in build_sessions(_photos.usable_pages(records)):
         apply_times(session, times)
+        apply_widened(session, signed)
         found = verdicts.get(session.session_id, [])
         status = session.state
         if credited(found):

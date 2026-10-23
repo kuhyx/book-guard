@@ -12,7 +12,7 @@ from pathlib import Path
 import sys
 from typing import TYPE_CHECKING, Final, TextIO
 
-from book_guard import _ask_cli, _library_cli
+from book_guard import _ask_cli, _library_cli, _widen
 from book_guard._actions import next_quiz, notify, process
 from book_guard._attach import attach
 from book_guard._bonus import regrant
@@ -199,6 +199,7 @@ def _parser() -> argparse.ArgumentParser:
         ("library", "every book, its sessions and notes", _library_cli.cmd_library),
         ("regrant", "grant the day's bonus to credits that now earn it", _cmd_regrant),
         ("lock", "run the gate (locks only when behind pace)", _cmd_lock),
+        ("retime", "widen a session the app lost a photo of", _widen.cmd_retime),
     ]
     subs = {}
     for name, help_text, handler in commands:
@@ -229,6 +230,7 @@ def _parser() -> argparse.ArgumentParser:
     _ask_cli.configure(subs["ask"])
     _library_cli.configure(subs["library"])
     subs["regrant"].add_argument("--dry-run", action="store_true")
+    _widen.configure(subs["retime"])
     subs["lock"].add_argument("--production", action="store_true")
     subs["lock"].add_argument(
         "--today", type=date.fromisoformat, help="demo: pretend date"

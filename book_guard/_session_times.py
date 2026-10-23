@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from book_guard._ledger import Ledger
     from book_guard._sessions import Session
 
 _logger: Final = logging.getLogger(__name__)
@@ -67,3 +68,26 @@ def apply_times(session: Session, times: SessionTimes) -> None:
         session.started = start
     if end is not None and session.started_at < end < session.end.taken:
         session.ended = end
+
+
+RETIME: Final = "retime"
+"""The ledger kind of a signed, CLI-only correction (:mod:`book_guard._widen`)."""
+RETIME_PREFIX: Final = f"{RETIME}:"
+
+
+def widened(ledger: Ledger) -> SessionTimes:
+    """Every signed correction in ``ledger``, by session id."""
+    return {
+        e.entry_id.removeprefix(RETIME_PREFIX): (
+            when(e.detail.get("start")),
+            when(e.detail.get("end")),
+        )
+        for e in ledger.of_kind(RETIME)
+    }
+
+
+def apply_widened(session: Session, times: SessionTimes) -> None:
+    """Set ``session``'s signed times -- unclamped, unlike the reader's."""
+    start, end = times.get(session.session_id, (None, None))
+    session.started = start or session.started
+    session.ended = end or session.ended
