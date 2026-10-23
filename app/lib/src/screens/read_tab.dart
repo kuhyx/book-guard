@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
+import 'package:book_guard_app/src/screens/photo_delivery.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
+import 'package:book_guard_app/src/screens/session_buttons.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +33,7 @@ class ReadTab extends StatefulWidget {
     this.reader,
     this.local,
     this.journal = const [],
+    this.captures = const [],
   });
 
   /// The PC.
@@ -55,6 +59,9 @@ class ReadTab extends StatefulWidget {
 
   /// Every photo taken on this device.
   final List<JournalEntry> journal;
+
+  /// Photos back from the camera that were never sent.
+  final List<Capture> captures;
 
   @override
   State<ReadTab> createState() => _ReadTabState();
@@ -88,62 +95,102 @@ class _ReadTabState extends State<ReadTab> {
     }
   }
 
-  /// Reads the photo on the device, lets the reader confirm or box the
-  /// number, then queues it; waits for the PC's verdict only if the PC
-  /// is reachable -- a photo must never just vanish.
+  /// Takes a photo, stores it on the device at once, then reads it, lets
+  /// the reader confirm or box the number and queues it; waits for the
+  /// PC's verdict only if the PC is reachable -- a photo must never just
+  /// vanish. Every step is a lifecycle event for the PC's log.
   Future<void> _photo(String label) => _run('photo', () async {
+    final api = widget.api;
+    final id = api.newId();
+    await api.captures.launching(id, label);
+    await api.errors.event('photo', 'camera', {'attempt': id, 'label': label});
     final file = await widget.photoSource(camera: !widget.desktop);
-    if (file == null) return;
+    if (file == null) {
+      await api.captures.landed();
+      await api.errors.event('photo', 'no-photo', {'attempt': id});
+      return;
+    }
     final bytes = await file.readAsBytes();
+    final capture = await api.captures.keep(id, label, file.name, bytes);
+    await api.errors.event('photo', 'captured', {
+      'attempt': id,
+      'file': file.name,
+      'bytes': bytes.length,
+    });
+    await _send(capture, bytes);
+  });
+
+  /// Finishes a photo stored earlier and never sent.
+  Future<void> _resume(Capture capture) => _run('photo', () async {
+    final bytes = await widget.api.captures.bytes(capture);
+    if (bytes == null) return; // sent meanwhile
+    await widget.api.errors.event('photo', 'resumed', {'attempt': capture.id});
+    await _send(capture, bytes);
+  });
+
+  Future<void> _send(Capture capture, Uint8List bytes) async {
+    final api = widget.api;
+    final attempt = {'attempt': capture.id};
     if (!mounted) return;
     if (widget.reader != null) _note('Reading the page number...');
     final review = await reviewPhoto(
       context,
       reader: widget.reader,
       bytes: bytes,
-      fileName: file.name,
+      fileName: capture.fileName,
       pageContext: pageContextFor(
-        label,
+        capture.label,
         widget.state,
         widget.journal,
         _openStart,
       ),
-      errors: widget.api.errors,
+      errors: api.errors,
+      attempt: capture.id,
     );
-    if (review == null) return _note('Photo discarded - take it again.');
-    final name = await widget.api.queuePhoto(
-      label,
-      file.name,
+    if (review == null) {
+      // Back, or the screen went away: the photo stays on the phone.
+      await api.errors.event('photo', 'review-left', attempt);
+      return _note(
+        'Photo kept on the phone - finish it with the button above.',
+      );
+    }
+    if (review.retake) {
+      await api.captures.drop(capture);
+      await api.errors.event('photo', 'discarded', attempt);
+      return _note('Photo discarded - take it again.');
+    }
+    await api.errors.event('photo', 'reviewed', {
+      ...attempt,
+      'page': review.page,
+      'boxed': review.box != null,
+    });
+    final name = await api.queuePhoto(
+      capture.label,
+      capture.fileName,
       bytes,
       page: review.page,
       box: review.box,
     );
-    final seen = review.page == null ? '' : ' (p. ${review.page})';
-    if (await widget.api.flush() > 0) {
-      return _note(
-        'Saved on the phone$seen - it goes to the PC as soon as the PC is '
-        'reachable.',
-      );
-    }
-    _note('Uploaded$seen - waiting for the PC...');
-    final read = await widget.api.waitForPhoto(name);
+    await api.captures.drop(capture);
+    await api.errors.event('photo', 'queued', {...attempt, 'photo': name});
+    final sent = await deliverPhoto(
+      api,
+      name: name,
+      attempt: capture.id,
+      page: review.page,
+      onSent: _note,
+    );
     if (!mounted) return;
-    final note = photoVerdict(read);
-    _note(note);
-    if (read != null && read.accepted) {
-      showToast(context, note);
-    } else {
-      if (read != null) {
-        unawaited(
-          widget.api.errors.log('photo', read.reason, {
-            'photo': name,
-            'phone_page': review.page,
-          }),
-        );
-      }
-      showError(context, note);
+    _note(sent.note);
+    switch (sent.good) {
+      case true:
+        showToast(context, sent.note);
+      case false:
+        showError(context, sent.note);
+      case null:
+        break;
     }
-  });
+  }
 
   void _note(String text) {
     if (mounted) setState(() => _photoNote = text);
@@ -159,26 +206,13 @@ class _ReadTabState extends State<ReadTab> {
         if (_busy) const LinearProgressIndicator(),
         SessionPrompt(reading: reading, waiting: widget.local?.waiting ?? 0),
         const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            FilledButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () => _photo(reading == null ? 'start' : 'stop'),
-              icon: Icon(
-                widget.desktop ? Icons.upload_file : Icons.photo_camera,
-              ),
-              label: Text(reading == null ? 'Start reading' : 'Stop reading'),
-            ),
-            for (final s in checks)
-              FilledButton.tonalIcon(
-                onPressed: _busy ? null : () => _photo('check${s.checkPage}'),
-                icon: const Icon(Icons.fact_check),
-                label: Text('Photograph page ${s.checkPage}'),
-              ),
-          ],
+        SessionButtons(
+          reading: reading,
+          desktop: widget.desktop,
+          captures: widget.captures,
+          checks: checks,
+          onPhoto: _busy ? null : _photo,
+          onResume: _busy ? null : _resume,
         ),
         if (_photoNote case final note?) ...[
           const SizedBox(height: AppSpacing.sm),

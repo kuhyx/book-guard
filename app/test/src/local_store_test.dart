@@ -27,6 +27,19 @@ void main() {
     expect(await store.read('journal.json'), isNull);
   });
 
+  test('writes of one file at once never collide', () async {
+    // 2026-10-18 and -21 on the phone: two state.json writes shared one
+    // ".part" name and the second rename found it gone.
+    final store = FileStore(Directory('${root.path}/store'));
+    await Future.wait([
+      for (var i = 0; i < 50; i++)
+        store.write('state.json', Uint8List.fromList([i])),
+    ]);
+    expect((await store.read('state.json'))!.single, inInclusiveRange(0, 49));
+    final left = Directory('${root.path}/store').listSync();
+    expect(left.map((f) => f.path.split('/').last), ['state.json']);
+  });
+
   test('memory store behaves the same', () async {
     final store = api.MemoryStore();
     await store.write('b', Uint8List.fromList([1]));

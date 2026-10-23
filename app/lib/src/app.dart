@@ -6,6 +6,8 @@ import 'package:book_guard_app/src/local_store.dart';
 import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
+import 'package:book_guard_app/src/screens/read_support.dart'
+    show retrieveLostPhoto;
 import 'package:book_guard_app/src/screens/settings_screen.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -104,6 +106,7 @@ class _BookGuardAppState extends State<BookGuardApp> {
               api: api,
               desktop: widget.desktop,
               reader: widget.pageReader,
+              lostPhoto: widget.desktop ? null : retrieveLostPhoto,
               // The Navigator lives below MaterialApp, so HomeScreen pushes
               // this page with its own context.
               settingsPage: widget.desktop

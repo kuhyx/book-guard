@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
-"""_errlog: the shared failure log, phone entries, bug reports, outages."""
+"""_errlog: the shared failure log and Claude outages."""
 
 from __future__ import annotations
 
@@ -35,53 +35,8 @@ def test_log_error_never_raises(
     def broken(*_a: object) -> None:
         raise OSError
 
-    monkeypatch.setattr(_errlog, "_append", broken)
+    monkeypatch.setattr(_errlog, "append_entry", broken)
     _errlog.log_error(bg_paths, "x", "y")  # logged as a warning only
-
-
-def test_merge_phone(bg_paths: Paths) -> None:
-    assert _errlog.merge_phone(bg_paths) == 0
-    bg_paths.phone_logs.mkdir(parents=True)
-    (bg_paths.phone_logs / "a.json").write_text(
-        '{"stage": "reader", "error": "unreadable", "host": "desktop"}',
-        encoding="utf-8",
-    )
-    (bg_paths.phone_logs / "b.json").write_text('{"stage": "x"}', encoding="utf-8")
-    (bg_paths.phone_logs / "c.json").write_text("[1]", encoding="utf-8")
-    (bg_paths.phone_logs / "d.json").write_text("not json", encoding="utf-8")
-    assert _errlog.merge_phone(bg_paths) == 2
-    first, second = _lines(bg_paths)
-    assert first["host"] == "desktop"  # the sender's own label is kept
-    assert second["host"] == "phone"
-    assert list(bg_paths.phone_logs.iterdir()) == []
-
-
-def test_merge_reports(bg_paths: Paths) -> None:
-    assert _errlog.merge_reports(bg_paths) == 0
-    folder = bg_paths.uploaded_reports
-    folder.mkdir(parents=True)
-    (folder / "r1.jpg").write_bytes(b"jpeg")
-    (folder / "r1.json").write_text(
-        '{"photo": "start_a.jpg", "failure": "no page number found", "actual_page": 7}',
-        encoding="utf-8",
-    )
-    (folder / "r2.json").write_text("[]", encoding="utf-8")  # no image, not a dict
-    (folder / "r3.json").write_text("{bad", encoding="utf-8")
-    assert _errlog.merge_reports(bg_paths) == 2
-    assert sorted(p.name for p in bg_paths.reports.iterdir()) == [
-        "r1.jpg",
-        "r1.json",
-        "r2.json",
-    ]
-    first, second = _lines(bg_paths)
-    assert (first["stage"], first["error"], first["actual_page"]) == (
-        "bug-report",
-        "no page number found",
-        7,
-    )
-    assert str(first["report"]).endswith("r1.json")
-    assert second["error"] == "reported by the reader"
-    assert list(folder.iterdir()) == []
 
 
 def test_outage_marker(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> None:

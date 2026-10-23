@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -29,84 +30,6 @@ void main() {
       pollEvery: Duration.zero,
       timeout: const Duration(milliseconds: 50),
     );
-  });
-
-  group('outbox', () {
-    test('keeps order, stops at the first failure, resumes later', () async {
-      final outbox = Outbox(store, share.dav());
-      await outbox.put('inbox/a.jpg.json', _b('{}'));
-      await outbox.put('inbox/a.jpg', _b('jpeg'));
-      share.down = true;
-      expect(await outbox.flush(), 2);
-      expect(outbox.lastError?.status, 0);
-      expect(await outbox.pending(), 2);
-      share.down = false;
-      expect(await outbox.flush(), 0);
-      expect(outbox.lastError, isNull);
-      expect(share.files.keys, [
-        'Reading/inbox/a.jpg.json',
-        'Reading/inbox/a.jpg',
-      ]);
-      expect(await store.list('outbox/'), isEmpty);
-    });
-
-    test('an item whose body is gone is dropped', () async {
-      final outbox = Outbox(store, share.dav());
-      await outbox.put('x', _b('1'));
-      final body = (await store.list('outbox/'))
-          .firstWhere((n) => n.endsWith('.body'));
-      await store.delete(body);
-      expect(await outbox.flush(), 0);
-      expect(share.files, isEmpty);
-    });
-
-    test('concurrent flushes share one run', () async {
-      final outbox = Outbox(store, share.dav());
-      await outbox.put('x', _b('1'));
-      final both = await Future.wait([outbox.flush(), outbox.flush()]);
-      expect(both, [0, 0]);
-      expect(share.requests, hasLength(1));
-    });
-  });
-
-  group('error log', () {
-    test('keeps the newest entries and queues each for the PC', () async {
-      final outbox = Outbox(store, share.dav());
-      final log = ErrorLog(
-        store,
-        outbox,
-        host: 'phone',
-        clock: () => DateTime.utc(2026, 10, 3, 12, 27),
-        random: Random(2),
-      );
-      for (var i = 0; i < ErrorLog.keep + 3; i++) {
-        await log.log('upload', 'failed $i', {'n': i});
-      }
-      final kept = utf8.decode((await store.read('errors.jsonl'))!);
-      expect(const LineSplitter().convert(kept), hasLength(ErrorLog.keep));
-      expect(kept, isNot(contains('"failed 2"')));
-      share.down = true;
-      await outbox.flush();
-      final report = await log.diagnostics(last: 2);
-      expect(report, contains('waiting to send: ${ErrorLog.keep + 3}'));
-      expect(report, contains('last send failed'));
-      expect(report, contains('"failed ${ErrorLog.keep + 2}"'));
-      expect(report, isNot(contains('"failed 0"')));
-      share.down = false;
-      await outbox.flush();
-      final sent = share.files.keys.where(
-        (k) => k.startsWith('Reading/logs/phone/'),
-      );
-      expect(sent, hasLength(ErrorLog.keep + 3));
-      final entry = jsonDecode(share.text(sent.first)!) as Map<String, dynamic>;
-      expect(entry, containsPair('host', 'phone'));
-      expect(entry, containsPair('stage', 'upload'));
-    });
-
-    test('an empty log still reports its queue', () async {
-      final log = ErrorLog(store, Outbox(store, share.dav()), host: 'desktop');
-      expect(await log.diagnostics(), contains('waiting to send: 0'));
-    });
   });
 
   group('GuardApi offline', () {
@@ -191,6 +114,74 @@ void main() {
       expect(await api.localPhoto(name), _b('jpeg'));
     });
 
+    test('a snapshot listing a photo marks it read for good', () async {
+      await api.queuePhoto('start', 'a.jpg', _b('a'));
+      await api.queuePhoto('stop', 'b.jpg', _b('b'));
+      share.putText(
+        'Reading/state.json',
+        jsonEncode({
+          'photos': [
+            {'name': 'start_a.jpg', 'file': 'processed/x-start_a.jpg'},
+          ],
+        }),
+      );
+      await api.fetchState();
+      final [a, b] = await api.journal.load();
+      expect((a.seen, b.seen), (true, false));
+    });
+
+    test('lifecycle events wait in their own queue and go up', () async {
+      await api.errors.event('photo', 'camera', {'attempt': 'a1'});
+      expect(await api.outbox.pending(), 0); // not "waiting on the phone"
+      expect(await api.eventbox.pending(), 1);
+      expect(await api.flush(), 0);
+      final [sent] = share.files.keys.toList();
+      expect(sent, startsWith('Reading/logs/phone/'));
+      expect(jsonDecode(share.text(sent)!), {
+        'at': isA<String>(),
+        'host': 'phone',
+        'level': 'event',
+        'stage': 'photo',
+        'event': 'camera',
+        'attempt': 'a1',
+      });
+    });
+
+    test('an event that cannot be stored is dropped, never thrown', () async {
+      final log = ErrorLog(
+        _BrokenStore(),
+        Outbox(_BrokenStore(), share.dav()),
+        host: 'phone',
+      );
+      await log.event('photo', 'camera');
+    });
+
+    test('a photo upload reports itself: failed once, then sent', () async {
+      await api.queuePhoto('start', 'a.jpg', _b('a'), page: 7);
+      share.down = true;
+      await api.flush();
+      await api.flush(); // still down: no second "failed"
+      share.down = false;
+      await api.flush();
+      await api.flush(); // the "uploaded" event itself goes up
+      final logged = [
+        for (final k in share.files.keys)
+          if (k.startsWith('Reading/logs/phone/'))
+            jsonDecode(share.text(k)!) as Map<String, dynamic>,
+      ];
+      expect(
+        [for (final e in logged) (e['event'], e['photo'])],
+        unorderedEquals([
+          ('upload-failed', 'start_a.jpg'),
+          ('uploaded', 'start_a.jpg'),
+        ]),
+      );
+      expect(
+        logged.firstWhere((e) => e['event'] == 'upload-failed')['error'],
+        contains('unreachable'),
+      );
+    });
+
     test('only the newest photos are kept on the device', () async {
       for (var i = 0; i < keptPhotos + 2; i++) {
         await api.queuePhoto('start', 'p$i.jpg', _b('$i'));
@@ -220,4 +211,21 @@ void main() {
       expect(await api.uploadPhoto('toc-a.jpg', _b('x')), ('toc-a.jpg', false));
     });
   });
+}
+
+/// A store whose every call fails, like a full or vanished disk.
+class _BrokenStore implements LocalStore {
+  @override
+  Future<Uint8List?> read(String name) => throw const FileSystemException('x');
+
+  @override
+  Future<void> write(String name, Uint8List bytes) =>
+      throw const FileSystemException('x');
+
+  @override
+  Future<void> delete(String name) => throw const FileSystemException('x');
+
+  @override
+  Future<List<String>> list(String prefix) =>
+      throw const FileSystemException('x');
 }

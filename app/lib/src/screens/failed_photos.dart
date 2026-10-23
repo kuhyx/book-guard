@@ -32,11 +32,12 @@ List<FailedPhoto> failedPhotos(GuardState? state, List<JournalEntry> journal) {
   final byName = {
     for (final p in state?.photos ?? const <PhotoInfo>[]) p.name: p,
   };
+  final known = knownToPc(state, journal);
   return [
     for (final e in journal.reversed)
       if (byName[e.name] case final pc? when !pc.accepted)
         FailedPhoto(entry: e, reason: pc.caption, pc: pc)
-      else if (!byName.containsKey(e.name) && e.page == null)
+      else if (!known.contains(e.name) && e.page == null)
         FailedPhoto(entry: e, reason: 'the phone found no page number'),
   ];
 }

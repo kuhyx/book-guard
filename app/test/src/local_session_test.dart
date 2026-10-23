@@ -1,28 +1,14 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
-import 'package:book_guard_app/src/local_store.dart';
+import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Uint8List _b(String text) => Uint8List.fromList(utf8.encode(text));
+import '../support/journal_fixtures.dart';
 
 void main() {
-  late MemoryStore store;
-
-  setUp(() => store = MemoryStore());
-
   group('local session view', () {
-    final t0 = DateTime.utc(2026, 10, 3, 12);
-    JournalEntry e(String name, String label, int? page, int minutes) =>
-        JournalEntry(
-          name: name,
-          label: label,
-          sha: photoSha(_b(name)),
-          takenAt: t0.add(Duration(minutes: minutes)),
-          page: page,
-        );
+    final t0 = journalStart;
+    const e = journalEntry;
 
     GuardState state({int? openStart, List<String> photos = const []}) =>
         GuardState.fromJson({
@@ -104,15 +90,88 @@ void main() {
       expect(view.needSummary.single.id, 'session:pc');
     });
 
-    test('journal entries round-trip and the journal is capped', () async {
-      final journal = Journal(store);
-      for (var i = 0; i < Journal.keep + 1; i++) {
-        await journal.add(e('n$i', 'start', i, i));
-      }
-      final all = await journal.load();
-      expect(all, hasLength(Journal.keep));
-      expect(all.first.name, 'n1');
-      expect(all.last.takenAt, t0.add(const Duration(minutes: Journal.keep)));
+    test('a full journal: entries outside the PC window are not replayed', () {
+      // 2026-10-23: the journal keeps 200 photos, state.json only the 40
+      // newest -- every older one used to count as "not read yet" and
+      // rebuild sessions the PC closed weeks ago.
+      final journal = [
+        e('old_start', 'start', 104, 0),
+        e('old_stop', 'stop', 151, 50),
+        e('old_check', 'check119', 119, 52),
+        e('old_check30', 'check30', 30, 53),
+        for (var i = 4; i < Journal.keep - 2; i++)
+          e('n$i', i.isEven ? 'start' : 'stop', 200 + i, 60 * i),
+        e('new_start', 'start', 600, 60 * 300),
+        e('new_stop', 'stop', 620, 60 * 300 + 30),
+      ];
+      final listed = journal.sublist(Journal.keep - 42, Journal.keep - 2);
+      final view = localView(
+        windowState(photos: [for (final p in listed) p.name]),
+        journal,
+      )!;
+      expect(view.waiting, 2);
+      expect(view.needSummary, isEmpty);
+      expect(view.needCheck.map((s) => (s.startPage, s.endPage)), [
+        (0, 0), // the PC's own session:pc, unanswered by the old check30
+        (600, 620),
+      ]);
+      expect(view.openStart, isNull);
+      expect(
+        failedPhotos(windowState(photos: [listed.last.name]), [
+          e('old_unread', 'start', null, 0),
+          ...listed,
+          e('new_unread', 'start', null, 60 * 400),
+        ]).map((f) => f.entry.name),
+        ['new_unread'],
+      );
+    });
+
+    test('photos older than the whole PC window are known by time', () {
+      // Nothing the phone took is listed (desktop uploads filled the
+      // window): what was taken before its oldest photo is long read.
+      final old = [e('a', 'start', 104, 0), e('b', 'stop', 151, 50)];
+      final fresh = e('c', 'start', 300, 600);
+      final view = localView(
+        windowState(
+          photos: ['desktop1', 'desktop2'],
+          takenAt: t0.add(const Duration(minutes: 100)),
+        ),
+        [...old, fresh],
+      )!;
+      expect((view.waiting, view.openStart), (1, 300));
+      expect(view.needSummary, isEmpty);
+    });
+
+    test("today's sequence: the PC's open start stays open", () {
+      // The PC read start p252 and lists it; the old Oct 4 start/stop/check
+      // dropped out of its window. The app must say "Stop reading".
+      final journal = [
+        e('start_104', 'start', 104, 0),
+        e('stop_151', 'stop', 151, 50),
+        e('check119', 'check119', 119, 52),
+        for (var i = 0; i < 39; i++) e('w$i', 'check$i', i, 100 + i),
+        e('start_252', 'start', 252, 1000),
+      ];
+      final listed = [for (final p in journal.skip(3)) p.name];
+      final pc = windowState(openStart: 252, photos: listed);
+      expect(localView(pc, journal), isNull);
+      // A genuinely new check photo is still pending -- and still leaves
+      // the session the PC holds open.
+      final view = localView(pc, [...journal, e('c30', 'check30', 30, 1010)])!;
+      expect((view.openStart, view.waiting), (252, 1));
+      expect(view.needSummary.single.id, 'session:pc');
+    });
+
+    test('a new start not uploaded yet is pending and shown', () {
+      final journal = [
+        for (var i = 0; i < 40; i++) e('w$i', 'check$i', i, i),
+        e('start_new', 'start', 260, 100),
+      ];
+      final view = localView(
+        windowState(photos: [for (final p in journal.take(40)) p.name]),
+        journal,
+      )!;
+      expect((view.openStart, view.waiting), (260, 1));
     });
   });
 }

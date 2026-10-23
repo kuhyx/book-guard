@@ -14,13 +14,13 @@ from book_guard._app_handlers import HANDLERS
 from book_guard._autogrant import auto_grant
 from book_guard._books import current, normalise_chapters, register
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
-from book_guard._errlog import merge_phone, merge_reports
 from book_guard._flock import exclusive
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
 from book_guard._indexer import kick, mark_queued
 from book_guard._ledger import ESCAPE, Entry
 from book_guard._openlibrary import BookInfo
+from book_guard._phone_logs import merge_phone, merge_reports
 from book_guard._publish import write_next_file
 from book_guard._render import todo_lines
 from book_guard._requests import handle_requests

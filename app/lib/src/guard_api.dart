@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:book_guard_app/src/capture.dart';
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/error_log.dart';
 import 'package:book_guard_app/src/guard_response.dart';
@@ -11,9 +13,14 @@ import 'package:book_guard_app/src/local_store.dart';
 import 'package:book_guard_app/src/outbox.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/photo_reports.dart';
+import 'package:book_guard_app/src/responses.dart';
+import 'package:book_guard_app/src/snapshot.dart';
+import 'package:book_guard_app/src/upload_log.dart';
 
+export 'package:book_guard_app/src/capture.dart';
 export 'package:book_guard_app/src/guard_response.dart';
 export 'package:book_guard_app/src/photo_reports.dart';
+export 'package:book_guard_app/src/snapshot.dart';
 
 /// book-guard's file protocol over the dufs share (see the Python side's
 /// `_requests.py`): read `state.json`, drop request files, poll responses,
@@ -39,8 +46,11 @@ class GuardApi {
        _timeout = timeout ?? const Duration(minutes: 5),
        store = store ?? MemoryStore() {
     outbox = Outbox(this.store, dav);
-    errors = ErrorLog(this.store, outbox, host: host);
+    eventbox = Outbox(this.store, dav, dir: 'eventbox/');
+    errors = ErrorLog(this.store, outbox, host: host, events: eventbox);
+    outbox.onSent = UploadLog(errors).call;
     journal = Journal(this.store);
+    captures = Captures(this.store);
   }
 
   /// The share.
@@ -58,12 +68,24 @@ class GuardApi {
   /// Every photo taken here.
   late final Journal journal;
 
+  /// Photos back from the camera and not queued yet.
+  late final Captures captures;
+
+  /// The photo pipeline's lifecycle events, bound for the PC's
+  /// `logs/phone-events.jsonl`; apart from [outbox] so they never count as
+  /// photos waiting.
+  late final Outbox eventbox;
+
   final Random _random;
   final Duration _pollEvery;
   final Duration _timeout;
+  late final _responses = Responses(
+    dav,
+    pollEvery: _pollEvery,
+    timeout: _timeout,
+  );
 
   static const _root = 'Reading';
-  static const _stateFile = 'state.json';
   static const _pending = 'pending/';
 
   /// The latest snapshot, or null before the PC ever wrote one. Kept on
@@ -72,20 +94,18 @@ class GuardApi {
     final text = await dav.getText('$_root/state.json');
     if (text == null) return null;
     final state = GuardState.fromJson(jsonDecode(text) as Map<String, dynamic>);
-    await store.write(_stateFile, Uint8List.fromList(utf8.encode(text)));
+    await store.write(snapshotFile, Uint8List.fromList(utf8.encode(text)));
+    // Its photo list is only the newest 40: what it shows read stays read.
+    await journal.markSeen(state);
     return state;
   }
 
-  /// Sends what the outbox holds; returns how many items still wait.
-  Future<int> flush() => outbox.flush();
-
-  /// The last snapshot fetched, for when the PC cannot be reached.
-  Future<GuardState?> cachedState() async {
-    final raw = await store.read(_stateFile);
-    if (raw == null) return null;
-    return GuardState.fromJson(
-      jsonDecode(utf8.decode(raw)) as Map<String, dynamic>,
-    );
+  /// Sends what the outbox holds, then the lifecycle events; returns how
+  /// many outbox items still wait.
+  Future<int> flush() async {
+    final waiting = await outbox.flush();
+    await eventbox.flush();
+    return waiting;
   }
 
   /// A fresh request id the PC accepts (`[A-Za-z0-9_-]{8,64}`).
@@ -104,7 +124,7 @@ class GuardApi {
       '$_root/requests/$id.json',
       Uint8List.fromList(utf8.encode(jsonEncode(payload))),
     );
-    return await _await(id) ?? _notYet;
+    return await _responses.wait(id) ?? _notYet;
   }
 
   static const _notYet = GuardResponse(
@@ -135,7 +155,7 @@ class GuardApi {
             'as the PC is reachable.',
       );
     }
-    final answer = await _await(id);
+    final answer = await _responses.wait(id);
     if (answer == null) return _notYet;
     await store.delete('$_pending$id');
     return answer;
@@ -146,36 +166,13 @@ class GuardApi {
     final found = <LateAnswer>[];
     for (final name in await store.list(_pending)) {
       final id = name.substring(_pending.length);
-      final response = await _take(id);
+      final response = await _responses.take(id);
       if (response == null) continue;
       final what = utf8.decode(await store.read(name) ?? const []);
       await store.delete(name);
       found.add((what: what, response: response));
     }
     return found;
-  }
-
-  Future<GuardResponse?> _await(String id) async {
-    final deadline = DateTime.now().add(_timeout);
-    while (DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(_pollEvery);
-      final response = await _take(id);
-      if (response != null) return response;
-    }
-    return null;
-  }
-
-  Future<GuardResponse?> _take(String id) async {
-    final text = await dav.getText('$_root/responses/$id.json');
-    if (text == null) return null;
-    await dav.delete('$_root/responses/$id.json');
-    final json = jsonDecode(text) as Map<String, dynamic>;
-    return GuardResponse(
-      ok: json['ok'] == true,
-      message: '${json['message'] ?? ''}',
-      passed: json['passed'] as bool?,
-      data: json['data'] as Map<String, dynamic>?,
-    );
   }
 
   /// Stores a photo on the device and queues it (sidecar note first) for

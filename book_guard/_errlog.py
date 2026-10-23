@@ -11,8 +11,8 @@ Written for a later Claude session as much as for a human: grep a stage,
 only the CLI's (empty) stderr -- "claude exited 1:" -- and the reason, which
 the CLI prints on stdout, was lost.
 
-The phone cannot append over WebDAV, so it uploads one file per entry to
-``Reading/logs/phone/``; :func:`merge_phone` folds them in on every pass.
+The phone's entries and bug reports arrive as files and are folded in by
+:mod:`book_guard._phone_logs`.
 
 ``data/claude_down.json`` marks an ongoing Claude outage, so the app can say
 "waiting for the grader (Claude unavailable since 12:27)" instead of a bare
@@ -41,7 +41,6 @@ _logger: Final = logging.getLogger(__name__)
 
 PC: Final = "pc"
 PHONE: Final = "phone"
-_MAX_PHONE_ENTRY: Final = 64_000
 _RESETS: Final = re.compile(
     r"\bresets\s+(\d{1,2})(?::(\d{2}))?\s*([ap]m)?(?![\w:])"
     r"(?:\s*\(([A-Za-z_]+(?:/[A-Za-z0-9_+-]+)*)\))?",
@@ -51,9 +50,13 @@ _HALF_DAY: Final = 12
 _HOUR: Final = 60
 
 
-def _append(paths: Paths, entry: dict[str, object]) -> None:
-    paths.error_log.parent.mkdir(parents=True, exist_ok=True)
-    with paths.error_log.open("a", encoding="utf-8") as log:
+def append_entry(
+    paths: Paths, entry: dict[str, object], *, events: bool = False
+) -> None:
+    """Append one entry to the error log (or, ``events``, the phone's events)."""
+    target = paths.phone_events if events else paths.error_log
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as log:
         log.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
 
 
@@ -67,70 +70,9 @@ def log_error(paths: Paths, stage: str, error: str, **detail: object) -> None:
         **detail,
     }
     try:
-        _append(paths, entry)
+        append_entry(paths, entry)
     except OSError as exc:
         _logger.warning("could not write %s (%s)", paths.error_log, exc)
-
-
-def merge_phone(paths: Paths) -> int:
-    """Fold the phone's uploaded entries into the log; returns how many."""
-    folder = paths.phone_logs
-    if not folder.is_dir():
-        return 0
-    merged = 0
-    for path in sorted(folder.glob("*.json")):
-        try:
-            raw = path.read_text(encoding="utf-8")[:_MAX_PHONE_ENTRY]
-            entry = json.loads(raw)
-        except (OSError, ValueError) as exc:
-            _logger.warning("dropping unreadable phone log %s (%s)", path.name, exc)
-            path.unlink(missing_ok=True)
-            continue
-        if isinstance(entry, dict):
-            _append(paths, {"host": PHONE, **entry})
-            merged += 1
-        path.unlink(missing_ok=True)
-    return merged
-
-
-def merge_reports(paths: Paths) -> int:
-    """File the app's "this should not have failed" reports; returns how many.
-
-    Each is a JPEG plus a JSON note (sent after the JPEG, so a note means
-    both are there). Both move out of the share into ``data/reports/`` --
-    the start of a new ``scripts/page_truth.py`` row -- and the log gets a
-    ``bug-report`` line pointing at them.
-    """
-    folder = paths.uploaded_reports
-    if not folder.is_dir():
-        return 0
-    filed = 0
-    paths.reports.mkdir(parents=True, exist_ok=True)
-    for note in sorted(folder.glob("*.json")):
-        try:
-            detail = json.loads(note.read_text(encoding="utf-8")[:_MAX_PHONE_ENTRY])
-        except (OSError, ValueError) as exc:
-            _logger.warning("dropping unreadable report %s (%s)", note.name, exc)
-            note.unlink(missing_ok=True)
-            continue
-        image = note.with_suffix(".jpg")
-        if image.exists():
-            image.replace(paths.reports / image.name)
-        note.replace(paths.reports / note.name)
-        fields = detail if isinstance(detail, dict) else {}
-        _append(
-            paths,
-            {
-                "host": PHONE,
-                **fields,
-                "at": datetime.now().astimezone().isoformat(timespec="seconds"),
-                "stage": "bug-report",
-                "error": str(fields.get("failure", "reported by the reader")),
-                "report": str(paths.reports / note.name),
-            },
-        )
-        filed += 1
-    return filed
 
 
 def reset_at(error: str, since: datetime) -> datetime | None:

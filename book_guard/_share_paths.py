@@ -26,6 +26,11 @@ class SharePaths:
         return self.reading_dir / "logs" / "errors.jsonl"
 
     @property
+    def phone_events(self) -> Path:
+        """The app's photo-pipeline steps (camera, captured, queued...)."""
+        return self.reading_dir / "logs" / "phone-events.jsonl"
+
+    @property
     def uploaded_reports(self) -> Path:
         """Bug reports ("this should not have failed"), as uploaded."""
         return self.reading_dir / "logs" / "reports"

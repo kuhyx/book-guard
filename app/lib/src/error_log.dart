@@ -17,14 +17,22 @@ class ErrorLog {
     required this.host,
     DateTime Function()? clock,
     Random? random,
+    Outbox? events,
   }) : _clock = clock ?? DateTime.now,
-       _random = random ?? Random();
+       _random = random ?? Random(),
+       events = events ?? outbox;
 
   /// The local copy.
   final LocalStore store;
 
   /// Sends entries to the PC.
   final Outbox outbox;
+
+  /// Sends lifecycle events to the PC: its own queue, so they never count
+  /// as items "waiting on the phone".
+  final Outbox events;
+
+  final _serial = Serial();
 
   /// `phone` or `desktop`.
   final String host;
@@ -51,13 +59,43 @@ class ErrorLog {
       'error': error,
       ...detail,
     });
-    final lines = [...await _lines(), line];
-    final kept = lines.length > keep
-        ? lines.sublist(lines.length - keep)
-        : lines;
-    await store.write(_file, _bytes('${kept.join('\n')}\n'));
+    // Queued for the PC first: a failing local copy must not lose it.
+    await outbox.put(_name(), _bytes(line));
+    await _serial.run(() async {
+      final lines = [...await _lines(), line];
+      final kept = lines.length > keep
+          ? lines.sublist(lines.length - keep)
+          : lines;
+      await store.write(_file, _bytes('${kept.join('\n')}\n'));
+    });
+  }
+
+  /// Records one step of the photo pipeline (`camera`, `captured`,
+  /// `queued`, `uploaded`...) for the PC's `logs/phone-events.jsonl`.
+  /// Never throws: a log must not cost a photo.
+  Future<void> event(
+    String stage,
+    String what, [
+    Map<String, Object?> detail = const {},
+  ]) async {
+    try {
+      final line = jsonEncode({
+        'at': _clock().toIso8601String(),
+        'host': host,
+        'level': 'event',
+        'stage': stage,
+        'event': what,
+        ...detail,
+      });
+      await events.put(_name(), _bytes(line));
+    } on Object catch (_) {
+      // Nowhere left to report it; the photo goes on regardless.
+    }
+  }
+
+  String _name() {
     final id = List.generate(12, (_) => _random.nextInt(16).toRadixString(16));
-    await outbox.put('logs/phone/${id.join()}.json', _bytes(line));
+    return 'logs/phone/${id.join()}.json';
   }
 
   Future<List<String>> _lines() async {

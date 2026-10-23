@@ -27,6 +27,11 @@ class FileStore implements LocalStore {
 
   File _file(String name) => File('${root.path}/$name');
 
+  /// Makes every temp name unique: two writes of one file at once (the
+  /// 10 s refresh and a photo's wait both storing state.json) used to share
+  /// one ".part" and the second rename found it gone.
+  static int _seq = 0;
+
   @override
   Future<Uint8List?> read(String name) async {
     final file = _file(name);
@@ -38,7 +43,7 @@ class FileStore implements LocalStore {
     final file = _file(name);
     await file.parent.create(recursive: true);
     // Write aside, then rename: a killed app never leaves half a file.
-    final temp = File('${file.path}.part');
+    final temp = File('${file.path}.${_seq++}.part');
     await temp.writeAsBytes(bytes, flush: true);
     await temp.rename(file.path);
   }

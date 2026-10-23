@@ -1,12 +1,13 @@
 import 'dart:async';
 
-import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/screens/home_nav_bar.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
+import 'package:book_guard_app/src/screens/offline_note.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
@@ -30,7 +31,12 @@ class HomeScreen extends StatefulWidget {
     this.settingsPage,
     this.refreshEvery = const Duration(seconds: 10),
     this.reader,
+    this.lostPhoto,
   });
+
+  /// The photo Android kept when it stopped the app while the camera was
+  /// open; null on the desktop.
+  final LostPhoto? lostPhoto;
 
   /// On-device page reading; null on the desktop.
   final PageReader? reader;
@@ -51,23 +57,40 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   GuardState? _state;
   Object? _error;
   int _tab = 0;
   Timer? _timer;
   List<JournalEntry> _journal = const [];
+  List<Capture> _captures = const [];
   int _waiting = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_start());
     _timer = Timer.periodic(widget.refreshEvery, (_) => refresh());
   }
 
+  /// Leaving the app mid-photo is how a photo got lost once: the log says
+  /// when it happened.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.resumed) {
+      unawaited(widget.api.errors.event('app', state.name));
+    }
+  }
+
   /// Shows the last snapshot at once, then asks the PC.
   Future<void> _start() async {
+    try {
+      await widget.api.recoverCamera(widget.lostPhoto);
+    } on Exception catch (error) {
+      await widget.api.errors.log('camera', '$error');
+    }
     final cached = await widget.api.cachedState();
     final journal = await widget.api.journal.load();
     if (mounted && _state == null) {
@@ -81,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
   }
@@ -104,11 +128,13 @@ class _HomeScreenState extends State<HomeScreen> {
       await api.settleGrading(s);
     }
     final journal = await api.journal.load();
+    final captures = await api.captures.pending();
     if (!mounted) return;
     setState(() {
       _state = state;
-      _error = error == null ? null : _explain(error, state, waiting);
+      _error = error == null ? null : explainOffline(error, state, waiting);
       _journal = journal;
+      _captures = captures;
       _waiting = waiting;
     });
     if (answers.isEmpty) return;
@@ -118,22 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
     answers.every((a) => a.response.ok && (a.response.passed ?? true))
         ? showToast(context, text)
         : showError(context, text);
-  }
-
-  /// An unreachable PC is a mode, not an error: say what still works.
-  Object _explain(Object error, GuardState? state, int waiting) {
-    if (error is! DavException || error.status != 0) return error;
-    final at = state?.generatedAt?.toLocal();
-    final when = at == null
-        ? ''
-        : ' Showing the state from ${at.day}.${at.month} '
-              '${at.hour.toString().padLeft(2, '0')}:'
-              '${at.minute.toString().padLeft(2, '0')}.';
-    final queued = waiting == 0
-        ? ''
-        : ' $waiting item(s) wait on the phone and go up automatically.';
-    return 'Working offline - the PC cannot be reached.$when$queued '
-        'Photos, page numbers and summaries all work offline.';
   }
 
   Future<void> _copyDiagnostics() async {
@@ -169,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
         reader: widget.reader,
         local: local,
         journal: _journal,
+        captures: _captures,
       ),
       BookTab(
         api: widget.api,
@@ -213,34 +224,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.insights),
-            label: 'Status',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible:
-                  (local?.needCheck ?? state?.needCheck ?? const []).length +
-                      (local?.needSummary ?? state?.needSummary ?? const [])
-                          .length >
-                  0,
-              child: const Icon(Icons.menu_book),
-            ),
-            label: 'Read',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.library_books),
-            label: 'Book',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.local_library),
-            label: 'Library',
-          ),
-        ],
+      bottomNavigationBar: HomeNavBar(
+        selected: _tab,
+        onSelected: (i) => setState(() => _tab = i),
+        readWaiting:
+            (local?.needCheck ?? state?.needCheck ?? const []).isNotEmpty ||
+            (local?.needSummary ?? state?.needSummary ?? const []).isNotEmpty,
       ),
     );
   }

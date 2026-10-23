@@ -5,21 +5,12 @@ import 'dart:typed_data';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/box_painter.dart';
+import 'package:book_guard_app/src/screens/review_result.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-/// What the review screen settled on for one photo.
-class ReviewResult {
-  /// Creates a result.
-  const new({this.page, this.box});
-
-  /// The page number the phone read (null: let the PC decide).
-  final int? page;
-
-  /// Where it is, in the stored file's pixels.
-  final Box? box;
-}
+export 'package:book_guard_app/src/screens/review_result.dart';
 
 /// Shows the photo upright with the page number the phone found boxed.
 ///
@@ -138,7 +129,9 @@ class _PhotoReviewState extends State<PhotoReview> {
               child: Row(
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pop(const ReviewResult(retake: true)),
                     child: const Text('Retake'),
                   ),
                   const Spacer(),

@@ -130,7 +130,8 @@ void main() {
         true,
       ));
       await api.uploadPhoto('/sdcard/DCIM/a/b.jpg', bytes);
-      expect(share.files.keys, [
+      // Each upload also logs itself for the PC (logs/phone/).
+      expect(share.files.keys.where((k) => k.startsWith('Reading/inbox/')), [
         'Reading/inbox/IMG_1_2_.jpg',
         'Reading/inbox/b.jpg',
       ]);

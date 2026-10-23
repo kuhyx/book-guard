@@ -40,5 +40,24 @@ class MemoryStore implements LocalStore {
       [..._items.keys.where((k) => k.startsWith(prefix))]..sort();
 }
 
+/// Runs actions one at a time, in call order, so one read-modify-write of
+/// a stored file never interleaves with another (two at once used to drop
+/// the first one's change).
+class Serial {
+  // Null until the first action: a ready future made up front belongs to
+  // the zone that built this, and a test's fake clock would never run it.
+  Future<void>? _last;
+
+  /// Runs [action] after every action queued before it.
+  Future<T> run<T>(Future<T> Function() action) {
+    final last = _last;
+    final result = last == null
+        ? Future.sync(action)
+        : last.then((_) => action());
+    _last = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+}
+
 /// Files on the phone, memory on the web.
 Future<LocalStore> createLocalStore() => platform.createLocalStore();

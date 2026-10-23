@@ -23,6 +23,15 @@ Future<XFile?> pickPhoto({required bool camera}) => ImagePicker().pickImage(
   source: camera ? ImageSource.camera : ImageSource.gallery,
 );
 
+/// The default `LostPhoto`: what Android kept from a camera the app was
+/// stopped behind (`retrieveLostData`), on the phone only.
+Future<(String, Uint8List)?> retrieveLostPhoto() async {
+  final lost = await ImagePicker().retrieveLostData();
+  final file = lost.file;
+  if (lost.isEmpty || file == null) return null;
+  return (file.name, await file.readAsBytes());
+}
+
 /// What the page number of a [label] photo has to fit, from the snapshot,
 /// this phone's [journal] and the page reading started at.
 PageContext pageContextFor(
@@ -62,9 +71,16 @@ Future<ReviewResult?> reviewPhoto(
   required String fileName,
   required PageContext pageContext,
   required ErrorLog errors,
+  String? attempt,
 }) async {
   if (reader == null) return const ReviewResult();
   final scan = await reader.scan(bytes);
+  // What the phone read, before anyone confirms it: the step a photo was
+  // once lost after (2026-10-23, "Page 252?" and then gone).
+  await errors.event('photo', 'scanned', {
+    'attempt': ?attempt,
+    'hits': scan == null ? null : [for (final h in scan.hits) h.value],
+  });
   if (scan == null) {
     unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));
     return const ReviewResult();
