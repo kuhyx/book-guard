@@ -6,6 +6,7 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
+import 'package:book_guard_app/src/screens/failed_photo_card.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
 import 'package:book_guard_app/src/screens/report_dialog.dart';
 import 'package:design_system/design_system.dart';
@@ -45,7 +46,8 @@ List<FailedPhoto> failedPhotos(GuardState? state, List<JournalEntry> journal) {
 /// The failed photos, each with "box the number" (the PC reads it again
 /// inside the box) and "this should not fail" (a bug report: the photo,
 /// what both readers made of it and what it really shows, sent to the PC's
-/// `Reading/logs/reports/`).
+/// `Reading/logs/reports/`), and "dismiss" / "clear all", which only hide
+/// cards on this device (a later failure with a new name still shows).
 class FailedPhotos extends StatefulWidget {
   /// Creates the section.
   const new({
@@ -81,6 +83,19 @@ class _FailedPhotosState extends State<FailedPhotos> {
   final _reported = <String>{};
 
   final _loads = <String, Future<(Uint8List?, bool)>>{};
+
+  /// Names hidden on this device; null until read from the store.
+  Set<String>? _dismissed;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(
+      widget.api.dismissedPhotos().then((names) {
+        if (mounted) setState(() => _dismissed = names);
+      }),
+    );
+  }
 
   Future<Uint8List?> _photo(String name) async =>
       _bytes[name] ??= await widget.api.localPhoto(name);
@@ -157,70 +172,49 @@ class _FailedPhotosState extends State<FailedPhotos> {
     );
   }
 
+  Future<void> _dismiss(Iterable<FailedPhoto> failed) async {
+    final names = [for (final f in failed) f.entry.name];
+    setState(() => _dismissed?.addAll(names));
+    for (final name in names) {
+      await widget.api.dismissPhoto(name);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final failed = failedPhotos(widget.state, widget.journal);
+    final hidden = _dismissed;
+    if (hidden == null) return const SizedBox.shrink();
+    final failed = [
+      for (final f in failedPhotos(widget.state, widget.journal))
+        if (!hidden.contains(f.entry.name)) f,
+    ];
     if (failed.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader('Failed photos'),
+        SectionHeader(
+          'Failed photos',
+          action: TextButton(
+            onPressed: () => _dismiss(failed),
+            child: const Text('Clear all'),
+          ),
+        ),
         for (final f in failed)
           FutureBuilder<(Uint8List?, bool)>(
             future: _loads[f.entry.name] ??= _load(f.entry.name),
             builder: (context, snap) {
               final bytes = snap.data?.$1;
-              final reported =
-                  (snap.data?.$2 ?? false) || _reported.contains(f.entry.name);
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 72,
-                        height: 96,
-                        child: bytes == null
-                            ? const Icon(Icons.image_not_supported)
-                            : Image.memory(
-                                bytes,
-                                fit: BoxFit.cover,
-                                cacheWidth: 144,
-                              ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('${f.entry.label}: ${f.reason}'),
-                            Wrap(
-                              spacing: AppSpacing.xs,
-                              children: [
-                                if (f.pc != null && widget.reader != null)
-                                  TextButton(
-                                    onPressed: () => _box(f),
-                                    child: const Text('Box the number'),
-                                  ),
-                                TextButton(
-                                  onPressed: reported || bytes == null
-                                      ? null
-                                      : () => _report(f),
-                                  child: Text(
-                                    reported
-                                        ? 'Reported'
-                                        : 'This should not fail',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return FailedPhotoCard(
+                failed: f,
+                bytes: bytes,
+                reported:
+                    (snap.data?.$2 ?? false) ||
+                    _reported.contains(f.entry.name),
+                onBox: f.pc != null && widget.reader != null
+                    ? () => _box(f)
+                    : null,
+                onReport: bytes == null ? null : () => _report(f),
+                onDismiss: () => _dismiss([f]),
               );
             },
           ),

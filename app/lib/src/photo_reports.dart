@@ -6,6 +6,9 @@ import 'package:book_guard_app/src/guard_api.dart';
 /// Photos kept on the device for review and bug reports (~2 MB each).
 const keptPhotos = 40;
 
+/// Where "dismiss" marks a failed photo as hidden on this device.
+const _dismissed = 'dismissed/';
+
 /// The device's copies of its photos, and "this should not fail" reports.
 extension PhotoReports on GuardApi {
   /// Keeps only the newest [keptPhotos] photos on the device.
@@ -50,4 +53,15 @@ extension PhotoReports on GuardApi {
   /// Whether [name] was already reported.
   Future<bool> reported(String name) async =>
       await store.read('reported/$name') != null;
+
+  /// Hides the failed photo [name] on this device. Hide-only: the journal,
+  /// the photo and everything sent to the PC stay as they are.
+  Future<void> dismissPhoto(String name) =>
+      store.write('$_dismissed$name', Uint8List(0));
+
+  /// The failed photos hidden on this device.
+  Future<Set<String>> dismissedPhotos() async => {
+    for (final key in await store.list(_dismissed))
+      key.substring(_dismissed.length),
+  };
 }
