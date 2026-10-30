@@ -72,10 +72,12 @@ knots plus the story's two ends (the last one is the copy's last page). At
 least 3 located pages are needed; `book-guard ebook-map` rebuilds and
 prints it (knots and leave-one-out error in pages). The PC serves the text
 and the map as `Reading/ebooks/<isbn>.txt` / `.map.json`; the app keeps
-both and reads offline. "Start reading" is kept on the phone at the tap,
-"Stop reading" queues an `ebook_session` request through the outbox, and
-the time is plain wall-clock between the taps (closing the app in between
-changes nothing). The PC re-estimates the pages with its own copy of the
+both and reads offline. Opening the reader starts a session, kept on the
+phone at once; leaving it (swipe right-to-left, back, Escape) queues an
+`ebook_session` request through the outbox, and the time is plain
+wall-clock in between (an app killed mid-read resumes the same session
+for 6 h). Leaving under a page, over 6 h, or under 50 s a page drops the
+session on the phone instead. The PC re-estimates the pages with its own copy of the
 map and stores the session append-only (`ebook_sessions.json`); from then
 on it is a session like any other -- 50 s a page, 6 h at most, no check
 page, the summary graded on exactly the text that was on screen, credit

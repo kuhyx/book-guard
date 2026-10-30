@@ -4,6 +4,7 @@ import 'package:book_guard_app/src/ebook_store.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/ebook_reader.dart';
+import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:book_guard_app/src/screens/session_times.dart' show hhmm;
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:design_system/design_system.dart';
@@ -168,15 +169,30 @@ class _EbookEntryState extends State<EbookEntry> {
         if (ebook != null && book != null && ebook.map.isbn == book.isbn)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: FilledButton.tonalIcon(
-              onPressed: () => _open(ebook),
-              icon: const Icon(Icons.chrome_reader_mode),
-              label: Text(
-                running == null
-                    ? 'Read in app (≈ p. ${_openingPage(ebook.map)})'
-                    : 'Continue reading in app (since '
-                          '${hhmm(running.startedAt)})',
-              ),
+            child: Row(
+              children: [
+                Flexible(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => _open(ebook),
+                    icon: const Icon(Icons.chrome_reader_mode),
+                    label: Text(
+                      running == null
+                          ? 'Read in app (≈ p. ${_openingPage(ebook.map)})'
+                          : 'Continue reading in app (since '
+                                '${hhmm(running.startedAt)})',
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Reading settings',
+                  icon: const Icon(Icons.text_fields),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ReadingSettingsScreen(api: widget.api),
+                    ),
+                  ),
+                ),
+              ],
             ),
           )
         else if (book?.ebook != null && _tried)

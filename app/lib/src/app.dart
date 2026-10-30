@@ -114,6 +114,7 @@ class _BookGuardAppState extends State<BookGuardApp> {
                   : () => SettingsScreen(
                       store: widget.loginStore,
                       onSaved: _onSaved,
+                      api: api,
                     ),
             ),
     );

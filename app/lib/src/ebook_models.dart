@@ -13,8 +13,8 @@ class Ebook {
   final String text;
 }
 
-/// "Start reading" in the app: kept on the device at the tap, so closing,
-/// killing or restarting the app in between changes nothing.
+/// Reading started in the app (by opening the reader): kept on the device
+/// at once, so killing or restarting the app in between changes nothing.
 class ReadingStart {
   /// Creates a start.
   const new({
@@ -49,7 +49,7 @@ class ReadingStart {
   /// Where reading started in the text.
   final int offset;
 
-  /// When "Start reading" was tapped.
+  /// When the reader opened on it.
   final DateTime startedAt;
 
   /// The text it was read in.
@@ -100,10 +100,10 @@ class AppSession {
   /// The first page not read (estimated).
   final int endPage;
 
-  /// The Start tap.
+  /// When the reading started (the reader opened).
   final DateTime startedAt;
 
-  /// The Stop tap.
+  /// When it stopped (the reader was left).
   final DateTime endedAt;
 
   /// The PC's id for it.

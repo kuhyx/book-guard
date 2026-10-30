@@ -1,13 +1,19 @@
 import 'dart:async';
 
+import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/login_store.dart';
+import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// The phone's dufs login: URL, user, password.
+/// The phone's dufs login (URL, user, password) and, once connected, the
+/// way to the reading settings.
 class SettingsScreen extends StatefulWidget {
   /// Creates the screen.
-  const new({required this.store, required this.onSaved, super.key});
+  const new({required this.store, required this.onSaved, super.key, this.api});
+
+  /// The connected API; null on the first run (no reading settings yet).
+  final GuardApi? api;
 
   /// Where the login is kept.
   final LoginStore store;
@@ -90,6 +96,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
         FilledButton(onPressed: _save, child: const Text('Save')),
+        if (widget.api case final api?) ...[
+          const SizedBox(height: AppSpacing.lg),
+          ListTile(
+            leading: const Icon(Icons.text_fields),
+            title: const Text('Reading'),
+            subtitle: const Text('Text size in the in-app reader'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ReadingSettingsScreen(api: api),
+              ),
+            ),
+          ),
+        ],
       ],
     ),
   );

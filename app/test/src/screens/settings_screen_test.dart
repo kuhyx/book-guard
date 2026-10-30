@@ -1,4 +1,5 @@
 import 'package:book_guard_app/src/login_store.dart';
+import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:book_guard_app/src/screens/settings_screen.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -103,5 +104,30 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await settle(tester);
     expect(find.byType(SettingsScreen), findsNothing);
+  });
+
+  testWidgets('connected, it leads on to the reading settings', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildLightTheme(),
+        home: SettingsScreen(
+          store: LoginStore(),
+          onSaved: () async {},
+          api: FakeApi(),
+        ),
+      ),
+    );
+    await settle(tester);
+    await tapVisible(tester, find.text('Reading'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReadingSettingsScreen), findsOneWidget);
+  });
+
+  testWidgets('the first-run login has no reading settings', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: buildLightTheme(), home: screen()),
+    );
+    await settle(tester);
+    expect(find.text('Reading'), findsNothing);
   });
 }

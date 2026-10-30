@@ -23,9 +23,6 @@ extension EbookStore on GuardApi {
   static const _done = 'ebook/sessions/';
   static const _pending = 'pending/';
 
-  /// Default reading font size.
-  static const defaultFontSize = 18.0;
-
   Uint8List _bytes(Object? json) =>
       Uint8List.fromList(utf8.encode(jsonEncode(json)));
 
@@ -89,10 +86,11 @@ extension EbookStore on GuardApi {
   Future<void> savePosition(String isbn, int offset) =>
       store.write('$_dir$isbn.pos', _bytes(offset));
 
-  /// The reading font size.
-  Future<double> fontSize() async {
+  /// The reading font size chosen in the settings; null until one was
+  /// (the reader then picks one for the window).
+  Future<double?> savedFontSize() async {
     final raw = await _json('${_dir}font');
-    return raw is num ? raw.toDouble() : defaultFontSize;
+    return raw is num ? raw.toDouble() : null;
   }
 
   /// Remembers the reading font size.

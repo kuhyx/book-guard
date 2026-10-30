@@ -11,7 +11,7 @@ environment:
 dependencies:
   # sha256 of each photo, so the phone names the check page offline exactly
   # as the PC will (book_guard/_sessions.py check_page_for).
-  crypto: 3.0.7
+  crypto: 3.0.8
   design_system:
     git:
       url: https://github.com/kuhyx/utils
@@ -47,6 +47,14 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # The in-app reader's book face (SIL OFL, assets/fonts/OFL.txt): variable
+  # weight + optical size; reading_style.dart sets both axes explicitly.
+  fonts:
+    - family: Literata
+      fonts:
+        - asset: assets/fonts/Literata.ttf
+        - asset: assets/fonts/Literata-Italic.ttf
+          style: italic
 
 # The shared icon family (python_pkg/app_icons in testsAndMisc, key
 # book_guard_app): charcoal field, open-book glyph in the family accent.

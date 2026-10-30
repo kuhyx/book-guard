@@ -126,8 +126,10 @@ Read README.md first. These are the invariants that are easy to break.
 - **In-app reading is credited in estimated paper pages** (`_ebook_map`,
   `_ebook`, `_ebook_sessions`): the PC's private map
   (`data_dir/ebook_maps/`) decides the pages, never the copy on the share
-  or the app's numbers; the session clock is wall-clock between the Start
-  and Stop taps; it never overlaps a countable paper session. The app's
+  or the app's numbers; the session clock is wall-clock from opening the
+  reader (once its place has loaded) to leaving it -- a running start
+  survives an app kill for 6 h; it never overlaps a countable paper
+  session. The app's
   `ebook_map.dart` floors exactly like `_ebook_map.page_coordinate`
   (`app/test/fixtures/ebook_map_goldens.json`; regenerate with
   `BOOK_GUARD_WRITE_GOLDENS=1` on `test_core_ebook_map.py`). Served text

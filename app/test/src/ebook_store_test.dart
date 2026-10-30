@@ -69,9 +69,9 @@ void main() {
       expect(await api.readingPosition(ebookIsbn), isNull);
       await api.savePosition(ebookIsbn, 1234);
       expect(await api.readingPosition(ebookIsbn), 1234);
-      expect(await api.fontSize(), 18);
+      expect(await api.savedFontSize(), isNull); // the reader picks one
       await api.saveFontSize(22);
-      expect(await api.fontSize(), 22);
+      expect(await api.savedFontSize(), 22);
     });
 
     test('a start is kept at the tap and survives a restart', () async {

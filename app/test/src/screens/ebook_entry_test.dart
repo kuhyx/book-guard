@@ -1,10 +1,10 @@
-import 'dart:typed_data';
-
 import 'package:book_guard_app/src/ebook_store.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/ebook_entry.dart';
 import 'package:book_guard_app/src/screens/ebook_reader.dart';
+import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/ebook_fixture.dart';
@@ -85,8 +85,9 @@ void main() {
     await tester.tap(find.text('Read in app (≈ p. 20)'));
     await tester.pumpAndSettle();
     expect(find.byType(EbookReaderScreen), findsOneWidget);
-    await tester.pageBack();
+    await tester.binding.handlePopRoute(); // the system back
     await tester.pumpAndSettle();
+    expect(find.byType(EbookReaderScreen), findsNothing);
     expect(changed, 1);
   });
 
@@ -158,17 +159,26 @@ void main() {
     await pump(tester, ebookState(latestPage: 20));
     await tester.tap(find.text('Read in app (≈ p. 20)'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Start reading here'));
-    await tester.pumpAndSettle();
-    for (var i = 0; i < 3; i++) {
-      await tester.tap(find.byTooltip('Next page'));
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.audioVolumeDown);
       await tester.pumpAndSettle();
     }
     now = now.add(const Duration(hours: 1));
-    await tester.tap(find.text('Stop reading'));
+    await tester.fling(
+      find.byType(EbookReaderScreen),
+      const Offset(-300, 0),
+      1500,
+    );
     await tester.pumpAndSettle();
     expect(find.byType(EbookReaderScreen), findsNothing);
     expect(find.textContaining('Summary for ≈ p. 20-'), findsOneWidget);
     expect(changed, 1);
+  });
+
+  testWidgets('the reading settings are a tap away', (tester) async {
+    await pump(tester, ebookState(latestPage: 20));
+    await tester.tap(find.byTooltip('Reading settings'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReadingSettingsScreen), findsOneWidget);
   });
 }
