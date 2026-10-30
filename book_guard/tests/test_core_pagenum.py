@@ -41,6 +41,20 @@ def test_candidates_are_lone_numbers_near_an_edge() -> None:
     assert _pagenum.candidates(page) == [3, 1953, 51]
 
 
+def test_lone_numbers_may_set_unsure_line_mates_aside() -> None:
+    read = (
+        _word("z", 950, "1", conf=32.0),  # a swash read as junk
+        _word("9", 950, "1"),
+        _word("s", 950, "1", conf=55.0),
+        _word("s.", 960, "2"),  # a citation: a real word beside it
+        _word("18", 960, "2"),
+        _word("4", 970, "3", conf=40.0),  # the number itself unsure
+    )
+    sure = _pagenum.lone_numbers(read, 1000, ignore_unsure=True)
+    assert [w.text for w in sure] == ["9"]
+    assert _pagenum.lone_numbers(read, 1000, ignore_unsure=False) == []
+
+
 @pytest.mark.parametrize(
     ("found", "context", "expected"),
     [

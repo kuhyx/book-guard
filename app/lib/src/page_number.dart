@@ -9,13 +9,21 @@ library;
 
 import 'dart:math' as math;
 
+export 'package:book_guard_app/src/page_box.dart';
+
 /// left, top, right, bottom.
 typedef Box = ({int left, int top, int right, int bottom});
 
 /// One recognised line, in the pixels of the image it was read from.
 class SeenLine {
   /// Creates a line.
-  const new(this.text, this.box, {this.words = const []});
+  const new(
+    this.text,
+    this.box, {
+    this.words = const [],
+    this.confidence = const [],
+    this.angle,
+  });
 
   /// The line's text.
   final String text;
@@ -25,6 +33,13 @@ class SeenLine {
 
   /// Its words with their boxes (for telling upright from sideways).
   final List<(String, Box)> words;
+
+  /// ML Kit's confidence (0-1) per word, aligned with [words]; null or
+  /// missing where it gives none.
+  final List<double?> confidence;
+
+  /// Degrees ML Kit turned the line to read it; null if it does not say.
+  final double? angle;
 }
 
 /// A candidate page number and where it is printed (stored pixels).
@@ -77,15 +92,73 @@ const _anyPage = 9999;
 /// the reader's own say-so (`FAR_FROM_LAST` on the PC).
 const farFromLast = 20;
 
-/// Lines that are a lone number near the top or bottom of an image
-/// [height] pixels tall.
-List<SeenLine> numberLines(List<SeenLine> lines, int height) => [
-  for (final line in lines)
-    if (_number.hasMatch(line.text.trim()) &&
-        math.min(_middle(line.box), height - _middle(line.box)) <=
-            height * _edgeBand)
-      line,
-];
+final _ends = RegExp(r'^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$', unicode: true);
+final _alnum = RegExp(r'[\p{L}\p{N}]', unicode: true);
+const _sure = 0.6;
+const _upright = 45;
+
+/// The number a line holds once ornaments are set aside -- or null.
+///
+/// Swashes or dashes either side of a page number ("~ 9 ~", p. 9 of
+/// 2026-10-30) come out as symbols or unsure letters: those words do not
+/// count. A real word beside a number ("s. 18") still disqualifies it, as
+/// does an unsure number (`_MIN_CONF` on the PC).
+int? loneNumber(SeenLine line) {
+  final words = line.words.isEmpty
+      ? [(line.text, 1.0)]
+      : [
+          for (final (i, (text, _)) in line.words.indexed)
+            (text, i < line.confidence.length ? line.confidence[i] : null),
+        ];
+  final kept = [
+    for (final (text, conf) in words)
+      if (_alnum.hasMatch(text) && (conf ?? 1) >= _sure)
+        text.replaceAll(_ends, ''),
+  ];
+  return kept.length == 1 && _number.hasMatch(kept.single)
+      ? int.parse(kept.single)
+      : null;
+}
+
+/// Lone numbers near the top or bottom of an image [height] pixels tall,
+/// with their lines. Lines of nothing but the number come first, as on the
+/// PC; only when there are none are ornaments set aside ([loneNumber]), so
+/// a page that read before reads exactly as before.
+List<(int, SeenLine)> numberLines(List<SeenLine> lines, int height) {
+  final edge = [
+    for (final line in lines)
+      if (math.min(_middle(line.box), height - _middle(line.box)) <=
+          height * _edgeBand)
+        line,
+  ];
+  final bare = [
+    for (final line in edge)
+      if (_number.hasMatch(line.text.trim()))
+        (int.parse(line.text.trim()), line),
+  ];
+  return bare.isNotEmpty
+      ? bare
+      : [
+          for (final line in edge)
+            if (loneNumber(line) case final number?) (number, line),
+        ];
+}
+
+/// The number in a boxed crop, already turned upright -- or null.
+///
+/// A line ML Kit had to turn to read is a glyph read the wrong way up: a
+/// flipped "9" reads "6" (the "page 6" box of 2026-10-30 was a 9).
+int? boxNumber(List<SeenLine> lines) {
+  for (final line in lines) {
+    final turned = (line.angle ?? 0) % 360; // (-180, 180] or [0, 360)
+    if (math.min(turned, 360 - turned) > _upright) continue;
+    final digits = line.text
+        .replaceAll(RegExp(r'\s'), '')
+        .replaceAll(_ends, '');
+    if (_number.hasMatch(digits)) return int.parse(digits);
+  }
+  return null;
+}
 
 double _middle(Box box) => (box.top + box.bottom) / 2;
 
@@ -164,50 +237,3 @@ PageChoice choosePage(
     'page number unclear (${options.map((h) => h.value).join(' or ')})',
   );
 }
-
-/// [box] in an image that was scaled by [scale] and then turned [turn]
-/// degrees clockwise (an image [width] x [height] *before* the turn)
-/// -> the same box in the decoded, EXIF-applied pixels.
-Box unturn(Box box, int turn, int width, int height, double scale) {
-  (double, double) back(double x, double y) => switch (turn) {
-    90 => (y, height - x),
-    180 => (width - x, height - y),
-    270 => (width - y, x),
-    _ => (x, y),
-  };
-  return _bounds(
-    back(box.left.toDouble(), box.top.toDouble()),
-    back(box.right.toDouble(), box.bottom.toDouble()),
-    1 / scale,
-  );
-}
-
-/// [box] in the EXIF-applied pixels of a file stored [storedWidth] x
-/// [storedHeight] with EXIF [orientation] -> the stored pixels, which is
-/// what the PC is sent (it applies EXIF itself, as PIL does).
-Box toStored(Box box, int orientation, int storedWidth, int storedHeight) {
-  final w = storedWidth.toDouble();
-  final h = storedHeight.toDouble();
-  (double, double) back(double x, double y) => switch (orientation) {
-    2 => (w - x, y),
-    3 => (w - x, h - y),
-    4 => (x, h - y),
-    5 => (y, x),
-    6 => (y, h - x),
-    7 => (w - y, h - x),
-    8 => (w - y, x),
-    _ => (x, y),
-  };
-  return _bounds(
-    back(box.left.toDouble(), box.top.toDouble()),
-    back(box.right.toDouble(), box.bottom.toDouble()),
-    1,
-  );
-}
-
-Box _bounds((double, double) a, (double, double) b, double factor) => (
-  left: (math.min(a.$1, b.$1) * factor).floor(),
-  top: (math.min(a.$2, b.$2) * factor).floor(),
-  right: (math.max(a.$1, b.$1) * factor).ceil(),
-  bottom: (math.max(a.$2, b.$2) * factor).ceil(),
-);

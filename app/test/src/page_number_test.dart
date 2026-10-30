@@ -14,7 +14,48 @@ void main() {
       SeenLine('page 7', _b(40, 950, 80, 960)),
       SeenLine('12345', _b(40, 950, 80, 960)),
     ];
-    expect(numberLines(lines, 1000).map((l) => l.text), ['3', ' 51 ']);
+    expect(numberLines(lines, 1000).map((h) => h.$2.text), ['3', ' 51 ']);
+  });
+
+  test('ornaments either side of a page number do not hide it', () {
+    // p. 9 of 2026-10-30: "9" centred between two swashes at the page foot.
+    SeenLine line(List<(String, double?)> words) => SeenLine(
+      words.map((w) => w.$1).join(' '),
+      _b(40, 950, 80, 960),
+      words: [for (final (t, _) in words) (t, _b(40, 950, 80, 960))],
+      confidence: [for (final (_, c) in words) c],
+    );
+    final lines = [
+      line([('z', 0.3), ('9', 0.95), ('s', 0.4)]), // swashes read as junk
+      line([('~', null), ('9', null), ('~', null)]), // symbols, no confidence
+      SeenLine('~9~', _b(40, 950, 80, 960)), // one glued element
+      line([('s.', 0.9), ('18', 0.95)]), // a citation: real word beside it
+      line([('C', 0.3), ('9', 0.4), ('s', 0.4)]), // the number itself unsure
+    ];
+    expect(lines.map(loneNumber), [9, 9, 9, null, null]);
+    expect(numberLines(lines, 1000).map((h) => h.$1), [9, 9, 9]);
+    // A bare number on the page wins: the relaxed rule is only a fallback.
+    final bare = SeenLine('51', _b(40, 10, 50, 20));
+    expect(numberLines([...lines, bare], 1000).map((h) => h.$1), [51]);
+  });
+
+  test('a boxed number read upside down is no reading', () {
+    // A flipped "9" reads "6": a line ML Kit read turned from the page's
+    // upright is not trusted, whatever digits it shows.
+    expect(boxNumber([SeenLine('6', _b(0, 0, 9, 9), angle: 179)]), isNull);
+    expect(boxNumber([SeenLine('6', _b(0, 0, 9, 9), angle: 182)]), isNull);
+    // A slight tilt is upright under either angle convention.
+    expect(boxNumber([SeenLine('9', _b(0, 0, 9, 9), angle: 358)]), 9);
+    expect(boxNumber([SeenLine('9', _b(0, 0, 9, 9), angle: -3)]), 9);
+    expect(
+      boxNumber([
+        SeenLine('6', _b(0, 0, 9, 9), angle: -178),
+        SeenLine('1 5 1', _b(0, 0, 9, 9), angle: 2),
+      ]),
+      151,
+    );
+    expect(boxNumber([SeenLine('~ 9 ~', _b(0, 0, 9, 9))]), 9);
+    expect(boxNumber([SeenLine('p. 9', _b(0, 0, 9, 9))]), isNull);
   });
 
   test('wide words count only upright, real, wide words', () {

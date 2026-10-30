@@ -32,7 +32,9 @@ from PIL import Image, ImageOps
 from book_guard._ocr import tesseract, words
 
 if TYPE_CHECKING:
-    from book_guard._ocr import Scan
+    from collections.abc import Sequence
+
+    from book_guard._ocr import Scan, Word
 
 Box = tuple[int, int, int, int]
 """left, top, right, bottom."""
@@ -87,21 +89,35 @@ class Choice:
 
 def candidates(scan: Scan) -> list[int]:
     """Numbers alone on a line near the top or bottom edge, in reading order."""
-    lines: dict[tuple[str, str, str], list[int]] = {}
-    for index, word in enumerate(scan.words):
-        lines.setdefault(word.line, []).append(index)
-    height = scan.size[1]
-    found: list[int] = []
+    found = lone_numbers(scan.words, scan.size[1], ignore_unsure=False)
+    return list(dict.fromkeys(int(word.text) for word in found))
+
+
+def lone_numbers(
+    read: Sequence[Word], height: int, *, ignore_unsure: bool
+) -> list[Word]:
+    """Number words alone on their line in the top or bottom band.
+
+    ``ignore_unsure``: a line-mate read below ``_MIN_CONF`` does not count.
+    Swash ornaments either side of a number come out as low-confidence junk
+    ("z 9 s", 26-55) on its line; real words beside a number ("s. 18",
+    "CHINY, 1953") are read with confidence and still disqualify it.
+    """
+    lines: dict[tuple[str, str, str], list[Word]] = {}
+    for word in read:
+        if word.conf >= _MIN_CONF or not ignore_unsure:
+            lines.setdefault(word.line, []).append(word)
+    found: list[Word] = []
     for members in lines.values():
         if len(members) != 1:
             continue
-        word = scan.words[members[0]]
+        word = members[0]
         if not _NUMBER.fullmatch(word.text) or word.conf < _MIN_CONF:
             continue
         middle = (word.box[1] + word.box[3]) / 2
         if min(middle, height - middle) <= height * _EDGE_BAND:
-            found.append(int(word.text))
-    return list(dict.fromkeys(found))
+            found.append(word)
+    return found
 
 
 def _plausible(found: list[int], context: Context) -> list[int]:

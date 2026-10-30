@@ -80,6 +80,7 @@ Future<ReviewResult?> reviewPhoto(
   await errors.event('photo', 'scanned', {
     'attempt': ?attempt,
     'hits': scan == null ? null : [for (final h in scan.hits) h.value],
+    'turn': ?scan?.turn, // which way up it read the page (a 9 vs a 6)
   });
   if (scan == null) {
     unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));

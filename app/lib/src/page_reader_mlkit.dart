@@ -132,6 +132,8 @@ class MlKitPageReader implements PageReader {
               words: [
                 for (final e in line.elements) (e.text, _box(e.boundingBox)),
               ],
+              confidence: [for (final e in line.elements) e.confidence],
+              angle: line.angle,
             ),
       ];
     } finally {
@@ -172,10 +174,10 @@ class MlKitPageReader implements PageReader {
     return PageScan(
       turn: bestTurn,
       hits: [
-        for (final line in numbers)
-          NumberHit(int.parse(line.text.trim()), toStoredBox(line.box)),
+        for (final (number, line) in numbers)
+          NumberHit(number, toStoredBox(line.box)),
       ],
-      previewHits: [for (final line in numbers) line.box],
+      previewHits: [for (final (_, line) in numbers) line.box],
       preview: prepared.jpegs[_turns.indexOf(bestTurn)],
       previewWidth: sideways ? prepared.height : prepared.width,
       previewHeight: height,
@@ -191,9 +193,6 @@ class MlKitPageReader implements PageReader {
     final jpeg = await Isolate.run(
       () => cropForBox((bytes, decoded, scan.turn)),
     );
-    final digits = (await _lines(jpeg, 'box'))
-        .map((l) => l.text.replaceAll(RegExp(r'\s'), ''))
-        .where((t) => RegExp(r'^\d{1,4}$').hasMatch(t));
-    return digits.isEmpty ? null : int.parse(digits.first);
+    return boxNumber(await _lines(jpeg, 'box'));
   }
 }
