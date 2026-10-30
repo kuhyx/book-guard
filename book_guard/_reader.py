@@ -7,8 +7,9 @@
 1. Otherwise a barcode zbar can decode is an ISBN photo.
 2. Otherwise Tesseract turns the page upright by its content and reads it;
    :mod:`book_guard._pagenum` picks the printed page number from what the
-   photo was taken for. This is the fallback for photos with no phone
-   reading (the desktop web app has no OCR).
+   photo was taken for (:mod:`book_guard._sparse` takes a second look when
+   the page offers none, e.g. a number set between ornaments). This is the
+   fallback for photos with no phone reading (the desktop web app has no OCR).
 3. A page whose number cannot be pinned down carries the reason, so the
    app can ask for the number to be boxed instead of the photo vanishing.
 """
@@ -30,6 +31,7 @@ from book_guard._pagenum import (
     read_box,
     upright_box,
 )
+from book_guard._sparse import sparse_candidates
 from book_guard._vision import ISBN, OTHER, PAGE, Reading, normalise_isbn
 
 if TYPE_CHECKING:
@@ -103,7 +105,7 @@ def _pc_reading(path: Path, context: Context, box: Box | None) -> Reading:
     found = _box_numbers(path, page, box, context) if box is not None else []
     boxed = bool(found)
     if not boxed:  # no box, nothing legible, or disputed: the whole page decides
-        found = candidates(page)
+        found = candidates(page) or sparse_candidates(page)
     choice = choose(found, context, boxed=boxed)
     if choice.page is not None:
         return Reading(PAGE, choice.page, None, page.text, rotation=page.rotation)

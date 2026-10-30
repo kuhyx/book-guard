@@ -41,11 +41,13 @@ def _reader_with(
     found: list[int],
     boxed: list[int] | None = None,
     isbn: str | None = None,
+    sparse: list[int] | None = None,
 ) -> None:
     monkeypatch.setattr(_reader, "barcode_isbn", lambda _p: isbn)
     monkeypatch.setattr(_reader, "scan", lambda _p: page)
     monkeypatch.setattr(_reader, "candidates", lambda _s: found)
     monkeypatch.setattr(_reader, "read_box", lambda _img, _box: boxed or [])
+    monkeypatch.setattr(_reader, "sparse_candidates", lambda _s: sparse or [])
 
 
 def test_reader_barcode_needs_nothing_else(
@@ -153,3 +155,14 @@ def test_box_readings_are_evidence_not_a_verdict(
     assert _reader.read(path, Context(expected=85), box).page_number == 85
     # Not a check photo: the most frequent reading.
     assert _reader.read(path, Context(near=80), box).page_number == 86
+
+
+def test_the_sparse_look_runs_only_when_the_page_offers_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # p. 9 of 2026-10-30: the 9 between swashes only a sparse read finds.
+    _reader_with(monkeypatch, page=_page(), found=[], sparse=[9])
+    assert _reader.read(_jpeg(tmp_path), Context(last_page=172)).page_number == 9
+    # A page that read before reads exactly as before.
+    _reader_with(monkeypatch, page=_page(), found=[51], sparse=[9])
+    assert _reader.read(_jpeg(tmp_path), Context()).page_number == 51
