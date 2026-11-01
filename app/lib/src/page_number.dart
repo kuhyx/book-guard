@@ -190,6 +190,13 @@ PageChoice choosePage(
     for (final hit in hits) {
       if (hit.value == expected) return PageChoice(hit);
     }
+    // A chapter's first page (or the blank before it) often has no printed
+    // number; the open spread still shows a neighbour's, which proves it.
+    for (final hit in hits) {
+      if ((hit.value - expected).abs() == 1) {
+        return PageChoice(NumberHit(expected, hit.box));
+      }
+    }
     return PageChoice(null, 'page $expected not found on the photo');
   }
   final top = context.lastPage ?? _anyPage;

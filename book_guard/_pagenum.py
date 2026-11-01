@@ -166,7 +166,10 @@ def choose(found: list[int], context: Context, *, boxed: bool = False) -> Choice
     from the last page is believed.
     """
     if context.expected is not None:
-        if context.expected in found:
+        # A chapter's first page (or the blank before it) often has no
+        # printed number; the open spread still shows a neighbour's.
+        nearby = {context.expected - 1, context.expected, context.expected + 1}
+        if nearby.intersection(found):
             return Choice(context.expected)
         return Choice(None, f"page {context.expected} not found on the photo")
     options = _plausible(found, context)

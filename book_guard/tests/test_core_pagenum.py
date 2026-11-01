@@ -60,6 +60,14 @@ def test_lone_numbers_may_set_unsure_line_mates_aside() -> None:
     [
         ([3, 19], Context(expected=19), Choice(19)),
         ([3], Context(expected=19), Choice(None, "page 19 not found on the photo")),
+        # A chapter's first page is often unnumbered: its spread neighbour proves it.
+        ([18], Context(expected=19), Choice(19)),
+        ([3, 20], Context(expected=19), Choice(19)),
+        (
+            [17, 21],
+            Context(expected=19),
+            Choice(None, "page 19 not found on the photo"),
+        ),
         ([], Context(), Choice(None, "no page number found")),
         ([3], Context(after=7), Choice(None, "no page after 7 found on the photo")),
         ([3, 51], Context(after=7, last_page=406), Choice(51)),

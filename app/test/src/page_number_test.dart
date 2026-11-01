@@ -90,6 +90,16 @@ void main() {
       );
     });
 
+    test('an unnumbered check page is proven by its spread neighbour', () {
+      final before = pick([18], const PageContext(expected: 19)).hit;
+      expect(before?.value, 19);
+      expect(pick([3, 20], const PageContext(expected: 19)).hit?.value, 19);
+      expect(
+        pick([17, 21], const PageContext(expected: 19)).reason,
+        'page 19 not found on the photo',
+      );
+    });
+
     test('nothing plausible', () {
       expect(pick([], const PageContext()).reason, 'no page number found');
       expect(
