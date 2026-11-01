@@ -50,6 +50,8 @@ void main() {
     expect(args.first, '--app=http://localhost:8773');
     expect(args, contains('--user-data-dir=${profileDir('/h')}'));
     expect(args, containsAll(['--class=book-guard', '--password-store=basic']));
+    // No extension may load, or one opens a second, normal browser window.
+    expect(args, contains('--disable-extensions'));
     expect(browserArgs('/h', port: 1234).first, '--app=http://localhost:1234');
   });
 }
