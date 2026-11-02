@@ -19,5 +19,5 @@ exceptions:
       fastembed needs onnxruntime, and onnxruntime 1.31.1 -- itself the
       latest release -- ships no cp315 wheel (newest: cp314), so CI's
       `setup_dev.sh` fails on Python 3.15. tests.yml pins 3.14 until a 3.15
-      wheel ships (TODO-unpin-ci-python.md, 2026-11-02).
+      wheel ships (unpin tracked in todo-app task 0ea3306e, 2026-11-02).
     blocked_by: "transitive:onnxruntime@1.31.1"
