@@ -61,7 +61,7 @@ def cmd_ask(args: argparse.Namespace) -> int:
         return 2
     head = [] if sim is None else [f"Simulation: {sim.delta:+d} pages on {sim.day}"]
     ledger = load(active.ledger, active.key_file)
-    calendar = (freedays.is_free_day, _sick.standing_down())
+    calendar = (freedays.is_free_day, _sick.standing_down(day))
     if args.week or args.month:
         days = month_of(day) if args.month else week_of(day)
         found = views(ledger, today, days, calendar, sim)

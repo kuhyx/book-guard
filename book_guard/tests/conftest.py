@@ -11,6 +11,9 @@ Autouse, so no test can forget them:
 * embeddings come from a tiny deterministic fake instead of fastembed;
 * the background index unit is never started (``systemctl --user start``
   raises unless a test installs its own fake);
+* focus projects: ``book_guard._focus.stands_down`` answers from the per-test
+  :func:`focus_pool` set (empty unless a test adds a day), never the real
+  registry;
 * the free-day pool is empty, and the sick-day pool is the per-test
   :func:`sick_pool` dict (empty unless a test marks a day): every sickdays
   read is answered from it, so kuhy's real pool is never read.
@@ -25,7 +28,7 @@ import numpy as np
 import pytest
 import sickdays
 
-from book_guard import _embed, _http, _openlibrary, _paths
+from book_guard import _embed, _focus, _http, _openlibrary, _paths
 from book_guard._paths import Paths
 
 if TYPE_CHECKING:
@@ -67,6 +70,12 @@ def bg_paths(tmp_path: Path) -> Paths:
 
 
 @pytest.fixture
+def focus_pool() -> set[date]:
+    """This test's focus days on which the ``book`` gate stands down."""
+    return set()
+
+
+@pytest.fixture
 def sick_pool() -> SickPool:
     """This test's sick-day pool: add ``{day: frozenset(kept lockers)}``."""
     return {}
@@ -100,7 +109,10 @@ def _fake_sick_pool(monkeypatch: pytest.MonkeyPatch, pool: SickPool) -> None:
 
 @pytest.fixture(autouse=True)
 def _hermetic(
-    bg_paths: Paths, sick_pool: SickPool, monkeypatch: pytest.MonkeyPatch
+    bg_paths: Paths,
+    sick_pool: SickPool,
+    focus_pool: set[date],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[None]:
     _paths.set_override(bg_paths)
 
@@ -131,6 +143,10 @@ def _hermetic(
     monkeypatch.setattr("freedays.is_free_day", lambda *_a, **_k: False)
     # The shared sick-day pool is kuhy's real file: no test may read it.
     _fake_sick_pool(monkeypatch, sick_pool)
+    # The focus-project registry is kuhy's real file: answer from focus_pool.
+    monkeypatch.setattr(
+        _focus, "stands_down", lambda gate, day: gate == "book" and day in focus_pool
+    )
     monkeypatch.setattr("shutil.which", lambda _name: None)
     # The morning carrot reads bg_paths.morning_session (under tmp_path), and
     # a production-mode test must never wait 30 real seconds for it.

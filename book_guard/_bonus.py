@@ -59,7 +59,7 @@ def is_on_pace(ledger: Ledger, credit: Entry) -> bool:
         Ledger([*kept, credit]),
         date.fromisoformat(credit.day),
         freedays.is_free_day,
-        sick=_sick.standing_down(),
+        sick=_sick.standing_down(date.fromisoformat(credit.day)),
     )
     return pace.behind == 0
 
@@ -74,7 +74,7 @@ def day_requirement(ledger: Ledger, day: date) -> int:
         e for e in ledger.entries if not (e.kind == CREDIT and e.day >= day.isoformat())
     ]
     pace = compute_pace(
-        Ledger(kept), day, freedays.is_free_day, sick=_sick.standing_down()
+        Ledger(kept), day, freedays.is_free_day, sick=_sick.standing_down(day)
     )
     return pace.ask.bonus_at
 

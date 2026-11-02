@@ -213,7 +213,7 @@ def snapshot(
     """
     day = today or datetime.now().astimezone().date()
     free_check = is_free or freedays.is_free_day
-    sick_days = _sick.standing_down() if sick is None else sick
+    sick_days = _sick.standing_down(day) if sick is None else sick
     ledger = _ledger.load(paths.ledger, paths.key_file)
     sessions, started = _reading(paths, ledger)
     pace = compute_pace(ledger, day, free_check, sick=sick_days)
