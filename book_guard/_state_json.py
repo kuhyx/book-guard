@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import freedays
 
-from book_guard import _ebook, _indexjob
+from book_guard import _ebook, _indexjob, _sick
 from book_guard import _photos as _photo_cache
 from book_guard._bookindex import index_path
 from book_guard._errlog import claude_outage
@@ -157,6 +157,7 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         "locked": snap.locked,
         "reason": snap.reason,
         "sick_today": snap.sick_today,
+        "focus_name": _sick.focus_name(snap.today),
         "book": None
         if book is None
         else {

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from book_guard import _sick
 from book_guard._constants import DAILY_PASS_PAGES, WEEKEND_CAP_PAGES
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, OVERLAP
@@ -75,12 +76,13 @@ def todo_lines(snap: Snapshot) -> list[str]:
     return lines
 
 
-def _today_line(p: Pace, *, sick: bool) -> str:
+def _today_line(p: Pace, *, sick: bool, focus: str | None = None) -> str:
     """Today's requirement and whether its +1h bonus is in."""
     if sick:
         earned = "bonus earned" if p.ask.bonus else f"{p.ask.bonus_at} earn the +1h"
         return (
-            f"Today is a sick day: no pages asked, its share moves to the days left "
+            f"Today is {f'a focus day ({focus})' if focus else 'a sick day'}: "
+            f"no pages asked, its share moves to the days left "
             f"({p.pages_today} read; {earned})"
         )
     if not p.ask.required and p.ask.bonus:
@@ -120,7 +122,7 @@ def status_lines(snap: Snapshot, *, recent: int = 6) -> list[str]:
             f"{f'carried credit {p.carried_credit}; ' if p.carried_credit else ''}"
             f"books finished {p.finished_books})"
         ),
-        _today_line(p, sick=snap.sick_today),
+        _today_line(p, sick=snap.sick_today, focus=_sick.focus_name(snap.today)),
     ]
     if p.ask.excused:
         lines.append(f"Sick days excused: {p.ask.excused} pages off the target")

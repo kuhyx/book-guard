@@ -29,6 +29,24 @@ FOCUS_RADIUS_DAYS = 62
 """Focus days sampled either side of the anchor: the month plus its neighbours."""
 
 
+def focus_name(day: date) -> str | None:
+    """The focus project's name when it, and not a sick day, stands down ``day``.
+
+    A real sick day keeps its own verdict and text, so it wins here.
+    """
+    if sickdays.stands_down(sickdays.LOCKER_BOOK, day):
+        return None
+    if not _focus.stands_down(_focus.GATE, day):
+        return None
+    return _focus.project_name(day)
+
+
+def focus_reason(day: date, reason: str) -> str:
+    """``reason``, or ``focus day: <project>`` when a focus project is why."""
+    name = focus_name(day)
+    return reason if name is None else f"focus day: {name}"
+
+
 def standing_down(anchor: date | None = None) -> frozenset[date]:
     """Every sick day that does not keep ``book``, and every focus day.
 

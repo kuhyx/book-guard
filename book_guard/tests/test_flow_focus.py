@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING
 
 from book_guard import _bonus, _focus, _ledger, _sick
 from book_guard._daily_lock import kept
+from book_guard._render import status_lines
 from book_guard._state import snapshot
+from book_guard._state_json import to_json
 from book_guard.tests._flow_helpers import LOCKED_DAY
 
 if TYPE_CHECKING:
@@ -22,6 +24,7 @@ if TYPE_CHECKING:
     from book_guard.tests.conftest import SickPool
 
 REAL_STANDS_DOWN = _focus.stands_down
+REAL_PROJECT_NAME = _focus.project_name
 """Captured at import: the autouse stub replaces the module attribute."""
 NEXT = LOCKED_DAY + timedelta(days=1)
 
@@ -109,3 +112,51 @@ def test_a_missing_package_fails_closed_and_logs_once(
     errors = [r for r in caplog.records if r.levelno == logging.ERROR]
     assert len(errors) == 1
     assert "focus_project is not importable" in errors[0].getMessage()
+
+
+def test_a_focus_day_says_focus_in_every_surface(
+    bg_paths: Paths, focus_pool: set[date]
+) -> None:
+    focus_pool.add(LOCKED_DAY)
+
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+
+    assert snap.reason == "focus day: Test project"
+    assert _sick.focus_name(LOCKED_DAY) == "Test project"
+    assert "Today is a focus day (Test project): no pages asked" in "\n".join(
+        status_lines(snap)
+    )
+    assert to_json(bg_paths, snap)["focus_name"] == "Test project"
+
+
+def test_a_real_sick_day_keeps_its_text_even_inside_a_project(
+    bg_paths: Paths, sick_pool: SickPool, focus_pool: set[date]
+) -> None:
+    sick_pool[LOCKED_DAY] = frozenset()
+    focus_pool.add(LOCKED_DAY)
+
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+
+    assert snap.reason == "today is a sick day"
+    assert _sick.focus_name(LOCKED_DAY) is None
+    assert "Today is a sick day" in "\n".join(status_lines(snap))
+
+
+def test_an_ordinary_day_has_no_focus_name(bg_paths: Paths) -> None:
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+
+    assert _sick.focus_name(LOCKED_DAY) is None
+    assert to_json(bg_paths, snap)["focus_name"] is None
+
+
+def test_the_project_name_comes_from_the_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = SimpleNamespace(name="HackerRank prep")
+    fake = SimpleNamespace(active=lambda day: project if day == NEXT else None)
+    monkeypatch.setitem(sys.modules, "focus_project", fake)
+
+    assert REAL_PROJECT_NAME(NEXT) == "HackerRank prep"
+    assert REAL_PROJECT_NAME(LOCKED_DAY) == "focus project"
+    monkeypatch.setitem(sys.modules, "focus_project", None)
+    assert REAL_PROJECT_NAME(NEXT) == "focus project"

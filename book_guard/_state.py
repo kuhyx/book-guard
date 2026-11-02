@@ -173,10 +173,12 @@ def _decide(
     """Locked or not, and why: the one-number rule from the resplit."""
     flags = {"sick": day in cal.sick, "free": cal.is_free(day), "escaped": escaped}
     if day < RESPLIT_DATE:
-        return _verdict(day, pace, **flags)
-    yesterday = day - timedelta(days=1)
-    kept_yesterday = kept(ledger, yesterday, cal.is_free, sick=cal.sick)
-    return one_number(pace, kept_yesterday=kept_yesterday, **flags)
+        locked, reason = _verdict(day, pace, **flags)
+    else:
+        yesterday = day - timedelta(days=1)
+        kept_yesterday = kept(ledger, yesterday, cal.is_free, sick=cal.sick)
+        locked, reason = one_number(pace, kept_yesterday=kept_yesterday, **flags)
+    return locked, _sick.focus_reason(day, reason) if flags["sick"] else reason
 
 
 def _escapes_of_month(ledger: Ledger, day: date) -> list[Entry]:

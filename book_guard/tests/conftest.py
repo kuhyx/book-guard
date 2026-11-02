@@ -147,6 +147,7 @@ def _hermetic(
     monkeypatch.setattr(
         _focus, "stands_down", lambda gate, day: gate == "book" and day in focus_pool
     )
+    monkeypatch.setattr(_focus, "project_name", lambda _day: "Test project")
     monkeypatch.setattr("shutil.which", lambda _name: None)
     # The morning carrot reads bg_paths.morning_session (under tmp_path), and
     # a production-mode test must never wait 30 real seconds for it.
