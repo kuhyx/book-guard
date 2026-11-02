@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from book_guard import _sick
 from book_guard._constants import (
     BONUS_MIN_MINUTES,
     BONUS_MIN_PAGES,
@@ -38,6 +39,12 @@ def _assumed_note(view: DayView) -> str:
     return ""
 
 
+def _off_label(view: DayView) -> str:
+    """``sick day``, or ``focus day (<project>)`` when a project is why."""
+    name = _sick.focus_name(view.day)
+    return "sick day" if name is None else f"focus day ({name})"
+
+
 def row(view: DayView) -> str:
     """One line for the week/month listings."""
     head = f"{view.day:%a %Y-%m-%d}  {view.kind:<6}"
@@ -46,7 +53,7 @@ def row(view: DayView) -> str:
     if view.free:
         return f"{head}  free day, read {view.credited}{_assumed_note(view)}"
     if view.sick:
-        return f"{head}  sick day, read {view.credited}{_assumed_note(view)}"
+        return f"{head}  {_off_label(view)}, read {view.credited}{_assumed_note(view)}"
     if view.old_rule:
         return f"{head}  old rule (15+15 / 10+10), read {view.credited}"
     met = "  met" if view.kind != FUTURE and view.credited >= view.required else ""
@@ -71,7 +78,7 @@ def detail(view: DayView) -> list[str]:
         lines.append("  free day: asks nothing")
     elif view.sick:
         lines.append(
-            "  sick day: asks nothing, its share moves to the days left "
+            f"  {_off_label(view)}: asks nothing, its share moves to the days left "
             f"(reading {view.pace.ask.bonus_at} pages still earns the +1h)"
         )
     else:

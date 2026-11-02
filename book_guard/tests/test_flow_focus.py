@@ -10,7 +10,7 @@ import sys
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
-from book_guard import _bonus, _focus, _ledger, _sick
+from book_guard import _bonus, _cli, _focus, _ledger, _sick
 from book_guard._daily_lock import kept
 from book_guard._render import status_lines
 from book_guard._state import snapshot
@@ -160,3 +160,32 @@ def test_the_project_name_comes_from_the_package(
     assert REAL_PROJECT_NAME(LOCKED_DAY) == "focus project"
     monkeypatch.setitem(sys.modules, "focus_project", None)
     assert REAL_PROJECT_NAME(NEXT) == "focus project"
+
+
+def test_ask_says_focus_day_not_sick_day(
+    focus_pool: set[date], capsys: pytest.CaptureFixture[str]
+) -> None:
+    focus_pool.add(LOCKED_DAY)
+    day = LOCKED_DAY.isoformat()
+
+    assert _cli.main(["ask", "--date", day]) == 0
+    detail = capsys.readouterr().out
+    assert _cli.main(["ask", "--date", day, "--week"]) == 0
+    week = capsys.readouterr().out
+
+    assert "focus day (Test project): asks nothing" in detail
+    assert "focus day (Test project), read" in week
+    assert "sick day" not in detail + week
+
+
+def test_ask_keeps_sick_day_text_inside_a_project(
+    sick_pool: SickPool, focus_pool: set[date], capsys: pytest.CaptureFixture[str]
+) -> None:
+    sick_pool[LOCKED_DAY] = frozenset()
+    focus_pool.add(LOCKED_DAY)
+
+    assert _cli.main(["ask", "--date", LOCKED_DAY.isoformat()]) == 0
+
+    out = capsys.readouterr().out
+    assert "sick day: asks nothing" in out
+    assert "focus day" not in out
