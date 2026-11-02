@@ -1,0 +1,8 @@
+# The one place the Android build declares versions (the dependency-freshness
+# gate reads this file). Exact pins, newest stable.
+[versions]
+# Apache-2.0 Tesseract OCR for Android; published on JitPack only.
+tesseract4android = "4.9.0"
+
+[libraries]
+tesseract4android = { module = "cz.adaptech.tesseract4android:tesseract4android", version.ref = "tesseract4android" }

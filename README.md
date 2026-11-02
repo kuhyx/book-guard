@@ -17,7 +17,7 @@ Paper cannot be proven read, only made cheaper to read than to fake:
 4. **Summary** -- 3-5 sentences in your own words, Polish or English.
 
 **Page numbers never need Claude, the PC or a network.** The phone reads
-each photo itself (ML Kit, bundled Latin model), turns it upright by its
+each photo itself (Tesseract4Android, bundled English model), turns it upright by its
 *content* -- the camera's EXIF tag is wrong when it points straight down at
 a book -- and shows the number it found boxed: tap another, or drag a box
 around the right one; it is never typed. Everything (photo, its sidecar

@@ -1,3 +1,5 @@
+import java.net.URI
+import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -14,6 +16,39 @@ val keystoreProperties = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// The English model (tessdata_fast, Apache-2.0, ~4 MB). Too big for git
+// (pre-commit caps files at 2000 KB), so it is fetched at build time from a
+// pinned upstream commit, checked against a pinned sha256 and cached in the
+// Gradle user home; a wrong hash fails the build.
+val tessdataSha256 = "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+val tessdataUrl =
+    "https://github.com/tesseract-ocr/tessdata_fast/raw/" +
+        "87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata"
+val tessdataDir = layout.buildDirectory.dir("generated/tessdata")
+
+fun sha256(file: File): String =
+    MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+        .joinToString("") { "%02x".format(it) }
+
+val fetchTessdata = tasks.register("fetchTessdata") {
+    val cached = File(gradle.gradleUserHomeDir, "book-guard/eng-$tessdataSha256.traineddata")
+    val target = tessdataDir.map { it.file("tessdata/eng.traineddata").asFile }
+    outputs.file(target)
+    doLast {
+        if (!cached.exists() || sha256(cached) != tessdataSha256) {
+            cached.parentFile.mkdirs()
+            val part = File(cached.path + ".part")
+            URI(tessdataUrl).toURL().openStream().use { input ->
+                part.outputStream().use { input.copyTo(it) }
+            }
+            check(sha256(part) == tessdataSha256) { "eng.traineddata sha256 mismatch" }
+            part.renameTo(cached)
+        }
+        target.get().parentFile.mkdirs()
+        cached.copyTo(target.get(), overwrite = true)
+    }
+}
+
 android {
     namespace = "com.kuhy.book_guard_app"
     compileSdk = flutter.compileSdkVersion
@@ -23,6 +58,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    sourceSets.getByName("main").assets.srcDir(tessdataDir.get().asFile)
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
@@ -65,6 +102,15 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+// Every task that packs or reads the assets waits for the model.
+tasks.matching { it.name.endsWith("Assets") }.configureEach {
+    dependsOn(fetchTessdata)
+}
+
+dependencies {
+    implementation(libs.tesseract4android)
 }
 
 flutter {

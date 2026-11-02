@@ -34,7 +34,7 @@ Read README.md first. These are the invariants that are easy to break.
 ## Invariants
 
 - **No model reads page numbers, and the phone's number is trusted.** The
-  phone (ML Kit) reads it upright by content and the reader confirms or
+  phone (Tesseract4Android) reads it upright by content and the reader confirms or
   boxes it there; the PC takes that number as is -- no Tesseract re-read,
   no plausibility check, no "unclear". Tesseract is only the fallback for a
   photo that arrives with no number (desktop web upload, "Send anyway"):

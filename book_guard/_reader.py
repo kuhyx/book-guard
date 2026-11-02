@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """What a photo shows, read entirely on this PC -- no model, no network.
 
-0. A page number the phone read (ML Kit, sidecar note) is the page: the PC
+0. A page number the phone read (its own OCR, sidecar note) is the page: the PC
    only transcribes the text for the grader. No re-read, no plausibility
    check, no "unclear" -- the reader already saw and confirmed it.
 1. Otherwise a barcode zbar can decode is an ISBN photo.

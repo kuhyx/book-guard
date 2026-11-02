@@ -34,11 +34,12 @@ class SeenLine {
   /// Its words with their boxes (for telling upright from sideways).
   final List<(String, Box)> words;
 
-  /// ML Kit's confidence (0-1) per word, aligned with [words]; null or
+  /// The recogniser's confidence (0-1) per word, aligned with [words]; null or
   /// missing where it gives none.
   final List<double?> confidence;
 
-  /// Degrees ML Kit turned the line to read it; null if it does not say.
+  /// Degrees the recogniser turned the line to read it; null if it does
+  /// not say.
   final double? angle;
 }
 
@@ -146,8 +147,8 @@ List<(int, SeenLine)> numberLines(List<SeenLine> lines, int height) {
 
 /// The number in a boxed crop, already turned upright -- or null.
 ///
-/// A line ML Kit had to turn to read is a glyph read the wrong way up: a
-/// flipped "9" reads "6" (the "page 6" box of 2026-10-30 was a 9).
+/// A line the recogniser had to turn to read is a glyph read the wrong way
+/// up: a flipped "9" reads "6" (the "page 6" box of 2026-10-30 was a 9).
 int? boxNumber(List<SeenLine> lines) {
   for (final line in lines) {
     final turned = (line.angle ?? 0) % 360; // (-180, 180] or [0, 360)

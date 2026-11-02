@@ -40,8 +40,8 @@ void main() {
   });
 
   test('a boxed number read upside down is no reading', () {
-    // A flipped "9" reads "6": a line ML Kit read turned from the page's
-    // upright is not trusted, whatever digits it shows.
+    // A flipped "9" reads "6": a line the recogniser read turned from
+    // the page's upright is not trusted, whatever digits it shows.
     expect(boxNumber([SeenLine('6', _b(0, 0, 9, 9), angle: 179)]), isNull);
     expect(boxNumber([SeenLine('6', _b(0, 0, 9, 9), angle: 182)]), isNull);
     // A slight tilt is upright under either angle convention.

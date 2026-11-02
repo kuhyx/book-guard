@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader_none.dart'
-    if (dart.library.io) 'package:book_guard_app/src/page_reader_mlkit.dart'
+    if (dart.library.io) 'package:book_guard_app/src/page_reader_tesseract.dart'
     as platform;
 
 /// What the phone read off one photo, before anything is uploaded.

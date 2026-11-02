@@ -24,9 +24,6 @@ dependencies:
   # The dufs login on the phone. The desktop build never holds it: the local
   # wrapper injects it when proxying WebDAV.
   flutter_secure_storage: 11.2.0
-  # On-device page-number reading (Latin model bundled: works offline).
-  # Android only -- the desktop web build never imports it.
-  google_mlkit_text_recognition: 0.17.1
   http: 1.6.0
   # Decodes the stored JPEG pixels *without* the EXIF turn, which is wrong
   # when the phone points straight down at a book, so the page can be
