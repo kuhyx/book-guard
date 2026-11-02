@@ -101,11 +101,11 @@ packages:
     dependency: "direct main"
     description:
       path: design_system
-      ref: "design_system-v0.2.1"
-      resolved-ref: "978d32af3af66f0d6500c4c6c0c6df5370ebe9a2"
+      ref: "design_system-v0.3.0"
+      resolved-ref: b3c9611af212880301ca79ed21f909bc4640f81f
       url: "https://github.com/kuhyx/utils"
     source: git
-    version: "0.2.1"
+    version: "0.3.0"
   fake_async:
     dependency: transitive
     description:
