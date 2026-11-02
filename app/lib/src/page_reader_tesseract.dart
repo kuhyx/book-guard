@@ -126,7 +126,13 @@ class TesseractPageReader implements PageReader {
     numbers = [
       for (final (number, line) in numbers.take(_recheckMax))
         (
-          await _readCrop(bytes, toDecodedBox(line.box), bestTurn) ?? number,
+          await _readCrop(
+                bytes,
+                toDecodedBox(line.box),
+                bestTurn,
+                glyph: false,
+              ) ??
+              number,
           line,
         ),
     ];
@@ -147,14 +153,22 @@ class TesseractPageReader implements PageReader {
   }
 
   /// The number in [decoded] (decoded pixels), cropped from the photo at
-  /// full resolution, turned [turn] and read as one line, else one glyph.
-  Future<int?> _readCrop(Uint8List bytes, Box decoded, int turn) async {
+  /// full resolution, turned [turn] and read as one line; with [glyph], a
+  /// crop that shows no line is read again as one glyph. The re-read of a
+  /// page hit leaves that out: a half-read "51" must not turn into "5".
+  Future<int?> _readCrop(
+    Uint8List bytes,
+    Box decoded,
+    int turn, {
+    required bool glyph,
+  }) async {
     final jpeg = await Isolate.run(() => cropForBox((bytes, decoded, turn)));
     final line = boxNumber(await _lines(jpeg, 'box', psm: _oneLine));
-    return line ?? boxNumber(await _lines(jpeg, 'box', psm: _oneChar));
+    if (line != null || !glyph) return line;
+    return boxNumber(await _lines(jpeg, 'box', psm: _oneChar));
   }
 
   @override
   Future<int?> readBox(Uint8List bytes, PageScan scan, Box previewBox) =>
-      _readCrop(bytes, scan.toDecodedBox(previewBox), scan.turn);
+      _readCrop(bytes, scan.toDecodedBox(previewBox), scan.turn, glyph: true);
 }

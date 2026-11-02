@@ -76,7 +76,7 @@ void main() {
       });
       final scan = (await reader.scan(photo))!;
       // The four turns, then the number re-read from its crop.
-      expect(calls.map((c) => c['psm']), [3, 3, 3, 3, 7, 10]);
+      expect(calls.map((c) => c['psm']), [3, 3, 3, 3, 7]);
       expect(scan.turn, 90);
       expect((scan.previewWidth, scan.previewHeight), (100, 200));
       expect(scan.hits.single.value, 19);
