@@ -19,6 +19,7 @@ from book_guard._bonus import regrant
 from book_guard._books import current, register
 from book_guard._booktext import BookTextError
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
+from book_guard._embed import EmbedderUnavailableError
 from book_guard._grading import quiz_one, register_isbn
 from book_guard._indexer import index_lock, run_index
 from book_guard._ledger import load
@@ -76,7 +77,14 @@ def _cmd_add(args: argparse.Namespace) -> int:
 
 
 def _cmd_index(_args: argparse.Namespace) -> int:
-    messages = run_index(paths())
+    try:
+        messages = run_index(paths())
+    except EmbedderUnavailableError as exc:
+        # The book stays queued and its checkpoint kept: a run on a Python
+        # with fastembed resumes it.
+        _logger.warning("index failed: %s", exc)
+        _say(str(exc), file=sys.stderr)
+        return 1
     if messages is None:
         _say("another index run is going; it picks up new files too")
         return 0
@@ -95,7 +103,7 @@ def _cmd_attach(args: argparse.Namespace) -> int:
                 _say("an index run is going; attach again when it ends")
                 return 1
             _say(attach(paths(), Path(args.file).expanduser()))
-    except BookTextError as exc:
+    except (BookTextError, EmbedderUnavailableError) as exc:
         _logger.warning("attach failed: %s", exc)
         _say(f"Not attached: {exc}", file=sys.stderr)
         return 1

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -110,7 +111,7 @@ def test_real_embedder_factory(
         def __init__(self, model: str, *, cache_dir: str) -> None:
             created.append((model, cache_dir))
 
-    monkeypatch.setattr(_embed, "TextEmbedding", FakeTextEmbedding)
+    monkeypatch.setattr(sys.modules["fastembed"], "TextEmbedding", FakeTextEmbedding)
     embedder = _embed._embedder(bg_paths)
     assert isinstance(embedder, FakeTextEmbedding)
     assert created == [(_bookindex.EMBED_MODEL, str(bg_paths.data_dir / "models"))]
@@ -145,3 +146,16 @@ def test_a_killed_build_resumes_from_its_checkpoint(
     )
     assert seen[0] == (2, total)  # the two checkpointed chunks were kept
     assert seen[-1] == (total, total)
+
+
+def test_missing_fastembed_raises_one_clear_error(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Python 3.15 has no onnxruntime wheel, so fastembed is not installed
+    # there: embedding fails loudly, never a silent skip or a fallback.
+    monkeypatch.setitem(sys.modules, "fastembed", None)
+    with pytest.raises(_embed.EmbedderUnavailableError) as caught:
+        _embed._embedder(bg_paths)
+    assert str(caught.value) == (
+        "fastembed needs Python <3.15 (no onnxruntime wheel yet)"
+    )

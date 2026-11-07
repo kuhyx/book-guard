@@ -156,7 +156,10 @@ repos:
         files: ^app/(lib|test|bin)/.*\.dart$
       - id: app-test
         name: flutter test (app)
-        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter test'
+        # -j 2: the default (one isolate per two cores, 12 here) peaks past
+        # capped.sh's 2 GiB and gets OOM-killed; -j 2 peaks at 1.5 GiB in
+        # ~50 s at the cap's 10 % CPU (-j 1 runs past a minute).
+        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter test -j 2'
         language: system
         pass_filenames: false
         files: ^app/(lib|test|bin)/.*\.dart$

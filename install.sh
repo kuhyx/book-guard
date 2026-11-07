@@ -25,7 +25,11 @@ readonly UNITS=(
     book-guard-index.service
     book-guard-index.path
     book-guard-index.timer
+    book-guard-wheel-todo.service
+    book-guard-wheel-todo.timer
 )
+# A copy, not the checkout: the wheel-todo unit must not run a branch.
+readonly LIB_DIR="${HOME}/.local/lib/book-guard"
 
 log() { printf 'install: %s\n' "$1" >&2; }
 fail() { printf 'install: FAILED -- %s\n' "$1" >&2; exit 1; }
@@ -87,9 +91,11 @@ install_units() {
     for unit in "${UNITS[@]}"; do
         install -m 644 "$REPO_DIR/$unit" "$UNIT_DIR/"
     done
+    install -Dm 755 "$REPO_DIR/scripts/sync_wheel_issue_to_todo.sh" \
+        "$LIB_DIR/sync_wheel_issue_to_todo.sh"
     systemctl --user daemon-reload
     systemctl --user enable --now book-guard-inbox.path book-guard-inbox.timer book-guard.timer \
-        book-guard-index.path book-guard-index.timer
+        book-guard-index.path book-guard-index.timer book-guard-wheel-todo.timer
     # Enabled for login arming, not started: starting it now would run the
     # gate immediately, which is the timer's and the next login's job.
     systemctl --user enable book-guard.service

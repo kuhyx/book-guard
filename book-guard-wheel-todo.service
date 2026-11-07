@@ -1,0 +1,11 @@
+[Unit]
+Description=Turn the onnxruntime cp315 issue into one todo-app task
+
+[Service]
+Type=oneshot
+# Run from the installed tree like the other units; gh and dart come from the
+# user's PATH. Adds nothing unless the weekly workflow opened the issue.
+Environment=PATH=%h/.local/bin:%h/.pub-cache/bin:/usr/local/bin:/usr/bin
+ExecStart=/bin/bash %h/.local/lib/book-guard/sync_wheel_issue_to_todo.sh
+Nice=19
+TimeoutStartSec=5min

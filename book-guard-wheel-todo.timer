@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly onnxruntime cp315 issue -> todo task
+
+[Timer]
+# The day after the Monday workflow run; Persistent catches a missed week.
+OnCalendar=Tue *-*-* 09:00:00
+Persistent=true
+Unit=book-guard-wheel-todo.service
+
+[Install]
+WantedBy=timers.target

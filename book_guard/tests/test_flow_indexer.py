@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -134,3 +135,16 @@ def test_cli_attach_waits_for_an_index_run(
     with _indexer.index_lock(bg_paths):
         assert _cli.main(["attach", str(book)]) == 1
     assert "an index run is going" in capsys.readouterr().out
+
+
+def test_cli_index_without_fastembed_says_why_and_keeps_the_book(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, capsys: Out
+) -> None:
+    add_book(bg_paths)
+    drop(bg_paths)
+    monkeypatch.setitem(sys.modules, "fastembed", None)
+    assert _cli.main(["index"]) == 1
+    err = capsys.readouterr().err
+    assert err.strip() == "fastembed needs Python <3.15 (no onnxruntime wheel yet)"
+    # Not failed, not done: the next run (on a Python with fastembed) resumes it.
+    assert (bg_paths.books / "war.txt").exists()

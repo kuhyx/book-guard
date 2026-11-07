@@ -1,0 +1,30 @@
+name: onnxruntime wheel
+
+# Weekly: has the latest onnxruntime shipped a cp315 wheel? Until it does,
+# pyproject skips fastembed on Python 3.15 and book_guard._embed raises there.
+# No wheel: green, nothing happens. A wheel: this run fails and opens one
+# issue (deduped by title) saying to drop the marker in pyproject.toml and the
+# guard in _embed.py; the book-guard-wheel-todo user timer turns that issue
+# into a todo-app task.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Look for a cp315 wheel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python scripts/check_onnxruntime_wheel.py

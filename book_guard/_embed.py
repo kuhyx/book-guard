@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from contextlib import closing
 import hashlib
+import importlib
 import logging
 import sqlite3
 from typing import TYPE_CHECKING, Final
 
-from fastembed import TextEmbedding
 import numpy as np
 from numpy.typing import NDArray
 
@@ -23,6 +23,8 @@ from book_guard._bookindex import EMBED_BATCH, EMBED_MODEL, index_path, unit, wi
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from pathlib import Path
+
+    from fastembed import TextEmbedding
 
     from book_guard._paths import Paths
 
@@ -34,8 +36,32 @@ CHECKPOINT_CHUNKS: Final = 64
 """Chunks per committed checkpoint: ~10 s of work at the unit's CPU cap."""
 
 
+NO_FASTEMBED: Final = "fastembed needs Python <3.15 (no onnxruntime wheel yet)"
+
+
+class EmbedderUnavailableError(RuntimeError):
+    """fastembed is not installed: indexing and anchoring cannot run here.
+
+    pyproject skips fastembed on Python 3.15 until onnxruntime ships a cp315
+    wheel; the weekly ``onnxruntime-wheel`` workflow says when to drop that
+    marker and this guard.
+    """
+
+
 def _embedder(paths: Paths) -> TextEmbedding:
-    return TextEmbedding(EMBED_MODEL, cache_dir=str(paths.data_dir / "models"))
+    """The embedding model; one loud error where fastembed is not installed.
+
+    Imported here, not at module level, so the rest of book-guard (status,
+    the photo pass) still imports on a Python without fastembed.
+    """
+    try:
+        fastembed = importlib.import_module("fastembed")
+    except ImportError as exc:
+        raise EmbedderUnavailableError(NO_FASTEMBED) from exc
+    model: TextEmbedding = fastembed.TextEmbedding(
+        EMBED_MODEL, cache_dir=str(paths.data_dir / "models")
+    )
+    return model
 
 
 def _no_progress(_done: int, _total: int) -> None:

@@ -8,9 +8,12 @@ Autouse, so no test can forget them:
   ~/data/cloud/Reading are never touched;
 * the Claude CLI, the network (urllib) and desktop notifications raise or
   no-op unless a test installs its own fake;
-* embeddings come from a tiny deterministic fake instead of fastembed;
+* embeddings come from a tiny deterministic fake instead of fastembed; where
+  fastembed is not installed (Python 3.15: no onnxruntime wheel yet) a fake
+  ``fastembed`` module stands in for it;
 * the background index unit is never started (``systemctl --user start``
-  raises unless a test installs its own fake);
+  raises unless a test installs its own fake); a test that runs a repo shell
+  script against stub commands on ``PATH`` asks for :func:`run_script`;
 * focus projects: ``book_guard._focus.stands_down`` answers from the per-test
   :func:`focus_pool` set (empty unless a test adds a day), never the real
   registry;
@@ -22,17 +25,23 @@ Autouse, so no test can forget them:
 from __future__ import annotations
 
 import hashlib
-from typing import TYPE_CHECKING
+import importlib
+import importlib.util
+import subprocess
+import sys
+import types
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import pytest
 import sickdays
 
-from book_guard import _embed, _focus, _http, _openlibrary, _paths
+from book_guard import _focus, _http, _openlibrary, _paths
 from book_guard._paths import Paths
+from scripts import check_onnxruntime_wheel
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from datetime import date
     from pathlib import Path
 
@@ -69,6 +78,20 @@ def bg_paths(tmp_path: Path) -> Paths:
     )
 
 
+_REAL_RUN: Final = subprocess.run
+"""Captured before ``_hermetic`` replaces ``subprocess.run`` for every test."""
+
+
+@pytest.fixture
+def run_script() -> Callable[..., subprocess.CompletedProcess[str]]:
+    """The real ``subprocess.run``, for a repo script run against stubs only.
+
+    The test must put stub executables first on ``PATH`` (and point every
+    other external at a stub) so the script reaches nothing real.
+    """
+    return _REAL_RUN
+
+
 @pytest.fixture
 def focus_pool() -> set[date]:
     """This test's focus days on which the ``book`` gate stands down."""
@@ -79,6 +102,19 @@ def focus_pool() -> set[date]:
 def sick_pool() -> SickPool:
     """This test's sick-day pool: add ``{day: frozenset(kept lockers)}``."""
     return {}
+
+
+def _fastembed(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
+    """The ``fastembed`` module ``_embed`` will import: real, or a stand-in.
+
+    On a Python with no fastembed install (3.15) a bare module is put in
+    ``sys.modules`` so the embedding code still runs and is covered there.
+    """
+    if importlib.util.find_spec("fastembed") is not None:
+        return importlib.import_module("fastembed")
+    stand_in = types.ModuleType("fastembed")
+    monkeypatch.setitem(sys.modules, "fastembed", stand_in)
+    return stand_in
 
 
 def _fake_sick_pool(monkeypatch: pytest.MonkeyPatch, pool: SickPool) -> None:
@@ -127,6 +163,7 @@ def _hermetic(
     monkeypatch.setattr("book_guard._claude.subprocess.run", no_claude)
     monkeypatch.setattr(_openlibrary, "urlopen", no_network)
     monkeypatch.setattr(_http, "urlopen", no_network)
+    monkeypatch.setattr(check_onnxruntime_wheel, "urlopen", no_network)  # PyPI
     monkeypatch.setattr("book_guard._local.urlopen", no_network)  # ollama
 
     def no_systemctl(*_args: object, **_kwargs: object) -> object:
@@ -139,7 +176,12 @@ def _hermetic(
     monkeypatch.setattr("book_guard._lookup.time.sleep", lambda _s: None)
     # The fastembed CLASS is faked, not the factory, so _embed._embedder
     # itself runs (and is covered) without downloading a model.
-    monkeypatch.setattr(_embed, "TextEmbedding", lambda *_a, **_k: FakeEmbedder())
+    monkeypatch.setattr(
+        _fastembed(monkeypatch),
+        "TextEmbedding",
+        lambda *_a, **_k: FakeEmbedder(),
+        raising=False,  # the 3.15 stand-in module starts empty
+    )
     monkeypatch.setattr("freedays.is_free_day", lambda *_a, **_k: False)
     # The shared sick-day pool is kuhy's real file: no test may read it.
     _fake_sick_pool(monkeypatch, sick_pool)

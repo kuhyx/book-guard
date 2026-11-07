@@ -11,12 +11,19 @@ requires-python = ">=3.14"
 # day (book_guard._focus); a missing install fails closed (the gate applies).
 # pillow: EXIF capture time + downscaling before the vision call.
 # fastembed: multilingual embeddings that anchor photos in the ebook file.
+# Skipped on Python 3.15: its onnxruntime has no cp315 wheel yet, and
+# book_guard._embed raises one clear error there. When the weekly
+# onnxruntime-wheel workflow reports the wheel, drop the marker here and the
+# guard in _embed.py.
+# numpy: the index vectors (_bookindex, _ebook_map); direct, since fastembed
+# no longer brings it on 3.15.
 dependencies = [
     "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.12.0#subdirectory=gatelock",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.0#subdirectory=freedays",
     "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.4.0#subdirectory=sickdays",
     "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.7.1#subdirectory=focus_project",
-    "fastembed==0.9.1",
+    "fastembed==0.9.1; python_version < '3.15'",
+    "numpy==2.5.4",
     "pillow==12.3.0",
 ]
 
@@ -66,7 +73,7 @@ known-first-party = ["book_guard"]
 ban-relative-imports = "all"
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.15"
 strict = true
 warn_unreachable = true
 ignore_missing_imports = true
@@ -74,8 +81,10 @@ show_error_codes = true
 exclude = [".venv/", ".demo/", "app/"]
 
 [tool.pylint.main]
-py-version = "3.14"
-jobs = 0
+py-version = "3.15"
+# One process: parallel jobs pickle the linter with dill, and dill 0.4.1
+# crashes on Python 3.15 (code objects lost co_lnotab). ~9 s single-process.
+jobs = 1
 ignore = [".venv", "__pycache__", ".demo", "app"]
 ignore-paths = ["^(.*/)?tests/.*$"]
 
