@@ -12,8 +12,8 @@ from pathlib import Path
 import sys
 from typing import TYPE_CHECKING, Final, TextIO
 
-from book_guard import _ask_cli, _ebook, _ebook_cli, _library_cli, _widen
-from book_guard._actions import next_quiz, notify, process
+from book_guard import _ask_cli, _ebook_cli, _index_cli, _library_cli, _widen
+from book_guard._actions import next_quiz, process
 from book_guard._attach import attach
 from book_guard._bonus import regrant
 from book_guard._books import current, register
@@ -21,7 +21,7 @@ from book_guard._booktext import BookTextError
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._embed import EmbedderUnavailableError
 from book_guard._grading import quiz_one, register_isbn
-from book_guard._indexer import index_lock, run_index
+from book_guard._indexer import index_lock
 from book_guard._ledger import load
 from book_guard._lock import run_gate
 from book_guard._openlibrary import BookInfo, search_title
@@ -72,26 +72,6 @@ def _cmd_add(args: argparse.Namespace) -> int:
         return 1
     if args.file:
         return _cmd_attach(args)
-    return 0
-
-
-def _cmd_index(_args: argparse.Namespace) -> int:
-    try:
-        messages = run_index(paths())
-    except EmbedderUnavailableError as exc:
-        # The book stays queued and its checkpoint kept: a run on a Python
-        # with fastembed resumes it.
-        _logger.warning("index failed: %s", exc)
-        _say(str(exc), file=sys.stderr)
-        return 1
-    if messages is None:
-        _say("another index run is going; it picks up new files too")
-        return 0
-    if messages and _ebook.refresh(paths()):
-        messages.append("in-app reader: page map ready")
-    for message in messages:
-        _say(message)
-    notify(messages)
     return 0
 
 
@@ -202,7 +182,7 @@ def _parser() -> argparse.ArgumentParser:
         ("pages", "set the current book's last page", _cmd_pages),
         ("attach", "attach the current book's ebook file (any format)", _cmd_attach),
         ("process", "read new photos from the inbox", _cmd_process),
-        ("index", "index book files dropped into Reading/books", _cmd_index),
+        ("index", "index book files dropped into Reading/books", _index_cli.cmd_index),
         ("ebook-map", "the in-app reader's page map", _ebook_cli.cmd_ebook_map),
         ("status", "show pace, sessions and what to do next", _cmd_status),
         ("quiz", "write the summary for a finished session", _cmd_quiz),
