@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
+import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/library_store.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
 import 'package:book_guard_app/src/screens/note_editor.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/switch_book_button.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -14,13 +16,25 @@ import 'package:flutter/material.dart';
 /// edited offline.
 class LibraryBookScreen extends StatefulWidget {
   /// Creates the screen for [book].
-  const new({required this.api, required this.book, super.key});
+  const new({
+    required this.api,
+    required this.book,
+    this.state,
+    this.onSwitched,
+    super.key,
+  });
 
   /// Where photos come from and notes go.
   final GuardApi api;
 
   /// The book as the library lists it.
   final LibraryBook book;
+
+  /// The live snapshot: tells whether a session is open.
+  final GuardState? state;
+
+  /// Called with the ISBN once "Read this now" is queued.
+  final ValueChanged<String>? onSwitched;
 
   @override
   State<LibraryBookScreen> createState() => _LibraryBookScreenState();
@@ -83,6 +97,12 @@ class _LibraryBookScreenState extends State<LibraryBookScreen> {
             'p. ${book.lastPageRead ?? 0}/${book.pages ?? '?'} - '
             '${book.pagesRead} pages credited - '
             '${_status(book)}',
+          ),
+          SwitchBookButton(
+            api: widget.api,
+            book: book,
+            state: widget.state,
+            onSwitched: widget.onSwitched,
           ),
           const SectionHeader('Notes'),
           if (notes.isEmpty) const Text('No notes yet.'),

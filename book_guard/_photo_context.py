@@ -22,6 +22,7 @@ import re
 from typing import TYPE_CHECKING, Final
 
 from book_guard._books import book_at
+from book_guard._ebook_overlap import breaks
 from book_guard._pagenum import Box, Context
 from book_guard._photos import usable_pages
 from book_guard._sessions import build_sessions, open_start
@@ -102,16 +103,16 @@ def context_for(
     if label.group(2):
         return Context(expected=int(label.group(2)), last_page=last_page)
     pages = usable_pages(records)
-    breaks = [s.start.taken for s in app]
+    closing = breaks(app, ledger)
     if label.group(1) == "stop":
-        start = open_start(pages, breaks)
+        start = open_start(pages, closing)
         return Context(after=start.page if start else None, last_page=last_page)
     # Where the last session ended -- not the last photo: the check photo
     # (p. 19 of a p. 7-51 session) is taken after the stop photo.
     isbn = book.isbn if book else None
     ends = [
         s.end
-        for s in build_sessions(pages, breaks)
+        for s in build_sessions(pages, closing)
         if s.end.taken <= taken
         and (b := book_at(ledger, s.end.taken))
         and b.isbn == isbn

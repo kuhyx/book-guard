@@ -10,6 +10,7 @@ import sys
 from typing import TYPE_CHECKING
 
 from book_guard import _library_text as library_text
+from book_guard._grading import switch_book
 from book_guard._library import build as build_library
 from book_guard._paths import paths
 from book_guard._state import snapshot
@@ -46,3 +47,10 @@ def cmd_library(args: argparse.Namespace) -> int:
     else:
         _out("\n".join(library_text.library_lines(doc)))
     return 0
+
+
+def cmd_switch(args: argparse.Namespace) -> int:
+    """Read a registered book again (``book-guard switch <ISBN>``)."""
+    ok, message = switch_book(paths(), args.isbn)
+    _out(message, err=not ok)
+    return 0 if ok else 1

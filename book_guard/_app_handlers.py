@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 import os
 from typing import TYPE_CHECKING, Any, Final
@@ -14,7 +15,7 @@ from book_guard._books import current, normalise_chapters, register
 from book_guard._booktext import BookTextError
 from book_guard._ebook_sessions import record as record_ebook_session
 from book_guard._flock import exclusive
-from book_guard._grading import quiz_one, register_isbn
+from book_guard._grading import quiz_one, register_isbn, switch_book
 from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book
 from book_guard._notes import upsert as upsert_note
@@ -55,6 +56,24 @@ def _register(paths: Paths, request: dict[str, Any]) -> Response:
         title=_text(request.get("title")),
         author=_text(request.get("author")),
     )
+    return Response(ok=ok, message=message)
+
+
+def _switch_book(paths: Paths, request: dict[str, Any]) -> Response:
+    """Read a registered book from the app's tap time (``at``, with offset)."""
+    isbn = normalise_isbn(request.get("isbn"))
+    if isbn is None:
+        return Response(ok=False, message="That is not a 10- or 13-digit ISBN.")
+    raw = request.get("at")
+    at = None
+    if raw is not None:
+        try:
+            at = datetime.fromisoformat(str(raw))
+        except ValueError as exc:
+            _logger.warning("switch_book: unreadable time %r (%s)", raw, exc)
+        if at is None or at.tzinfo is None:
+            return Response(ok=False, message=f"Bad switch time {raw!r}.")
+    ok, message = switch_book(paths, isbn, at)
     return Response(ok=ok, message=message)
 
 
@@ -155,6 +174,7 @@ def _retry_book(paths: Paths, request: dict[str, Any]) -> Response:
 
 HANDLERS: dict[str, Callable[[Paths, dict[str, Any]], Response]] = {
     "register": _register,
+    "switch_book": _switch_book,
     "edit_book": _edit_book,
     "lookup": _lookup,
     "summary": _summary,

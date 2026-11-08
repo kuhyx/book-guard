@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 from typing import TYPE_CHECKING, Final, NamedTuple
@@ -162,3 +162,52 @@ def register(
     )
     _ledger.append(paths.ledger, paths.key_file, entry)
     return _from_entry(entry)
+
+
+SWITCHED: Final = "switched"
+
+
+def switch(paths: Paths, isbn: str, *, at: datetime | None = None) -> Book:
+    """Make a book already registered the one being read, from ``at``.
+
+    A new ``book`` row copying that book's newest registration (pages,
+    chapters), marked ``switched`` so a paper session never pairs a start
+    photo of one book with an end photo of another (:func:`switch_times`).
+    ``at`` is the app's tap time (it may arrive late through the outbox),
+    clamped to now and to after the newest book row, so the ledger stays in
+    time order for :func:`book_at`. Switching to the current book writes
+    nothing. The caller holds ``_flock.exclusive``.
+
+    Raises:
+        LookupError: ``isbn`` was never registered.
+        OSError: The ledger could not be written.
+    """
+    rows = _ledger.load(paths.ledger, paths.key_file).of_kind(BOOK)
+    mine = [e for e in rows if e.detail.get("isbn") == isbn]
+    if not mine:
+        msg = f"ISBN {isbn} is not registered; add it first"
+        raise LookupError(msg)
+    newest = _from_entry(rows[-1])
+    if newest.isbn == isbn:
+        return newest
+    now = datetime.now(tz=UTC)
+    floor = newest.registered_at + timedelta(microseconds=1)
+    moment = max(min(at or now, now), floor)
+    entry = Entry(
+        entry_id=f"book:{isbn}:{moment.isoformat()}",
+        kind=BOOK,
+        day=moment.astimezone().date().isoformat(),
+        detail={**mine[-1].detail, SWITCHED: "1"},
+        created_at=moment.isoformat(),
+    )
+    _ledger.append(paths.ledger, paths.key_file, entry)
+    return _from_entry(entry)
+
+
+def switch_times(ledger: Ledger) -> list[datetime]:
+    """When the reader switched books: no paper session spans one."""
+    return [
+        datetime.fromisoformat(e.created_at)
+        for e in ledger.of_kind(BOOK)
+        if e.detail.get(SWITCHED) == "1"
+    ]

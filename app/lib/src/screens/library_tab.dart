@@ -41,6 +41,10 @@ class _LibraryTabState extends State<LibraryTab> {
   /// Notes written on this device: counted until the PC lists them.
   List<Note> _device = const [];
 
+  /// The book just chosen with "Read this now", current here until the
+  /// PC's library says so too.
+  String? _chosen;
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +81,17 @@ class _LibraryTabState extends State<LibraryTab> {
     setState(() {
       _library = library;
       _loaded = true;
+      final agreed = library?.books.any((b) => b.current && b.isbn == _chosen);
+      if (agreed ?? false) _chosen = null;
     });
+  }
+
+  /// [book] with the optimistic current flag applied.
+  LibraryBook _shown(LibraryBook book) {
+    final chosen = _chosen;
+    return chosen == null
+        ? book
+        : book.withCurrent(current: book.isbn == chosen);
   }
 
   String _subtitle(LibraryBook book) {
@@ -100,7 +114,12 @@ class _LibraryTabState extends State<LibraryTab> {
   Future<void> _open(LibraryBook book) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => LibraryBookScreen(api: widget.api, book: book),
+        builder: (_) => LibraryBookScreen(
+          api: widget.api,
+          book: book,
+          state: widget.state,
+          onSwitched: (isbn) => setState(() => _chosen = isbn),
+        ),
       ),
     );
     await _loadDeviceNotes();
@@ -108,7 +127,9 @@ class _LibraryTabState extends State<LibraryTab> {
 
   @override
   Widget build(BuildContext context) {
-    final books = _library?.books ?? const <LibraryBook>[];
+    final books = [
+      for (final b in _library?.books ?? const <LibraryBook>[]) _shown(b),
+    ];
     if (!_loaded) return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
       onRefresh: _load,

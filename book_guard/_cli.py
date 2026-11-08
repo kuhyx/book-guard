@@ -33,7 +33,6 @@ from book_guard._state_json import to_json
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-
 _logger: Final = logging.getLogger(__name__)
 
 
@@ -199,6 +198,7 @@ def _parser() -> argparse.ArgumentParser:
     commands: list[tuple[str, str, Callable[[argparse.Namespace], int]]] = [
         ("search", "find a book's ISBN by title", _cmd_search),
         ("add", "register the book you are reading", _cmd_add),
+        ("switch", "read a registered book again", _library_cli.cmd_switch),
         ("pages", "set the current book's last page", _cmd_pages),
         ("attach", "attach the current book's ebook file (any format)", _cmd_attach),
         ("process", "read new photos from the inbox", _cmd_process),
@@ -240,6 +240,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     _ask_cli.configure(subs["ask"])
     _library_cli.configure(subs["library"])
+    subs["switch"].add_argument("isbn")
     subs["regrant"].add_argument("--dry-run", action="store_true")
     _widen.configure(subs["retime"])
     subs["lock"].add_argument("--production", action="store_true")

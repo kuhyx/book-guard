@@ -11,7 +11,7 @@ import logging
 from typing import TYPE_CHECKING, Final
 
 from book_guard._anchor import find_span
-from book_guard._books import register
+from book_guard._books import register, switch
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._constants import GRADER_GRACE
 from book_guard._flock import exclusive
@@ -26,6 +26,8 @@ from book_guard._state import snapshot
 from book_guard._summaries import save_unlocked
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from book_guard._paths import Paths
     from book_guard._state import SessionView
 
@@ -69,6 +71,20 @@ def register_isbn(
         if book.pages
         else "; set the last page of your copy (app, or: book-guard pages N)"
     )
+    return True, f"Now reading: {book.label}{tail}"
+
+
+def switch_book(
+    paths: Paths, isbn: str, at: datetime | None = None
+) -> tuple[bool, str]:
+    """Go back to a registered book (``_books.switch``): (switched, a line)."""
+    try:
+        with exclusive(paths):
+            book = switch(paths, isbn, at=at)
+    except LookupError as exc:
+        _logger.warning("switch to %s refused: %s", isbn, exc)
+        return False, str(exc)
+    tail = f", last page {book.pages}" if book.pages else ""
     return True, f"Now reading: {book.label}{tail}"
 
 

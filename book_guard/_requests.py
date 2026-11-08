@@ -11,6 +11,8 @@ summary waiting out a grader outage is credited by ``quiz_one`` itself).
 Request types:
 
 * ``register`` -- ``{"isbn": str, "pages": int | null}``
+* ``switch_book`` -- ``{"isbn": str, "at": iso with offset}``: read a
+  registered book again, from the tap (``_books.switch``)
 * ``set_pages`` -- ``{"pages": int}`` for the current book
 * ``summary`` -- ``{"session_id": str, "summary": str}``
 * ``retry_book`` -- ``{"file": str}``: a failed book file, queued again

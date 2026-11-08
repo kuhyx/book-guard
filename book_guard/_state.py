@@ -110,7 +110,7 @@ def _session_views(
     verdicts = ledger.verdicts()
     signed = widened(ledger)
     views = []
-    paper = build_sessions(_photos.usable_pages(records), breaks(app))
+    paper = build_sessions(_photos.usable_pages(records), breaks(app, ledger))
     for session in sorted([*paper, *app], key=lambda s: s.end.taken):
         apply_times(session, times)
         apply_widened(session, signed)
@@ -194,7 +194,7 @@ def _reading(
     records = _photos.load(paths.photos)
     app = _ebook_sessions.sessions(paths)
     views = _session_views(ledger, records, load_times(paths.session_times), app)
-    return views, open_start(_photos.usable_pages(records), breaks(app))
+    return views, open_start(_photos.usable_pages(records), breaks(app, ledger))
 
 
 def snapshot(
