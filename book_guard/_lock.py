@@ -151,8 +151,6 @@ class BookGuardLock:
             self._vars.say(_pictos.WARN)
             finished = True
         if finished:
-            if self._vars.feedback.busy:
-                self._vars.say()  # a submit that hit a busy worker: try again
             self._refresh()
         self._vars.spin()
         if not self._closed:
@@ -189,9 +187,10 @@ class BookGuardLock:
         text = self._typed("summary")
         if not pending or not text:
             return
-        self._vars.say(busy=True)
         if self._worker.busy:
+            self._vars.say(_pictos.RETRY)  # not taken: send it again in a moment
             return
+        self._vars.say(busy=True)
 
         def done(verdict: Verdict) -> None:
             topics = "\n".join(f"- {m}" for m in verdict.missing)

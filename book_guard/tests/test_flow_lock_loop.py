@@ -125,18 +125,17 @@ def test_submit_needs_a_session_and_text(
     assert _job(gate).started == []
 
 
-def test_submit_while_busy(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_submit_while_busy_asks_to_send_again(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
     seed_photos(bg_paths, *quiz_pair())
     gate, seen = _arm(bg_paths, monkeypatch)
     seen.inputs[0].summary.set("my summary")
     _job(gate).busy = True
     gate._submit()
-    assert gate._vars.feedback.busy
-    assert _job(gate).started == []
-    _job(gate).busy = False
-    _job(gate).finish = True
-    gate._tick()  # the worker finished: the dangling spinner is cleared
+    assert gate._vars.feedback.icon == _pictos.RETRY
     assert not gate._vars.feedback.busy
+    assert _job(gate).started == []
 
 
 @pytest.mark.parametrize(
