@@ -25,6 +25,9 @@ const _uprightEnough = 25;
 // numbers, and each re-read costs a decode of the photo.
 const _recheckMax = 4;
 
+int _notShorter(int page, int? crop) =>
+    crop != null && '$crop'.length >= '$page'.length ? crop : page;
+
 /// Tesseract4Android through the `book_guard/tesseract` channel, over JPEG
 /// files written to the cache folder (the native side reads files).
 class TesseractPageReader implements PageReader {
@@ -53,6 +56,7 @@ class TesseractPageReader implements PageReader {
       final raw = await channel.invokeMethod<Object?>('recognize', {
         'path': file.path,
         'psm': psm,
+        'model': _model,
       });
       return linesFromChannel(raw, minConfidence: minConfidence);
     } finally {
@@ -86,8 +90,37 @@ class TesseractPageReader implements PageReader {
     return withoutRepeats(found);
   }
 
+  // Which model reads: the small fast one, or the full one (`scan` falls
+  // back to it when the fast one finds no number the photo can use).
+  var _model = 'fast';
+
   @override
-  Future<PageScan?> scan(Uint8List bytes) async {
+  Future<PageScan?> scan(
+    Uint8List bytes, {
+    PageContext context = const PageContext(),
+  }) async {
+    _model = 'fast';
+    final first = await _scan(bytes);
+    if (first == null || _usable(first, context)) return first;
+    // p. 611 of 2026-11-09: the fast model reads the bold corner number as
+    // a word of letters. The full model is slower and reads other photos
+    // worse (p. 502 as "2"), so it only gets a say where the fast one has
+    // nothing usable.
+    _model = 'full';
+    try {
+      final second = await _scan(bytes);
+      return second != null && _usable(second, context) ? second : first;
+    } finally {
+      _model = 'fast';
+    }
+  }
+
+  // `boxed` skips the "far from the last end" rule: that is the reader's
+  // call, not a reason to read the photo again.
+  bool _usable(PageScan scan, PageContext context) =>
+      choosePage(scan.hits, context, boxed: true).hit != null;
+
+  Future<PageScan?> _scan(Uint8List bytes) async {
     final watch = Stopwatch()..start();
     final Prepared prepared;
     try {
@@ -122,17 +155,20 @@ class TesseractPageReader implements PageReader {
       numbers = numberLines(await _edgeLines(bytes, bestTurn, width), height);
     }
     // The whole page is read at 1600 px, where a 151 can read as 161: each
-    // number is read again from its own full-resolution crop.
+    // number is read again from its own full-resolution crop. A crop fixes or
+    // adds a digit ("2" for 502), never drops one ("12" for 612).
     numbers = [
       for (final (number, line) in numbers.take(_recheckMax))
         (
-          await _readCrop(
-                bytes,
-                toDecodedBox(line.box),
-                bestTurn,
-                glyph: false,
-              ) ??
-              number,
+          _notShorter(
+            number,
+            await _readCrop(
+              bytes,
+              toDecodedBox(line.box),
+              bestTurn,
+              glyph: false,
+            ),
+          ),
           line,
         ),
     ];

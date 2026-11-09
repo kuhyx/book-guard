@@ -16,38 +16,52 @@ val keystoreProperties = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
-// The English model (tessdata_fast, Apache-2.0, ~4 MB). Too big for git
-// (pre-commit caps files at 2000 KB), so it is fetched at build time from a
-// pinned upstream commit, checked against a pinned sha256 and cached in the
-// Gradle user home; a wrong hash fails the build.
-val tessdataSha256 = "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
-val tessdataUrl =
-    "https://github.com/tesseract-ocr/tessdata_fast/raw/" +
-        "87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata"
+// The English models, fetched at build time (too big for git: pre-commit caps
+// files at 2000 KB) from pinned upstream commits, checked against pinned
+// sha256s and cached in the Gradle user home; a wrong hash fails the build.
+//  * fast: tessdata_fast (Apache-2.0, ~4 MB), reads every page.
+//  * full: tessdata (Apache-2.0, ~23 MB), the second opinion when fast has
+//    nothing usable (it reads the bold p. 611 the fast one misreads).
 val tessdataDir = layout.buildDirectory.dir("generated/tessdata")
 
 fun sha256(file: File): String =
     MessageDigest.getInstance("SHA-256").digest(file.readBytes())
         .joinToString("") { "%02x".format(it) }
 
-val fetchTessdata = tasks.register("fetchTessdata") {
-    val cached = File(gradle.gradleUserHomeDir, "book-guard/eng-$tessdataSha256.traineddata")
-    val target = tessdataDir.map { it.file("tessdata/eng.traineddata").asFile }
-    outputs.file(target)
-    doLast {
-        if (!cached.exists() || sha256(cached) != tessdataSha256) {
-            cached.parentFile.mkdirs()
-            val part = File(cached.path + ".part")
-            URI(tessdataUrl).toURL().openStream().use { input ->
-                part.outputStream().use { input.copyTo(it) }
+fun fetchModel(task: String, sha: String, url: String, folder: String) =
+    tasks.register(task) {
+        val cached = File(gradle.gradleUserHomeDir, "book-guard/eng-$sha.traineddata")
+        val target = tessdataDir.map { it.file("$folder/eng.traineddata").asFile }
+        outputs.file(target)
+        doLast {
+            if (!cached.exists() || sha256(cached) != sha) {
+                cached.parentFile.mkdirs()
+                val part = File(cached.path + ".part")
+                URI(url).toURL().openStream().use { input ->
+                    part.outputStream().use { input.copyTo(it) }
+                }
+                check(sha256(part) == sha) { "eng.traineddata sha256 mismatch" }
+                part.renameTo(cached)
             }
-            check(sha256(part) == tessdataSha256) { "eng.traineddata sha256 mismatch" }
-            part.renameTo(cached)
+            target.get().parentFile.mkdirs()
+            cached.copyTo(target.get(), overwrite = true)
         }
-        target.get().parentFile.mkdirs()
-        cached.copyTo(target.get(), overwrite = true)
     }
-}
+
+val fetchTessdata = fetchModel(
+    "fetchTessdata",
+    "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+    "https://github.com/tesseract-ocr/tessdata_fast/raw/" +
+        "87416418657359cb625c412a48b6e1d6d41c29bd/eng.traineddata",
+    "tessdata",
+)
+val fetchTessdataFull = fetchModel(
+    "fetchTessdataFull",
+    "daa0c97d651c19fba3b25e81317cd697e9908c8208090c94c3905381c23fc047",
+    "https://github.com/tesseract-ocr/tessdata/raw/" +
+        "ced78752cc61322fb554c280d13360b35b8684e4/eng.traineddata",
+    "tessdata_full",
+)
 
 android {
     namespace = "com.kuhy.book_guard_app"
@@ -106,7 +120,7 @@ kotlin {
 
 // Every task that packs or reads the assets waits for the model.
 tasks.matching { it.name.endsWith("Assets") }.configureEach {
-    dependsOn(fetchTessdata)
+    dependsOn(fetchTessdata, fetchTessdataFull)
 }
 
 dependencies {

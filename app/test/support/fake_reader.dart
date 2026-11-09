@@ -44,7 +44,10 @@ class FakeReader implements PageReader {
   final List<Box> asked = [];
 
   @override
-  Future<PageScan?> scan(Uint8List bytes) async => result;
+  Future<PageScan?> scan(
+    Uint8List bytes, {
+    PageContext context = const PageContext(),
+  }) async => result;
 
   @override
   Future<int?> readBox(Uint8List bytes, PageScan scan, Box previewBox) async {

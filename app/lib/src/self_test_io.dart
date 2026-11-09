@@ -31,21 +31,20 @@ Future<void> runSelfTestIfAsked(PageReader? reader) async {
   final results = <Map<String, Object?>>[];
   for (final row in rows.cast<Map<String, dynamic>>()) {
     if (row['box'] != null) continue;
+    final given = row['context'] as Map<String, dynamic>? ?? const {};
+    final context = PageContext(
+      expected: given['expected'] as int?,
+      after: given['after'] as int?,
+      near: given['near'] as int?,
+      lastPage: given['last_page'] as int?,
+    );
     final scan = await reader.scan(
       await File('${dir.path}/${row['file']}').readAsBytes(),
+      context: context,
     );
-    final context = row['context'] as Map<String, dynamic>? ?? const {};
     final choice = scan == null
         ? const PageChoice(null, 'unreadable')
-        : choosePage(
-            scan.hits,
-            PageContext(
-              expected: context['expected'] as int?,
-              after: context['after'] as int?,
-              near: context['near'] as int?,
-              lastPage: context['last_page'] as int?,
-            ),
-          );
+        : choosePage(scan.hits, context);
     final got = choice.hit?.value;
     final result = {
       'file': row['file'],

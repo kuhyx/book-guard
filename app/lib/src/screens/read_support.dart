@@ -95,7 +95,7 @@ Future<ReviewResult?> reviewPhoto(
   String? attempt,
 }) async {
   if (reader == null) return const ReviewResult();
-  final scan = await reader.scan(bytes);
+  final scan = await reader.scan(bytes, context: pageContext);
   // What the phone read, before anyone confirms it: the step a photo was
   // once lost after (2026-10-23, "Page 252?" and then gone).
   await errors.event('photo', 'scanned', {

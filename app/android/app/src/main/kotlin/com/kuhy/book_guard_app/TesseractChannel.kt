@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
 /**
  * Tesseract on the phone, for `page_reader_tesseract.dart`.
  *
- * One method, `recognize(path, psm)`: reads the image file at [path] and
+ * One method, `recognize(path, psm, model)`: reads the image file at [path] and
  * returns its lines, each a list of words `{text, left, top, right, bottom,
  * conf}` (confidence 0-1) in the image's own pixels. Recognition runs on a
  * single worker thread (TessBaseAPI is not thread-safe and takes seconds),
@@ -25,7 +25,7 @@ class TesseractChannel(
 ) : MethodChannel.MethodCallHandler {
     private val worker = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
-    private var engine: TessBaseAPI? = null
+    private val engines = HashMap<String, TessBaseAPI>()
 
     init {
         MethodChannel(messenger, "book_guard/tesseract").setMethodCallHandler(this)
@@ -38,13 +38,14 @@ class TesseractChannel(
         }
         val path = call.argument<String>("path")
         val psm = call.argument<Int>("psm") ?: TessBaseAPI.PageSegMode.PSM_AUTO
+        val model = call.argument<String>("model") ?: "fast"
         if (path == null) {
             result.error("args", "path is required", null)
             return
         }
         worker.execute {
             try {
-                val lines = recognize(path, psm)
+                val lines = recognize(path, psm, model)
                 main.post { result.success(lines) }
             } catch (e: Exception) {
                 main.post { result.error("tesseract", e.message, null) }
@@ -52,26 +53,35 @@ class TesseractChannel(
         }
     }
 
-    /** The eng model, copied out of the APK's assets once (Tesseract wants a file). */
-    private fun tessdataRoot(): String {
-        val dir = File(context.filesDir, "tessdata")
-        val model = File(dir, "eng.traineddata")
-        val bundled = context.assets.open("tessdata/eng.traineddata").use { it.readBytes() }
-        if (!model.exists() || model.length() != bundled.size.toLong()) {
+    /**
+     * The eng model of [model] ("fast", or "full": the bigger one, a second
+     * opinion), copied out of the APK's assets once (Tesseract wants a file
+     * at `<root>/tessdata/eng.traineddata`).
+     */
+    private fun tessdataRoot(model: String): String {
+        val root = if (model == "full") File(context.filesDir, "full") else context.filesDir
+        val dir = File(root, "tessdata")
+        val target = File(dir, "eng.traineddata")
+        val asset = if (model == "full") "tessdata_full" else "tessdata"
+        val bundled = context.assets.open("$asset/eng.traineddata").use { it.readBytes() }
+        if (!target.exists() || target.length() != bundled.size.toLong()) {
             dir.mkdirs()
-            model.writeBytes(bundled)
+            target.writeBytes(bundled)
         }
-        return context.filesDir.absolutePath
+        return root.absolutePath
     }
 
-    private fun engine(): TessBaseAPI =
-        engine ?: TessBaseAPI().also {
-            check(it.init(tessdataRoot(), "eng", TessBaseAPI.OEM_LSTM_ONLY)) { "tesseract init failed" }
-            engine = it
+    private fun engine(model: String): TessBaseAPI =
+        engines.getOrPut(model) {
+            TessBaseAPI().also {
+                check(it.init(tessdataRoot(model), "eng", TessBaseAPI.OEM_LSTM_ONLY)) {
+                    "tesseract init failed"
+                }
+            }
         }
 
-    private fun recognize(path: String, psm: Int): List<List<Map<String, Any>>> {
-        val tess = engine()
+    private fun recognize(path: String, psm: Int, model: String): List<List<Map<String, Any>>> {
+        val tess = engine(model)
         tess.pageSegMode = psm
         tess.setImage(File(path))
         // The iterator only has a page to walk once something has recognised it.

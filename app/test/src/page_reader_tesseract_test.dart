@@ -103,7 +103,10 @@ void main() {
     );
     final scan = (await reader.scan(photo))!;
     expect(scan.turn, 0);
-    expect(calls.where((c) => c['psm'] == 3), hasLength(1));
+    expect(
+      calls.where((c) => c['psm'] == 3 && c['model'] == 'fast'),
+      hasLength(1),
+    );
   });
 
   test('a number is re-read from a full-resolution crop', () async {

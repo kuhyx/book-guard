@@ -51,8 +51,12 @@ class PageScan {
 /// Reads page numbers on the device. Null where there is no on-device OCR
 /// (the desktop web build: its photos go straight to the PC).
 abstract interface class PageReader {
-  /// Reads the photo [bytes] (a JPEG as stored); null if unreadable.
-  Future<PageScan?> scan(Uint8List bytes);
+  /// Reads the photo [bytes] (a JPEG as stored); null if unreadable. What
+  /// the photo is for ([context]) tells whether a reading is any use.
+  Future<PageScan?> scan(
+    Uint8List bytes, {
+    PageContext context = const PageContext(),
+  });
 
   /// The number inside [previewBox] of [scan]'s preview, read at full
   /// resolution; null if none is legible there.
