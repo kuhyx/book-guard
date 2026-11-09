@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from book_guard import _lock
+from book_guard import _lock, _pictos
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import POLL_INTERVAL_MS, RANK_BOOK_GUARD
 from book_guard._quiz import Verdict
@@ -58,7 +58,7 @@ def test_demo_lock_arms_without_waiting(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gate, seen = _arm(bg_paths, monkeypatch)
-    assert _root(gate).titles == ["Book Guard [DEMO]"]
+    assert _root(gate).titles == ["book_guard"]
     assert seen.events == [
         (
             f"arbiter book_guard {RANK_BOOK_GUARD} "
@@ -70,19 +70,13 @@ def test_demo_lock_arms_without_waiting(
         "window.grab_input",
     ]
     assert [ms for ms, _cb in _root(gate).scheduled] == [POLL_INTERVAL_MS, 500]
-    status = gate._vars.status.get()
-    assert status.startswith("LOCKED: 423 pages behind")
-    # The locked screen keeps the requirement, the pass and where the debt goes.
-    assert status.splitlines()[3:] == [
-        "Today: 0/18 pages, today's requirement (reaching it earns the +1h bonus)",
-        "Lock pass: 0/20 pages (not yet: 20 pages a day open the lock even when behind)",
-        (
-            "Debt: 423 pages = up to 3/day over the 5 weekend days left "
-            "(Sat/Sun, at most 60 a day); 409 carried into next month"
-        ),
-    ]
-    assert gate._vars.todo.get().startswith("No book registered")
-    assert gate._vars.quiz_title.get() == "No session is waiting for a summary."
+    view = gate._vars.view
+    assert view is not None
+    assert view.locked
+    # The locked screen keeps the pace line, today's number and the debt.
+    assert view.gauges[0].icon == _pictos.MONTH
+    assert _pictos.DEBT in [g.icon for g in view.gauges]
+    assert view.chores == (_pictos.Chore(_pictos.BOOK, "?"),)
     gate.run()
     assert seen.events[-1] == "window.run"
 
@@ -91,28 +85,21 @@ def test_production_lock_waits_for_its_turn(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gate, seen = _arm(bg_paths, monkeypatch, production=True)
-    assert _root(gate).titles == ["Book Guard"]
+    assert _root(gate).titles == ["book_guard"]
     assert seen.events[1:4] == ["publish", "wait_for_turn", "acquire"]
     assert seen.configs[0].resolved_grab() == "global"
     gate.build_surface(PARENT, _surface())
     assert seen.demo_closes == []
 
 
-def test_render_names_the_waiting_session(
+def test_render_shows_the_waiting_session(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seed_photos(bg_paths, *quiz_pair())
     gate, _seen = _arm(bg_paths, monkeypatch)
-    assert gate._vars.quiz_title.get() == "Summary for p. 10-11 (3-5 sentences):"
-    assert gate._vars.todo.get().startswith("WRITE A SUMMARY")
-
-
-def test_empty_todo_gets_a_nudge(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(_lock, "todo_lines", lambda _snap: [])
-    gate, _seen = _arm(bg_paths, monkeypatch)
-    assert gate._vars.todo.get() == "Go read, then upload photos."
+    view = gate._vars.view
+    assert view is not None
+    assert view.chores[0] == _pictos.Chore(_pictos.PENCIL, "10-11")
 
 
 def test_surfaces_and_focus(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -153,7 +140,7 @@ def test_callback_error_and_close_hooks(
     with pytest.raises(ValueError, match="boom"):
         tk_callback()
     assert "ValueError: boom" in caplog.text
-    assert gate._vars.feedback.get() == "Something went wrong -- still watching."
+    assert gate._vars.feedback.icon == _pictos.WARN
     gate.on_close()
     assert _job(gate).shut
     gate.close()
@@ -222,5 +209,5 @@ def test_tick_reports_errors_and_refreshes(
     gate, _seen = _arm(bg_paths, monkeypatch)
     _job(gate).finish = ClaudeUnavailableError("offline")
     gate._tick()
-    assert gate._vars.feedback.get() == "Could not finish: offline"
+    assert gate._vars.feedback.icon == _pictos.WARN
     assert bg_paths.next_file.exists()

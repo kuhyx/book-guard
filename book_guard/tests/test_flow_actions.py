@@ -13,6 +13,7 @@ from book_guard import _actions, _ledger
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
 from book_guard._inbox import InboxResult
 from book_guard._ledger import ESCAPE
+from book_guard._pictos import BOOK, GLYPH
 from book_guard.tests._flow_helpers import (
     ISBN13,
     T0,
@@ -87,14 +88,14 @@ def test_process_reads_registers_and_notifies(
     assert registered == [ISBN13]
     assert len(result.read) == 1
     (argv,) = sent
-    assert argv[:2] == ["/usr/bin/notify-send", "book-guard"]
-    assert "No book registered" in argv[2]
+    assert argv[:3] == ["/usr/bin/notify-send", "-i", "x-office-document"]
+    assert argv[3:] == [GLYPH[BOOK], f"{GLYPH[BOOK]} ?"]
 
 
 def test_notify_skipped_headless_or_empty(monkeypatch: pytest.MonkeyPatch) -> None:
-    _actions.notify(["headless: which() is None in tests"])
+    _actions.notify("headless: which() is None in tests")
     sent = _notifier(monkeypatch)
-    _actions.notify([])
+    _actions.notify("")
     assert sent == []
 
 
@@ -134,9 +135,7 @@ def _today() -> str:
 
 
 def test_escape_needs_the_exact_phrase(bg_paths: Paths) -> None:
-    assert _actions.escape_today(bg_paths, "let me go") == (
-        f'Type exactly: "{ESCAPE_PHRASE}"'
-    )
+    assert _actions.escape_today(bg_paths, "let me go") == _actions.ESCAPE_WRONG
     assert not bg_paths.ledger.exists()
 
 
@@ -151,9 +150,7 @@ def test_escape_refused_when_none_left(bg_paths: Paths) -> None:
     month = _today()[:7]
     add_escape(bg_paths, f"{month}-01")
     add_escape(bg_paths, f"{month}-02")
-    assert _actions.escape_today(bg_paths, ESCAPE_PHRASE) == (
-        "No escapes left this month."
-    )
+    assert _actions.escape_today(bg_paths, ESCAPE_PHRASE) == _actions.ESCAPE_NO_ROOM
 
 
 def test_next_quiz(bg_paths: Paths) -> None:

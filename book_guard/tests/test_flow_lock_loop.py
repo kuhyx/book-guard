@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from book_guard import _lock
-from book_guard._constants import POLL_INTERVAL_MS
+from book_guard import _actions, _lock, _pictos
+from book_guard._constants import ESCAPE_PHRASE, POLL_INTERVAL_MS
 from book_guard._quiz import Verdict
 from book_guard._state import snapshot
 from book_guard.tests._flow_helpers import (
@@ -131,35 +131,51 @@ def test_submit_while_busy(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> 
     seen.inputs[0].summary.set("my summary")
     _job(gate).busy = True
     gate._submit()
-    assert gate._vars.feedback.get() == (
-        "Busy reading new photos -- submit again in a moment."
-    )
+    assert gate._vars.feedback.busy
     assert _job(gate).started == []
+    _job(gate).busy = False
+    _job(gate).finish = True
+    gate._tick()  # the worker finished: the dangling spinner is cleared
+    assert not gate._vars.feedback.busy
 
 
 @pytest.mark.parametrize(
-    ("verdict", "shown"),
+    ("verdict", "icon", "detail"),
     [
-        (Verdict(passed=True, feedback="Well read."), "Passed. Well read."),
-        (Verdict(passed=False, feedback="Too vague."), "Not counted. Too vague."),
+        (Verdict(passed=True, feedback="Well read."), _pictos.OK, ""),
+        (
+            Verdict(passed=False, feedback="Too vague.", missing=("ending", "name")),
+            _pictos.NO,
+            "- ending\n- name",
+        ),
     ],
 )
 def test_submit_grades_and_clears(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, verdict: Verdict, shown: str
+    bg_paths: Paths,
+    monkeypatch: pytest.MonkeyPatch,
+    verdict: Verdict,
+    icon: str,
+    detail: str,
 ) -> None:
     seed_photos(bg_paths, *quiz_pair())
     gate, seen = _arm(bg_paths, monkeypatch, forms=2)
     seen.inputs[0].summary.set("my summary")
     gate._submit()
-    assert gate._vars.feedback.get() == "Grading..."
+    was_busy = gate._vars.feedback.busy
     _work, done = _job(gate).started[-1]
     done(verdict)
-    assert gate._vars.feedback.get() == shown
+    assert was_busy
+    assert (gate._vars.feedback.icon, gate._vars.feedback.detail) == (icon, detail)
+    assert not gate._vars.feedback.busy
     assert [i.summary.get() for i in seen.inputs] == ["", ""]
 
 
+@pytest.mark.parametrize(
+    ("code", "detail"),
+    [(_actions.ESCAPE_WRONG, ESCAPE_PHRASE), (_actions.ESCAPE_NO_ROOM, "")],
+)
 def test_escape_error_is_shown(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, code: str, detail: str
 ) -> None:
     gate, seen = _arm(bg_paths, monkeypatch)
     seen.inputs[0].escape.set("please")
@@ -167,12 +183,15 @@ def test_escape_error_is_shown(
 
     def escape_today(_paths: Paths, text: str) -> str:
         typed.append(text)
-        return "Type exactly"
+        return code
 
     monkeypatch.setattr(_lock, "escape_today", escape_today)
     gate._escape()
     assert typed == ["please"]
-    assert gate._vars.feedback.get() == "Type exactly"
+    assert (gate._vars.feedback.icon, gate._vars.feedback.detail) == (
+        _pictos.NO,
+        detail,
+    )
     assert not bg_paths.next_file.exists()
 
 

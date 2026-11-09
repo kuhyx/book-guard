@@ -9,10 +9,10 @@ swapped for a recording fake instead.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from book_guard import _lock
+from book_guard._lock_state import Shared
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -52,6 +52,9 @@ class FakeField(FakeVar):
 class FakeInputs:
     summary: FakeField = field(default_factory=FakeField)
     escape: FakeField = field(default_factory=FakeField)
+
+    def meter(self) -> None:
+        """The length bar repaint: nothing to draw headless."""
 
 
 class FakeRoot:
@@ -129,9 +132,7 @@ def install_lock_fakes(monkeypatch: pytest.MonkeyPatch) -> LockFakes:
         "Arbiter": Arbiter,
         "LockWindow": LockWindow,
         "wait_for_turn": lambda _arbiter: seen.events.append("wait_for_turn"),
-        "make_vars": lambda _root: SimpleNamespace(
-            status=FakeVar(), todo=FakeVar(), quiz_title=FakeVar(), feedback=FakeVar()
-        ),
+        "make_vars": lambda _root: Shared(),
         "build_status": lambda parent, _vars: parent,
         "build_inputs": build_inputs,
         "install_demo_close": lambda _parent, close: seen.demo_closes.append(close),

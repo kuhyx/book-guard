@@ -26,11 +26,11 @@ from gatelock import (
     wait_for_turn,
 )
 
-from book_guard import _ledger
-from book_guard._actions import escape_today, process
+from book_guard import _ledger, _pictos
+from book_guard._actions import ESCAPE_NO_ROOM, ESCAPE_WRONG, escape_today, process
 from book_guard._autogrant import auto_grant
 from book_guard._claude import ClaudeUnavailableError
-from book_guard._constants import POLL_INTERVAL_MS, RANK_BOOK_GUARD
+from book_guard._constants import ESCAPE_PHRASE, POLL_INTERVAL_MS, RANK_BOOK_GUARD
 from book_guard._grading import quiz_one
 from book_guard._lock_view import (
     build_inputs,
@@ -40,7 +40,6 @@ from book_guard._lock_view import (
 )
 from book_guard._night_lockdown import gate_hold
 from book_guard._publish import write_next_file
-from book_guard._render import status_lines, todo_lines
 from book_guard._state import Snapshot, awaiting_quiz, snapshot
 from book_guard._worker import OneJob
 
@@ -84,7 +83,7 @@ class BookGuardLock:
             rank=RANK_BOOK_GUARD,
         )
         self.root = GateRoot()
-        self.root.title("Book Guard" + ("" if production else " [DEMO]"))
+        self.root.title("book_guard")
         self._vars = make_vars(self.root)
         arbiter = Arbiter(
             "book_guard",
@@ -133,7 +132,7 @@ class BookGuardLock:
     def on_callback_error(self) -> None:
         """A Tk callback raised: say so and keep the lock up."""
         _logger.error("a Tk callback raised inside the lock:\n%s", format_exc())
-        self._vars.feedback.set("Something went wrong -- still watching.")
+        self._vars.say(_pictos.WARN)
 
     def on_close(self) -> None:
         """Every exit path: stop the worker without waiting on a model call."""
@@ -142,28 +141,20 @@ class BookGuardLock:
     # -- behaviour ----------------------------------------------------------
 
     def _render(self) -> None:
-        snap = self._snap
-        self._vars.status.set("\n".join(status_lines(snap, recent=4)[:6]))
-        self._vars.todo.set(
-            "\n".join(todo_lines(snap)) or "Go read, then upload photos."
-        )
-        pending = awaiting_quiz(snap)
-        first = pending[0].session if pending else None
-        self._vars.quiz_title.set(
-            f"Summary for p. {first.start.page}-{first.end.page} (3-5 sentences):"
-            if first
-            else "No session is waiting for a summary."
-        )
+        self._vars.show(_pictos.build(self._snap, recent=4))
 
     def _tick(self) -> None:
         try:
             finished = self._worker.finish_if_done()
         except (ClaudeUnavailableError, OSError, ValueError) as exc:
             _logger.warning("background job failed inside the lock: %s", exc)
-            self._vars.feedback.set(f"Could not finish: {exc}")
+            self._vars.say(_pictos.WARN)
             finished = True
         if finished:
+            if self._vars.feedback.busy:
+                self._vars.say()  # a submit that hit a busy worker: try again
             self._refresh()
+        self._vars.spin()
         if not self._closed:
             self.root.after(_TICK_MS, self._tick)
 
@@ -198,25 +189,29 @@ class BookGuardLock:
         text = self._typed("summary")
         if not pending or not text:
             return
+        self._vars.say(busy=True)
         if self._worker.busy:
-            self._vars.feedback.set(
-                "Busy reading new photos -- submit again in a moment."
-            )
             return
-        self._vars.feedback.set("Grading...")
 
         def done(verdict: Verdict) -> None:
-            prefix = "Passed. " if verdict.passed else "Not counted. "
-            self._vars.feedback.set(prefix + verdict.feedback)
+            topics = "\n".join(f"- {m}" for m in verdict.missing)
+            if verdict.passed:
+                self._vars.say(_pictos.OK)
+            else:
+                self._vars.say(_pictos.NO, topics)
             for widgets in self._inputs.values():
                 widgets.summary.delete("1.0", "end")
+                widgets.meter()
 
         self._worker.start(lambda: quiz_one(self._paths, pending[0], text), done)
 
     def _escape(self) -> None:
         error = escape_today(self._paths, self._typed("escape"))
-        if error:
-            self._vars.feedback.set(error)
+        if error == ESCAPE_WRONG:
+            self._vars.say(_pictos.NO, ESCAPE_PHRASE)
+            return
+        if error == ESCAPE_NO_ROOM:
+            self._vars.say(_pictos.NO)
             return
         self._refresh()
 

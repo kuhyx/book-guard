@@ -21,8 +21,8 @@ from book_guard._indexer import kick, mark_queued
 from book_guard._ledger import ESCAPE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._phone_logs import merge_phone, merge_reports
+from book_guard._pictos import BOOK, GLYPH, toast_body, toast_icon
 from book_guard._publish import write_next_file
-from book_guard._render import todo_lines
 from book_guard._requests import handle_requests
 from book_guard._state import Snapshot, awaiting_quiz, snapshot
 
@@ -33,16 +33,20 @@ if TYPE_CHECKING:
 
 _logger: Final = logging.getLogger(__name__)
 
+ESCAPE_NO_ROOM: Final = "no_escapes_left"
+ESCAPE_WRONG: Final = "wrong_phrase"
+"""Why :func:`escape_today` refused (codes: the surfaces draw them, not say them)."""
+
 _SETTLE_WAIT_MAX: Final = 120.0
 """Longest a run waits for in-flight uploads before leaving them to the timer."""
 
 
-def notify(lines: list[str]) -> None:
-    """A desktop notification with the new to-dos; silently skipped headless."""
+def notify(body: str, *, icon: str = "dialog-information") -> None:
+    """A glyph-only desktop notification; silently skipped headless or empty."""
     notifier = shutil.which("notify-send")
-    if notifier and lines:
+    if notifier and body:
         subprocess.run(
-            [notifier, "book-guard", "\n".join(lines)], check=False, timeout=10
+            [notifier, "-i", icon, GLYPH[BOOK], body], check=False, timeout=10
         )
 
 
@@ -96,7 +100,7 @@ def process(
     if _ebook.refresh(paths):
         write_next_file(paths, snap)
     if result.read:
-        notify(todo_lines(snap))
+        notify(toast_body(snap), icon=toast_icon(snap))
     return result, snap
 
 
@@ -121,16 +125,16 @@ def next_quiz(paths: Paths, *, session_id: str | None = None) -> SessionView | N
 
 
 def escape_today(paths: Paths, typed: str) -> str | None:
-    """Spend one escape on today; returns an error message, or ``None``.
+    """Spend one escape on today; returns an error code, or ``None``.
 
     The escape forgives today's lock only. It credits no pages, so the
     deficit is still there tomorrow -- it buys a day, not a month.
     """
     snap = snapshot(paths)
     if snap.escapes_left <= 0:
-        return "No escapes left this month."
+        return ESCAPE_NO_ROOM
     if " ".join(typed.split()) != ESCAPE_PHRASE:
-        return f'Type exactly: "{ESCAPE_PHRASE}"'
+        return ESCAPE_WRONG
     day = snap.today.isoformat()
     with exclusive(paths):
         _ledger.append(

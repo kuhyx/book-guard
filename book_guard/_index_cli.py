@@ -12,6 +12,7 @@ from book_guard._actions import notify
 from book_guard._embed import EmbedderUnavailableError
 from book_guard._indexer import run_index
 from book_guard._paths import paths
+from book_guard._pictos import BOOK, GLYPH, OK
 
 if TYPE_CHECKING:
     import argparse
@@ -40,5 +41,6 @@ def cmd_index(_args: argparse.Namespace) -> int:
         messages.append("in-app reader: page map ready")
     for message in messages:
         _out(message)
-    notify(messages)
+    if messages:
+        notify(f"{GLYPH[BOOK]} {GLYPH[OK]}", icon="emblem-ok")
     return 0

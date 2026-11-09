@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from book_guard import _cli, _indexer, _indexjob
+from book_guard import _cli, _index_cli, _indexer, _indexjob
 from book_guard.tests._flow_helpers import LONG_TEXT, add_book
 from book_guard.tests._index_helpers import drop
 
@@ -124,6 +124,19 @@ def test_cli_index(bg_paths: Paths, capsys: Out) -> None:
     with _indexer.index_lock(bg_paths):
         assert _cli.main(["index"]) == 0
         assert "another index run is going" in capsys.readouterr().out
+
+
+def test_cli_index_with_nothing_dropped_sends_no_toast(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sent: list[str] = []
+    monkeypatch.setattr(_index_cli, "notify", lambda body, **_k: sent.append(body))
+    assert _cli.main(["index"]) == 0
+    assert sent == []
+    add_book(bg_paths)
+    drop(bg_paths)
+    assert _cli.main(["index"]) == 0
+    assert sent == ["📖 ✓"]
 
 
 def test_cli_attach_waits_for_an_index_run(
