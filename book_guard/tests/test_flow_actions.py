@@ -14,6 +14,7 @@ from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
 from book_guard._inbox import InboxResult
 from book_guard._ledger import ESCAPE, ESCAPE_UNDONE
 from book_guard._pictos import BOOK, GLYPH
+from book_guard._state import snapshot
 from book_guard.tests._flow_helpers import (
     ISBN13,
     T0,
@@ -162,7 +163,7 @@ def test_undo_escape_appends_a_cancelling_row(bg_paths: Paths) -> None:
     assert (row.entry_id, row.day, row.amount) == (f"unescape:{day}", str(day), 0)
     assert row.detail == {"reason": "reader failed"}
     assert len(ledger.of_kind(ESCAPE)) == 1  # the record only grows
-    assert _actions.snapshot(bg_paths).escaped_today is False
+    assert snapshot(bg_paths).escaped_today is False
 
 
 def test_undo_escape_refused_without_an_escape(bg_paths: Paths) -> None:

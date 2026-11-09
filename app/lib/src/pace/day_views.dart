@@ -38,6 +38,7 @@ class PaceInputs {
     required this.credits,
     required this.freeDays,
     this.sickDays = const {},
+    this.eased = const {},
   });
 
   /// Parses `pace_inputs`; null from a PC that predates it.
@@ -56,6 +57,14 @@ class PaceInputs {
         if (day != null && value is int) credits[day] = value;
       }
     }
+    final eased = <DateTime, int>{};
+    final rawEased = json['eased'];
+    if (rawEased is Map<String, dynamic>) {
+      for (final MapEntry(:key, :value) in rawEased.entries) {
+        final day = parseDay(key);
+        if (day != null && value is int && value > 0) eased[day] = value;
+      }
+    }
     return PaceInputs(
       today: today,
       rules: rules,
@@ -66,6 +75,7 @@ class PaceInputs {
       sickDays: {
         for (final d in json['sick_days'] as List? ?? const []) ?parseDay('$d'),
       },
+      eased: eased,
     );
   }
 
@@ -83,6 +93,9 @@ class PaceInputs {
 
   /// Sick days: they ask nothing and their share is dropped, not re-split.
   final Set<DateTime> sickDays;
+
+  /// Pages taken off a day's number (`ease` rows): the days left owe them.
+  final Map<DateTime, int> eased;
 }
 
 /// One deviation: `delta` pages more (or fewer) than assumed on `day`.
@@ -144,7 +157,8 @@ List<DayView> dayViews(
   List<DateTime> days, {
   PaceSimulation? sim,
 }) {
-  final PaceInputs(:today, :rules, :credits, :freeDays, :sickDays) = inputs;
+  final PaceInputs(:today, :rules, :credits, :freeDays, :sickDays, :eased) =
+      inputs;
   bool isFree(DateTime d) => freeDays.contains(d);
   DayView view(DayKind kind, DayPace pace, DateTime d, int got, int assumed) =>
       DayView(
@@ -169,7 +183,7 @@ List<DayView> dayViews(
     out.add(
       view(
         DayKind.past,
-        computePace(rules, before, d, isFree, sick: sickDays),
+        computePace(rules, before, d, isFree, sick: sickDays, eased: eased),
         d,
         got,
         got,
@@ -183,7 +197,14 @@ List<DayView> dayViews(
       if (!e.key.isAfter(today)) e.key: e.value,
   };
   for (final d in daySpan(today, days.last)) {
-    final pace = computePace(rules, rows, d, isFree, sick: sickDays);
+    final pace = computePace(
+      rules,
+      rows,
+      d,
+      isFree,
+      sick: sickDays,
+      eased: eased,
+    );
     final real = d == today ? credits[d] ?? 0 : 0;
     final delta = sim != null && sim.day == d ? sim.delta : 0;
     final assumed = math.max(math.max(real, pace.required) + delta, 0);

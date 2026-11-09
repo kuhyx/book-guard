@@ -87,6 +87,9 @@ final class Rational implements Comparable<Rational> {
 /// The larger of two.
 Rational maxQ(Rational a, Rational b) => a >= b ? a : b;
 
+/// The smaller of two.
+Rational minQ(Rational a, Rational b) => a <= b ? a : b;
+
 /// The sum of [values].
 Rational sumQ(Iterable<Rational> values) =>
     values.fold(Rational.zero, (a, b) => a + b);

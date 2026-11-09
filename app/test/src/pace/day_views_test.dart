@@ -50,6 +50,26 @@ void main() {
       })!;
       expect(bare.credits, isEmpty);
     });
+
+    test('eased days keep their pages; junk, zero and a PC without them', () {
+      final i = PaceInputs.fromJson({
+        'today': '2026-11-09',
+        'rules': rulesJson(),
+        'eased': {
+          '2026-11-09': 2,
+          'junk': 4,
+          '2026-11-10': 'x',
+          '2026-11-11': 0,
+        },
+      })!;
+      expect(i.eased, {d(11, 9): 2});
+      final none = PaceInputs.fromJson({
+        'today': '2026-11-09',
+        'rules': rulesJson(),
+        'eased': 'x',
+      })!;
+      expect(none.eased, isEmpty);
+    });
   });
 
   group('dayViews', () {

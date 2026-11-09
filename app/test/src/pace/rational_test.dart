@@ -42,6 +42,8 @@ void main() {
     expect(a.compareTo(b), lessThan(0));
     expect(maxQ(a, b), b);
     expect(maxQ(b, a), b);
+    expect(minQ(a, b), a);
+    expect(minQ(b, a), a);
   });
 
   test('ceil rounds toward positive infinity like Python', () {

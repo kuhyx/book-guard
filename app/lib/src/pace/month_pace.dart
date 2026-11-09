@@ -64,6 +64,7 @@ int _share(int balance, int months) {
   DateTime first,
   bool Function(DateTime) isFree,
   Set<DateTime> sick,
+  Map<DateTime, int> eased,
   int carry,
   DateTime until,
 ) {
@@ -95,6 +96,7 @@ int _share(int balance, int months) {
           e.key: e.value,
     },
     sick: sick,
+    eased: eased,
   );
   final useSwitch = nextMonth(first).isAfter(rules.quotaSwitch);
   final useResplit = nextMonth(first).isAfter(rules.resplit);
@@ -115,6 +117,7 @@ DayPace computePace(
   DateTime today,
   bool Function(DateTime) isFree, {
   Set<DateTime> sick = const {},
+  Map<DateTime, int> eased = const {},
 }) {
   final current = monthStart(today);
   var balance = 0;
@@ -149,6 +152,7 @@ DayPace computePace(
     current,
     isFree,
     sick,
+    eased,
     carry,
     today,
   );

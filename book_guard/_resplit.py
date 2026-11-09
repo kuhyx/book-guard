@@ -11,7 +11,9 @@ a sick day before the resplit was excused under the old rules is owed again
 from the resplit's morning. Each day then absorbs its own deviation
 (:attr:`MonthPlan.extra`: read minus asked, a debt negative), so the line at
 every morning is exactly the pages read and the next morning re-splits the
-difference. The days after the last known one keep its split: the
+difference. An eased day (:mod:`book_guard._ease`) asks its share less the
+eased pages, and what it did not ask is split by the next morning like any
+unread page. The days after the last known one keep its split: the
 projection that every day reads its number.
 """
 
@@ -61,9 +63,27 @@ def resplit_mornings(
         quotas, plan.unspread = split(max(left, Fraction(0)), rest)
         plan.leftover = max(-left, Fraction(0))
         ask = quotas.get(day, Fraction(0))
+        eased = min(Fraction(month.eased.get(day, 0)), ask)
+        if eased:
+            ask -= eased
+            quotas[day] = ask
+            if day == until:
+                quotas, plan.unspread = _after_eased(left, ask, day, rest)
         if day in quotas:
             plan.quotas[day] = ask
         if day < until:
             plan.extra[day] = month.pages_on.get(day, 0) - ask
         read += month.pages_on.get(day, 0)
     plan.quotas.update({d: q for d, q in quotas.items() if d > until})
+
+
+def _after_eased(
+    left: Fraction, ask: Fraction, day: date, rest: list[date]
+) -> tuple[dict[date, Fraction], Fraction]:
+    """The projection past an eased last known day: it reads ``ask``, the rest owe more.
+
+    Without it the days after would keep the split that assumed the full share
+    read, and the month's target would shrink by the eased pages.
+    """
+    later, unspread = split(left - ask, [d for d in rest if d > day])
+    return {day: ask, **later}, unspread

@@ -9,10 +9,13 @@
 /// that are not sick, and what was excused is owed again.
 library;
 
+import 'package:book_guard_app/src/pace/month_input.dart';
 import 'package:book_guard_app/src/pace/quotas.dart';
 import 'package:book_guard_app/src/pace/rational.dart';
 import 'package:book_guard_app/src/pace/resplit.dart';
 import 'package:book_guard_app/src/pace/rules.dart';
+
+export 'package:book_guard_app/src/pace/month_input.dart';
 
 /// The plan as of some day.
 class MonthPlan {
@@ -53,41 +56,6 @@ class MonthPlan {
 
   /// The month's requirement after carried credit came off it.
   Rational get target => sumQ(quotas.values) + sumQ(extra.values) + unspread;
-}
-
-/// Everything one month's plan is derived from (`_plan.MonthInput`).
-class MonthInput {
-  /// Creates an input.
-  const new({
-    required this.days,
-    required this.counted,
-    required this.weights,
-    required this.target,
-    required this.credit,
-    required this.pagesOn,
-    this.sick = const {},
-  });
-
-  /// Every day of the month.
-  final List<DateTime> days;
-
-  /// The paced, non-free days.
-  final List<DateTime> counted;
-
-  /// Each counted day's old-rule share of the base.
-  final Quotas weights;
-
-  /// Base plus carried debt.
-  final int target;
-
-  /// Surplus carried in.
-  final Rational credit;
-
-  /// Pages credited per day.
-  final Map<DateTime, int> pagesOn;
-
-  /// Sick days: counted, but no quota of their own.
-  final Set<DateTime> sick;
 }
 
 typedef _Cut = Rational Function(Quotas, List<DateTime>, Rational);

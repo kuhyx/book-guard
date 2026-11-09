@@ -42,6 +42,7 @@ Nothing here is stored. Every run re-derives, from the credits alone:
   before the resplit the old rules dropped it, owed again from the resplit).
   Reading on it still earns the bonus at the requirement the day would have
   had (:attr:`Ask.bonus_at`).
+* **eased day** (:mod:`book_guard._ease`): pages off its share, owed by the days left.
 """
 
 from __future__ import annotations
@@ -64,6 +65,7 @@ from book_guard._constants import (
     RESPLIT_DATE,
     WORKDAY_PAGES,
 )
+from book_guard._ease import eased_days
 from book_guard._ledger import CREDIT
 from book_guard._plan import MonthInput, MonthPlan, is_workday, plan_month
 
@@ -191,6 +193,7 @@ def _plan(
         credit=Fraction(max(-carry, 0)),
         pages_on=pages_on,
         sick=cal.sick,
+        eased=eased_days(ledger),
     )
     switch = QUOTA_SWITCH_DATE if _next_month(first) > QUOTA_SWITCH_DATE else None
     resplit = RESPLIT_DATE if _next_month(first) > RESPLIT_DATE else None

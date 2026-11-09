@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 from typing import TYPE_CHECKING, Any
 
-from book_guard._ledger import CREDIT, Entry, Ledger
+from book_guard._ledger import CREDIT, EASE, Entry, Ledger
 from book_guard._pace_inputs import rules, view_json
 from book_guard._pace_view import views
 from scripts._golden_cases import Case, cases, span
@@ -33,18 +33,21 @@ if TYPE_CHECKING:
 _OUT = Path(__file__).resolve().parent.parent / "app/test/fixtures/pace_goldens.json"
 
 
-def _ledger(pages: dict[date, int]) -> Ledger:
+def _ledger(pages: dict[date, int], eased: dict[date, int]) -> Ledger:
     return Ledger(
         [
-            Entry(f"g{i}", CREDIT, d.isoformat(), n)
-            for i, (d, n) in enumerate(pages.items())
+            *(
+                Entry(f"g{i}", CREDIT, d.isoformat(), n)
+                for i, (d, n) in enumerate(pages.items())
+            ),
+            *(Entry(f"ease:{d}", EASE, d.isoformat(), n) for d, n in eased.items()),
         ]
     )
 
 
 def _run(case: Case) -> dict[str, Any]:
     found = views(
-        _ledger(case.credits),
+        _ledger(case.credits, case.eased),
         case.today,
         span(case.first, case.last),
         (lambda d: d in case.free, case.sick),
@@ -57,6 +60,7 @@ def _run(case: Case) -> dict[str, Any]:
         "credits": {d.isoformat(): n for d, n in sorted(case.credits.items())},
         "free_days": sorted(d.isoformat() for d in case.free),
         "sick_days": sorted(d.isoformat() for d in case.sick),
+        "eased": {d.isoformat(): n for d, n in sorted(case.eased.items())},
         "simulate": None
         if case.sim is None
         else {"day": case.sim.day.isoformat(), "delta": case.sim.delta},

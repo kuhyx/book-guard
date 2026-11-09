@@ -18,7 +18,7 @@ from book_guard._flock import exclusive
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
 from book_guard._indexer import kick, mark_queued
-from book_guard._ledger import ESCAPE, ESCAPE_UNDONE, Entry
+from book_guard._ledger import EASE, ESCAPE, ESCAPE_UNDONE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._phone_logs import merge_phone, merge_reports
 from book_guard._pictos import BOOK, GLYPH, toast_body, toast_icon
@@ -161,4 +161,23 @@ def undo_escape(paths: Paths, day: date, reason: str) -> bool:
             paths.ledger,
             paths.key_file,
             Entry(f"unescape:{key}", ESCAPE_UNDONE, key, detail={"reason": reason}),
+        )
+
+
+def ease_day(paths: Paths, day: date, pages: int, reason: str) -> bool:
+    """Take ``pages`` off ``day``'s number with an append-only ``ease`` row.
+
+    The pages are not forgiven: from the resplit the next morning's split owes
+    them to the days left (:mod:`book_guard._ease`). A day not yet reached
+    takes effect on its morning. Returns ``False`` (nothing written) when
+    ``pages`` is not positive or ``day`` already has an ease.
+    """
+    if pages <= 0:
+        return False
+    key = day.isoformat()
+    with exclusive(paths):
+        return _ledger.append(
+            paths.ledger,
+            paths.key_file,
+            Entry(f"ease:{key}", EASE, key, pages, {"reason": reason}),
         )

@@ -92,6 +92,15 @@ Read README.md first. These are the invariants that are easy to break.
   *keeps* `book` is a normal day, past or today (quota, debt, lock, bonus).
   `_sick.standing_down()` is the one read of the pool; never call
   `sickdays.sick_days()` elsewhere, or the gate and the bonus disagree.
+- **An eased day** (`ease:<day>` row, `_actions.ease_day`, `_ease.py`):
+  from `RESPLIT_DATE` its morning share is lowered by `amount` pages (floor
+  0), read from the ledger inside `_pace._plan` so lock, bonus, `ask`, state
+  JSON and the app all see one requirement. The pages are owed, not
+  forgiven: the next morning re-splits what was not read, the month target
+  and year balance stay whole (like sick days), the app gets
+  `pace_inputs.eased` and its port mirrors it (goldens). It never rewrites a
+  credit row; a bonus already stamped stays as it is (`regrant` is the
+  user's call).
 - **Photos always first: indexing never runs in the photo pass.** A book
   file in `Reading/books/` is only marked `uploaded` by `process`, which
   starts `book-guard-index.service` (idle CPU/IO, resumable checkpoints)

@@ -2,8 +2,8 @@
 """What the app's port of the plan runs on, and a day's numbers as JSON.
 
 ``state.json``'s ``pace_inputs`` carries the credits per day, the free days,
-the sick days and the plan's constants, so the app computes any day's view offline
-(``app/lib/src/pace_*.dart``). ``scripts/pace_goldens.py`` writes
+the sick days, the eased days and the plan's constants, so the app computes
+any day's view offline (``app/lib/src/pace_*.dart``). ``scripts/pace_goldens.py`` writes
 :func:`view_json` for many scenarios; the Dart port must match every number.
 """
 
@@ -27,6 +27,7 @@ from book_guard._constants import (
     WEEKEND_WEIGHT,
     WORKDAY_PAGES,
 )
+from book_guard._ease import eased_days
 from book_guard._ledger import CREDIT
 from book_guard._pace import month_start
 from book_guard._pace_view import cached
@@ -101,6 +102,7 @@ def pace_inputs(
         "credits": credits_by_day(ledger),
         "free_days": [d.isoformat() for d in _span(first, last) if check(d)],
         "sick_days": sorted(d.isoformat() for d in sick if first <= d <= last),
+        "eased": {d.isoformat(): n for d, n in sorted(eased_days(ledger).items())},
     }
 
 

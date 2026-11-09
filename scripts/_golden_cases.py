@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from book_guard._pace_view import Simulation
@@ -22,6 +22,8 @@ class Case:
     sick: frozenset[date] = frozenset()
     sim: Simulation | None = None
     note: str = ""
+    eased: dict[date, int] = field(default_factory=dict)
+    """Pages an ``ease`` row takes off each day's number (``book_guard._ease``)."""
 
 
 def span(first: date, last: date) -> list[date]:
@@ -198,5 +200,37 @@ def cases() -> list[Case]:
             _reading(date(2026, 10, 2), date(2026, 10, 24), 20, 40, 8),
             sick=frozenset(span(date(2026, 10, 25), date(2026, 10, 31))),
             note="no day left to carry it: the share goes to November's carry",
+        ),
+        Case(
+            "eased-today",
+            date(2026, 11, 9),
+            date(2026, 11, 8),
+            date(2026, 11, 16),
+            _reading(date(2026, 10, 2), date(2026, 11, 8), 20, 50, 9),
+            eased={date(2026, 11, 9): 2},
+            note="today asks 2 less; the days left owe them, the target holds",
+        ),
+        Case(
+            "eased-past-day-and-month-end",
+            date(2026, 11, 20),
+            date(2026, 11, 4),
+            date(2026, 12, 6),
+            _reading(date(2026, 10, 2), date(2026, 11, 19), 20, 50, 10),
+            eased={date(2026, 11, 5): 3, date(2026, 11, 20): 4, date(2026, 11, 30): 2},
+            note="a past, today's and the last day eased: December's carry is whole",
+        ),
+        Case(
+            "eased-past-the-share-and-sick",
+            date(2026, 11, 10),
+            date(2026, 11, 9),
+            date(2026, 11, 13),
+            _reading(date(2026, 10, 2), date(2026, 11, 9), 20, 50, 11),
+            sick=frozenset({date(2026, 11, 12)}),
+            eased={
+                date(2026, 10, 15): 5,
+                date(2026, 11, 10): 500,
+                date(2026, 11, 12): 3,
+            },
+            note="floors at 0; a sick day's bonus is eased; before the resplit: none",
         ),
     ]

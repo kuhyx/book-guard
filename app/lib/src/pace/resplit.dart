@@ -16,7 +16,9 @@ import 'package:book_guard_app/src/pace/rules.dart';
 /// weight, so the days left carry its share; what the old rules excused
 /// before [start] is owed again. Each day then absorbs
 /// its own deviation ([MonthPlan.extra]: read minus asked), so the line at
-/// every morning is exactly the pages read. The days after [until] keep the
+/// every morning is exactly the pages read. An eased day ([MonthInput.eased])
+/// asks its share less the eased pages; the next morning's split owes them to
+/// the days left. The days after [until] keep the
 /// last morning's split. Mid-month the old plan's line meets the pages at
 /// [start] the same way, on the day before it.
 void resplitMornings(
@@ -50,7 +52,23 @@ void resplitMornings(
     plan
       ..unspread = unspread
       ..leftover = maxQ(-left, Rational.zero);
-    final ask = quotas[day] ?? Rational.zero;
+    var ask = quotas[day] ?? Rational.zero;
+    final eased = minQ(Rational.of(m.eased[day] ?? 0), ask);
+    if (!eased.isZero) {
+      ask -= eased;
+      quotas[day] = ask;
+      if (day == until) {
+        // The last known day reads its eased number; the days after owe
+        // the rest, or the target would shrink by the eased pages.
+        final (later, owed) = split(
+          rules,
+          left - ask,
+          rest.where((d) => d.isAfter(day)).toList(),
+        );
+        quotas = {day: ask, ...later};
+        plan.unspread = owed;
+      }
+    }
     if (quotas.containsKey(day)) plan.quotas[day] = ask;
     final pages = m.pagesOn[day] ?? 0;
     if (day.isBefore(until)) plan.extra[day] = Rational.of(pages) - ask;

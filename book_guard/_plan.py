@@ -113,6 +113,8 @@ class MonthInput:
         credit: Surplus carried in from earlier months, spent from day one.
         pages_on: Pages credited on each day (free and sick days included).
         sick: Sick days: no quota of their own, see :attr:`MonthPlan.excused`.
+        eased: Pages taken off a day's morning share from the resplit
+            (:mod:`book_guard._ease`); the days left owe them.
     """
 
     days: list[date]
@@ -122,6 +124,7 @@ class MonthInput:
     credit: Fraction
     pages_on: Mapping[date, int]
     sick: frozenset[date] = frozenset()
+    eased: Mapping[date, int] = field(default_factory=dict)
 
 
 def _opening_plan(month: MonthInput) -> MonthPlan:

@@ -21,6 +21,7 @@ void main() {
         'credits': kase['credits'],
         'free_days': kase['free_days'],
         'sick_days': kase['sick_days'],
+        'eased': kase['eased'],
       })!;
       final simulate = kase['simulate'] as Map<String, dynamic>?;
       final sim = simulate == null

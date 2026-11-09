@@ -19,6 +19,9 @@ Kinds:
 * ``unescape`` -- ``unescape:<day>`` cancels that day's ``escape`` (the
   escape row stays; the ledger only grows). The day counts as not escaped and
   the escape is no longer spent. ``detail.reason`` may say why. Worth nothing.
+* ``ease`` -- ``ease:<day>``: ``amount`` pages come off that day's number (from
+  the resplit; ``detail.reason`` says why). The pages are not forgiven: the
+  next morning's split owes them to the days left. One per day. Worth nothing.
 
 Tamper-evident, not tamper-proof: the key is world-readable, exactly as for
 the sibling lockers.
@@ -48,6 +51,7 @@ CREDIT: Final = "credit"
 REJECT: Final = "reject"
 ESCAPE: Final = "escape"
 ESCAPE_UNDONE: Final = "unescape"
+EASE: Final = "ease"
 
 _DEVICE: Final = socket.gethostname()
 
