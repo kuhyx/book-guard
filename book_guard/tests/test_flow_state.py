@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from book_guard import _publish
 from book_guard._bookindex import index_path
-from book_guard._ledger import CREDIT, REJECT
+from book_guard._ledger import CREDIT, ESCAPE_UNDONE, REJECT
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ
 from book_guard._state import CREDITED, awaiting_check, awaiting_quiz, snapshot
 from book_guard._state_json import SCHEMA, to_json
@@ -73,6 +73,21 @@ def test_escaped_today(bg_paths: Paths) -> None:
     snap = snapshot(bg_paths, today=LOCKED_DAY)
     assert snap.reason == "today's lock was skipped with the escape hatch"
     assert (snap.locked, snap.escaped_today, snap.escapes_left) == (False, True, 1)
+
+
+def test_undone_escape_is_not_escaped_and_not_spent(bg_paths: Paths) -> None:
+    add_escape(bg_paths, LOCKED_DAY.isoformat())
+    add_escape(bg_paths, "2026-10-02")
+    add_entry(bg_paths, f"unescape:{LOCKED_DAY}", ESCAPE_UNDONE, LOCKED_DAY.isoformat())
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+    assert (snap.locked, snap.escaped_today, snap.escapes_left) == (True, False, 1)
+    assert snap.reason.startswith("423 pages behind")
+
+
+def test_unescape_without_escape_changes_nothing(bg_paths: Paths) -> None:
+    add_entry(bg_paths, f"unescape:{LOCKED_DAY}", ESCAPE_UNDONE, LOCKED_DAY.isoformat())
+    snap = snapshot(bg_paths, today=LOCKED_DAY)
+    assert (snap.escaped_today, snap.escapes_left) == (False, 2)
 
 
 def test_behind_locks(bg_paths: Paths) -> None:

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from book_guard import _actions, _ledger
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
 from book_guard._inbox import InboxResult
-from book_guard._ledger import ESCAPE
+from book_guard._ledger import ESCAPE, ESCAPE_UNDONE
 from book_guard._pictos import BOOK, GLYPH
 from book_guard.tests._flow_helpers import (
     ISBN13,
@@ -151,6 +151,33 @@ def test_escape_refused_when_none_left(bg_paths: Paths) -> None:
     add_escape(bg_paths, f"{month}-01")
     add_escape(bg_paths, f"{month}-02")
     assert _actions.escape_today(bg_paths, ESCAPE_PHRASE) == _actions.ESCAPE_NO_ROOM
+
+
+def test_undo_escape_appends_a_cancelling_row(bg_paths: Paths) -> None:
+    day = datetime.now().astimezone().date()
+    add_escape(bg_paths, day.isoformat())
+    assert _actions.undo_escape(bg_paths, day, "reader failed") is True
+    ledger = _ledger.load(bg_paths.ledger, bg_paths.key_file)
+    (row,) = ledger.of_kind(ESCAPE_UNDONE)
+    assert (row.entry_id, row.day, row.amount) == (f"unescape:{day}", str(day), 0)
+    assert row.detail == {"reason": "reader failed"}
+    assert len(ledger.of_kind(ESCAPE)) == 1  # the record only grows
+    assert _actions.snapshot(bg_paths).escaped_today is False
+
+
+def test_undo_escape_refused_without_an_escape(bg_paths: Paths) -> None:
+    day = datetime.now().astimezone().date()
+    assert _actions.undo_escape(bg_paths, day, "x") is False
+    assert not bg_paths.ledger.exists()
+
+
+def test_undo_escape_only_once(bg_paths: Paths) -> None:
+    day = datetime.now().astimezone().date()
+    add_escape(bg_paths, day.isoformat())
+    assert _actions.undo_escape(bg_paths, day, "a") is True
+    assert _actions.undo_escape(bg_paths, day, "b") is False
+    ledger = _ledger.load(bg_paths.ledger, bg_paths.key_file)
+    assert len(ledger.of_kind(ESCAPE_UNDONE)) == 1
 
 
 def test_next_quiz(bg_paths: Paths) -> None:

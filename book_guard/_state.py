@@ -23,7 +23,7 @@ from book_guard._constants import (
 )
 from book_guard._daily_lock import kept, one_number
 from book_guard._ebook_overlap import book_of, breaks, clashes
-from book_guard._ledger import ESCAPE
+from book_guard._ledger import ESCAPE, ESCAPE_UNDONE
 from book_guard._pace import Pace, compute_pace
 from book_guard._quiz import credited
 from book_guard._session_times import (
@@ -182,9 +182,11 @@ def _decide(
 
 
 def _escapes_of_month(ledger: Ledger, day: date) -> list[Entry]:
-    """The escapes spent in ``day``'s month."""
+    """The escapes spent in ``day``'s month and not cancelled by an unescape."""
     month = day.isoformat()[:7]
-    return [e for e in ledger.of_kind(ESCAPE) if e.day.startswith(month)]
+    undone = {e.day for e in ledger.of_kind(ESCAPE_UNDONE)}
+    spent = (e for e in ledger.of_kind(ESCAPE) if e.day not in undone)
+    return [e for e in spent if e.day.startswith(month)]
 
 
 def _reading(

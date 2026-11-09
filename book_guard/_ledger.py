@@ -16,6 +16,9 @@ Kinds:
   the day the bonus belongs to, not the day the quiz was taken.
 * ``reject`` -- a session that failed the quiz. Worth nothing, and final.
 * ``escape`` -- a day whose lock was forgiven. Worth nothing either.
+* ``unescape`` -- ``unescape:<day>`` cancels that day's ``escape`` (the
+  escape row stays; the ledger only grows). The day counts as not escaped and
+  the escape is no longer spent. ``detail.reason`` may say why. Worth nothing.
 
 Tamper-evident, not tamper-proof: the key is world-readable, exactly as for
 the sibling lockers.
@@ -44,6 +47,7 @@ BOOK: Final = "book"
 CREDIT: Final = "credit"
 REJECT: Final = "reject"
 ESCAPE: Final = "escape"
+ESCAPE_UNDONE: Final = "unescape"
 
 _DEVICE: Final = socket.gethostname()
 

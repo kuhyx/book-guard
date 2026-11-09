@@ -18,7 +18,7 @@ from book_guard._flock import exclusive
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
 from book_guard._indexer import kick, mark_queued
-from book_guard._ledger import ESCAPE, Entry
+from book_guard._ledger import ESCAPE, ESCAPE_UNDONE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._phone_logs import merge_phone, merge_reports
 from book_guard._pictos import BOOK, GLYPH, toast_body, toast_icon
@@ -27,6 +27,8 @@ from book_guard._requests import handle_requests
 from book_guard._state import Snapshot, awaiting_quiz, snapshot
 
 if TYPE_CHECKING:
+    from datetime import date
+
     from book_guard._books import Chapter
     from book_guard._paths import Paths
     from book_guard._state import SessionView
@@ -141,3 +143,22 @@ def escape_today(paths: Paths, typed: str) -> str | None:
             paths.ledger, paths.key_file, Entry(f"escape:{day}", ESCAPE, day)
         )
     return None
+
+
+def undo_escape(paths: Paths, day: date, reason: str) -> bool:
+    """Cancel ``day``'s spent escape with an append-only ``unescape`` row.
+
+    The escape row stays in the ledger; the day then counts as not escaped
+    and the escape is not spent. Returns ``False`` (nothing written) when
+    ``day`` has no escape or it is already undone.
+    """
+    key = day.isoformat()
+    with exclusive(paths):
+        ledger = _ledger.load(paths.ledger, paths.key_file)
+        if not any(e.day == key for e in ledger.of_kind(ESCAPE)):
+            return False
+        return _ledger.append(
+            paths.ledger,
+            paths.key_file,
+            Entry(f"unescape:{key}", ESCAPE_UNDONE, key, detail={"reason": reason}),
+        )
