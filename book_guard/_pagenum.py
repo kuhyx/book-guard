@@ -47,6 +47,11 @@ FAR_FROM_LAST: Final = 20
 """A start more than this many pages from the last photographed page (same
 book) is not taken on the PC's own reading: it is far likelier a chapter
 numeral than a jump -- and a start too low is extra credit."""
+LAST_PAGE_SLACK: Final = 10
+"""Pages accepted above the book's last page. A publisher's page count misses
+the unnumbered last pages: the 2026-11-09 photo of p. 612 (pencilled, no
+printed number) of a book counted as 611. The phone has the same constant,
+``lastPageSlack`` -- keep them equal."""
 _BOX_PAD: Final = 0.25
 _ORIENTATION_TAG: Final = 0x0112
 _TRANSPOSE: Final = {
@@ -72,7 +77,7 @@ class Context:
     near: int | None = None
     """A start photo: where the last session (same book) ended."""
     last_page: int | None = None
-    """The book's last page, when known."""
+    """The book's last page, when known (:data:`LAST_PAGE_SLACK` more is let in)."""
     hint: int | None = None
     """What the phone read. When set it IS the page: ``_reader.read`` takes
     it without consulting anything below -- these rules are the fallback
@@ -121,7 +126,7 @@ def lone_numbers(
 
 
 def _plausible(found: list[int], context: Context) -> list[int]:
-    top = context.last_page or _ANY_PAGE
+    top = _ANY_PAGE if not context.last_page else context.last_page + LAST_PAGE_SLACK
     keep = [n for n in dict.fromkeys(found) if 1 <= n <= top]
     if context.after is not None:
         keep = [n for n in keep if n > context.after]

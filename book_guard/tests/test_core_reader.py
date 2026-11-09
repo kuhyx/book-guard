@@ -42,12 +42,14 @@ def _reader_with(
     boxed: list[int] | None = None,
     isbn: str | None = None,
     sparse: list[int] | None = None,
+    margin: list[int] | None = None,
 ) -> None:
     monkeypatch.setattr(_reader, "barcode_isbn", lambda _p: isbn)
     monkeypatch.setattr(_reader, "scan", lambda _p: page)
     monkeypatch.setattr(_reader, "candidates", lambda _s: found)
     monkeypatch.setattr(_reader, "read_box", lambda _img, _box: boxed or [])
     monkeypatch.setattr(_reader, "sparse_candidates", lambda _s: sparse or [])
+    monkeypatch.setattr(_reader, "margin_candidates", lambda _s: margin or [])
 
 
 def test_reader_barcode_needs_nothing_else(
@@ -166,3 +168,16 @@ def test_the_sparse_look_runs_only_when_the_page_offers_nothing(
     # A page that read before reads exactly as before.
     _reader_with(monkeypatch, page=_page(), found=[51], sparse=[9])
     assert _reader.read(_jpeg(tmp_path), Context()).page_number == 51
+
+
+def test_the_margin_look_runs_last_and_only_when_nothing_else_offers_a_number(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # p. 612 of 2026-11-09: pencilled below the text, no word to Tesseract.
+    context = Context(after=556, last_page=611)
+    _reader_with(monkeypatch, page=_page(), found=[], margin=[612])
+    assert _reader.read(_jpeg(tmp_path), context).page_number == 612
+    _reader_with(monkeypatch, page=_page(), found=[], sparse=[600], margin=[612])
+    assert _reader.read(_jpeg(tmp_path), context).page_number == 600
+    _reader_with(monkeypatch, page=_page(), found=[590], margin=[612])
+    assert _reader.read(_jpeg(tmp_path), context).page_number == 590

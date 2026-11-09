@@ -73,6 +73,10 @@ def test_lone_numbers_may_set_unsure_line_mates_aside() -> None:
         ([3, 51], Context(after=7, last_page=406), Choice(51)),
         ([51, 80], Context(after=7), Choice(None, "page number unclear (51 or 80)")),
         ([500], Context(last_page=406), Choice(None, "no page number found")),
+        # The publisher's count misses unnumbered last pages: 10 more are let in.
+        ([416], Context(last_page=406), Choice(416)),
+        ([417], Context(last_page=406), Choice(None, "no page number found")),
+        ([612], Context(after=556, last_page=611), Choice(612)),
         ([51], Context(), Choice(51)),
         ([3, 51], Context(near=51), Choice(51)),
         ([3, 51], Context(near=27), Choice(None, "page number unclear (3 or 51)")),

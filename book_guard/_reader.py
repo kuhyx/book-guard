@@ -8,7 +8,9 @@
 2. Otherwise Tesseract turns the page upright by its content and reads it;
    :mod:`book_guard._pagenum` picks the printed page number from what the
    photo was taken for (:mod:`book_guard._sparse` takes a second look when
-   the page offers none, e.g. a number set between ornaments). This is the
+   the page offers none, e.g. a number set between ornaments, and
+   :mod:`book_guard._margin` a third, for a lone patch of ink in the margin:
+   a tiny corner number, a pencilled one). This is the
    fallback for photos with no phone reading (the desktop web app has no OCR).
 3. A page whose number cannot be pinned down carries the reason, so the
    app can ask for the number to be boxed instead of the photo vanishing.
@@ -22,6 +24,7 @@ from typing import TYPE_CHECKING, Final
 
 from PIL import Image
 
+from book_guard._margin import margin_candidates
 from book_guard._ocr import barcode_isbn, scan
 from book_guard._pagenum import (
     Box,
@@ -105,7 +108,7 @@ def _pc_reading(path: Path, context: Context, box: Box | None) -> Reading:
     found = _box_numbers(path, page, box, context) if box is not None else []
     boxed = bool(found)
     if not boxed:  # no box, nothing legible, or disputed: the whole page decides
-        found = candidates(page) or sparse_candidates(page)
+        found = candidates(page) or sparse_candidates(page) or margin_candidates(page)
     choice = choose(found, context, boxed=boxed)
     if choice.page is not None:
         return Reading(PAGE, choice.page, None, page.text, rotation=page.rotation)
