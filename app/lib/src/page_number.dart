@@ -93,6 +93,9 @@ const _anyPage = 9999;
 /// the reader's own say-so (`FAR_FROM_LAST` on the PC).
 const farFromLast = 20;
 
+/// Slack past the last page: a pencilled 612 of 611 (PC `LAST_PAGE_SLACK`).
+const lastPageSlack = 10;
+
 final _ends = RegExp(r'^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$', unicode: true);
 final _alnum = RegExp(r'[\p{L}\p{N}]', unicode: true);
 const _sure = 0.6;
@@ -200,7 +203,7 @@ PageChoice choosePage(
     }
     return PageChoice(null, 'page $expected not found on the photo');
   }
-  final top = context.lastPage ?? _anyPage;
+  final top = (context.lastPage ?? _anyPage) + lastPageSlack;
   final seen = <int>{};
   final options = [
     for (final hit in hits)

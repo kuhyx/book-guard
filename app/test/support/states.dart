@@ -47,7 +47,13 @@ GuardState sampleState([Map<String, dynamic> overrides = const {}]) =>
 /// credited session ending at [lastEnd], one asking for page [check].
 GuardState readingState({int? openStart, int? lastEnd, int? check}) =>
     GuardState.fromJson({
-      'book': {'isbn': '9788368380002', 'title': 'T', 'pages': 406},
+      'book': {
+        'isbn': '9788368380002',
+        'title': 'T',
+        'pages': 406,
+        // The PC names where the book was last read: the start's anchor.
+        'latest_page': ?lastEnd,
+      },
       'pace': const <String, dynamic>{},
       'sessions': [
         if (lastEnd != null)

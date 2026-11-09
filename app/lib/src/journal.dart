@@ -13,6 +13,7 @@ class JournalEntry {
     required this.sha,
     required this.takenAt,
     this.page,
+    this.isbn,
     this.seen = false,
   });
 
@@ -23,6 +24,7 @@ class JournalEntry {
     sha: '${json['sha']}',
     takenAt: DateTime.parse('${json['taken_at']}'),
     page: json['page'] as int?,
+    isbn: json['isbn'] as String?,
     seen: json['seen'] == true,
   );
 
@@ -41,6 +43,11 @@ class JournalEntry {
   /// The page number the phone read, if any.
   final int? page;
 
+  /// The book it was taken for; null for a photo taken before this was
+  /// recorded, or with no book known. A start photo is judged against the
+  /// last stop of *its* book only.
+  final String? isbn;
+
   /// Whether the PC has read it: kept once known, because `state.json`
   /// lists only its newest photos and the journal holds far more.
   final bool seen;
@@ -52,6 +59,7 @@ class JournalEntry {
     sha: sha,
     takenAt: takenAt,
     page: page,
+    isbn: isbn,
     seen: true,
   );
 
@@ -62,6 +70,7 @@ class JournalEntry {
     'sha': sha,
     'taken_at': takenAt.toIso8601String(),
     'page': page,
+    'isbn': ?isbn,
     if (seen) 'seen': true,
   };
 }

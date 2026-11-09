@@ -88,6 +88,7 @@ void main() {
             sha: 'a' * 64,
             takenAt: DateTime.utc(2026, 10, 3),
             page: 51,
+            isbn: '9788368380002', // readingState()'s book
           ),
           JournalEntry(
             name: 'stop_y.jpg',

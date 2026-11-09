@@ -48,17 +48,38 @@ PageContext pageContextFor(
     );
   }
   if (label == 'stop') return PageContext(after: openStart, lastPage: lastPage);
-  final ends = [
+  return PageContext(near: _lastEnd(state, journal), lastPage: lastPage);
+}
+
+/// Where the last session of the current book ended, for a start photo --
+/// never another book's (`context_for` filters ends by isbn on the PC).
+///
+/// With a book known: a stop of it the PC has not read yet, else the PC's
+/// own `latest_page` for it, else its newest read stop. The snapshot's
+/// sessions carry no book, so they count only when none is known.
+int? _lastEnd(GuardState? state, List<JournalEntry> journal) {
+  final book = state?.book;
+  if (book == null) {
+    final ends = [
+      for (final e in journal)
+        if (e.label == 'stop' && e.page != null) e.page!,
+    ];
+    final sessions = [
+      ...?state?.sessions,
+    ]..sort((a, b) => (a.startedAt ?? _epoch).compareTo(b.startedAt ?? _epoch));
+    return ends.isNotEmpty
+        ? ends.last
+        : sessions.isEmpty
+        ? null
+        : sessions.last.endPage;
+  }
+  final stops = [
     for (final e in journal)
-      if (e.label == 'stop' && e.page != null) e.page!,
+      if (e.label == 'stop' && e.page != null && e.isbn == book.isbn) e,
   ];
-  final sessions = [...?state?.sessions]
-    ..sort((a, b) => (a.startedAt ?? _epoch).compareTo(b.startedAt ?? _epoch));
-  final pcEnd = sessions.isEmpty ? null : sessions.last.endPage;
-  return PageContext(
-    near: ends.isNotEmpty ? ends.last : pcEnd,
-    lastPage: lastPage,
-  );
+  final unread = stops.where((e) => !e.seen);
+  if (unread.isNotEmpty) return unread.last.page;
+  return book.latestPage ?? (stops.isEmpty ? null : stops.last.page);
 }
 
 /// Reads the photo on the device and lets the reader confirm or box the

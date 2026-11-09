@@ -88,8 +88,7 @@ class GuardApi {
   static const _root = 'Reading';
   static const _pending = 'pending/';
 
-  /// The latest snapshot, or null before the PC ever wrote one. Kept on
-  /// the device for [cachedState].
+  /// The latest snapshot (kept for [cachedState]), or null if none yet.
   Future<GuardState?> fetchState() async {
     final text = await dav.getText('$_root/state.json');
     if (text == null) return null;
@@ -100,8 +99,7 @@ class GuardApi {
     return state;
   }
 
-  /// Sends what the outbox holds, then the lifecycle events; returns how
-  /// many outbox items still wait.
+  /// Sends the outbox, then lifecycle events; returns items still waiting.
   Future<int> flush() async {
     final waiting = await outbox.flush();
     await eventbox.flush();
@@ -178,9 +176,9 @@ class GuardApi {
     return found;
   }
 
-  /// Stores a photo on the device and queues it (sidecar note first) for
-  /// the PC's inbox; [page] and [box] are what the phone read. Returns the
-  /// name it is uploaded under. Call [outbox] `flush` to send.
+  /// Stores a photo on the device and queues it (sidecar note first) for the
+  /// PC's inbox; [page], [box] are what the phone read, [isbn] the book it
+  /// is for. Returns its upload name; call [outbox] `flush` to send.
   Future<String> queuePhoto(
     String label,
     String fileName,
@@ -188,6 +186,7 @@ class GuardApi {
     int? page,
     Box? box,
     DateTime? takenAt,
+    String? isbn,
   }) async {
     final name = safeName('${label}_$fileName');
     if (page != null || box != null) {
@@ -209,6 +208,7 @@ class GuardApi {
         sha: photoSha(bytes),
         takenAt: takenAt ?? DateTime.now(),
         page: page,
+        isbn: isbn,
       ),
     );
     await prunePhotos();

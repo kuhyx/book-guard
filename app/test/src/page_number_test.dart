@@ -112,6 +112,17 @@ void main() {
       );
     });
 
+    test('a pencilled page just past the last printed one is taken', () {
+      // 2026-11-09: p. 612 of a 611-page novel, pencilled by the reader.
+      const context = PageContext(after: 556, lastPage: 611);
+      expect(pick([612], context).hit?.value, 612);
+      expect(pick([611 + lastPageSlack], context).hit?.value, 621);
+      expect(
+        pick([611 + lastPageSlack + 1], context).reason,
+        'no page after 556 found on the photo',
+      );
+    });
+
     test('stops never take the bigger of two', () {
       expect(pick([3, 51], const PageContext(after: 7)).hit?.value, 51);
       expect(

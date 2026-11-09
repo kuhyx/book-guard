@@ -170,6 +170,7 @@ class _ReadTabState extends State<ReadTab> {
       bytes,
       page: review.page,
       box: review.box,
+      isbn: widget.state?.book?.isbn,
     );
     await api.captures.drop(capture);
     await api.errors.event('photo', 'queued', {...attempt, 'photo': name});

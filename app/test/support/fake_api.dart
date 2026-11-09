@@ -106,6 +106,7 @@ class FakeApi extends GuardApi {
     int? page,
     Box? box,
     DateTime? takenAt,
+    String? isbn,
   }) async {
     final error = uploadError;
     if (error != null) throw error;

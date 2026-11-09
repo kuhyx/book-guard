@@ -28,6 +28,25 @@ void main() {
     );
   });
 
+  test('the book a photo was taken for is kept, also once seen', () async {
+    final journal = Journal(store);
+    await journal.add(
+      JournalEntry(
+        name: 'a',
+        label: 'stop',
+        sha: 'a' * 64,
+        takenAt: t0,
+        page: 130,
+        isbn: '9788368380002',
+      ),
+    );
+    await journal.markSeen(windowState(photos: ['a']));
+    final entry = (await journal.load()).single;
+    expect((entry.seen, entry.isbn), (true, '9788368380002'));
+    // Entries stored before the book was recorded have none.
+    expect(JournalEntry.fromJson(entry.toJson()..remove('isbn')).isbn, isNull);
+  });
+
   test('entries added at once are all kept', () async {
     final journal = Journal(store);
     await Future.wait([
