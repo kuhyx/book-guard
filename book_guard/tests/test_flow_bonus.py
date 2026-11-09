@@ -149,8 +149,8 @@ def test_regrant_command(bg_paths: Paths, capsys: pytest.CaptureFixture[str]) ->
     _on_pace(bg_paths)
     _credit(bg_paths, "s1", DAY)
     assert _cli.main(["regrant", "--dry-run"]) == 0
-    assert f"would grant {DAY} bonus for s1" in capsys.readouterr().out
+    assert f"○ {DAY} s1" in capsys.readouterr().out
     assert len(_rows(bg_paths)) == 2
     assert _cli.main(["regrant"]) == 0
-    assert f"granted {DAY} bonus for s1" in capsys.readouterr().out
+    assert f"✓ {DAY} s1" in capsys.readouterr().out
     assert len(_rows(bg_paths)) == 3

@@ -26,7 +26,19 @@ from book_guard._ledger import load
 from book_guard._lock import run_gate
 from book_guard._openlibrary import BookInfo, search_title
 from book_guard._paths import paths
-from book_guard._render import session_line, status_lines
+from book_guard._pictos import (
+    BOOK,
+    CAMERA,
+    GLYPH,
+    NO,
+    OK,
+    OVERLAP,
+    PENCIL,
+    WARN,
+    book_line,
+    session_text,
+    text_lines,
+)
 from book_guard._state import snapshot
 from book_guard._state_json import to_json
 
@@ -34,6 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
 _logger: Final = logging.getLogger(__name__)
+GLYPH_COUNTS: Final = (GLYPH[CAMERA], GLYPH[OVERLAP], "◷")  # read, dup, deferred
 
 
 def _say(*parts: object, file: TextIO | None = None) -> None:
@@ -50,24 +63,23 @@ def _cmd_search(args: argparse.Namespace) -> int:
         hits = search_title(args.title)
     except OSError as exc:
         _logger.warning("title search failed: %s", exc)
-        _say(f"Open Library unreachable: {exc}", file=sys.stderr)
+        _say(GLYPH[WARN], file=sys.stderr)
         return 1
     if not hits:
-        _say("No matches.")
+        _say(GLYPH[NO])
         return 1
     for i, hit in enumerate(hits, 1):
-        pages = hit.pages or "?"
-        _say(
-            f"{i}. {hit.title} -- {hit.author or '?'} ({pages} p) "
-            f"ISBN {hit.isbn or '-'}"
-        )
-    _say("\nRegister one with: book-guard add <ISBN>")
+        who, isbn = hit.author or "?", hit.isbn or "-"
+        _say(f"{i}. {hit.title} -- {who} ▤{hit.pages or '?'} {isbn}")
     return 0
 
 
 def _cmd_add(args: argparse.Namespace) -> int:
     ok, message = register_isbn(paths(), args.isbn, pages=args.pages)
-    _say(message)
+    _logger.info("%s", message)
+    active = paths()
+    book = current(load(active.ledger, active.key_file)) if ok else None
+    _say(book_line(book) if book else GLYPH[NO])
     if not ok:
         return 1
     if args.file:
@@ -79,12 +91,13 @@ def _cmd_attach(args: argparse.Namespace) -> int:
     try:
         with index_lock(paths()) as mine:
             if not mine:
-                _say("an index run is going; attach again when it ends")
+                _say("◐")
                 return 1
-            _say(attach(paths(), Path(args.file).expanduser()))
+            _logger.info("%s", attach(paths(), Path(args.file).expanduser()))
+            _say(GLYPH[OK])
     except (BookTextError, EmbedderUnavailableError) as exc:
         _logger.warning("attach failed: %s", exc)
-        _say(f"Not attached: {exc}", file=sys.stderr)
+        _say(GLYPH[NO], file=sys.stderr)
         return 1
     return 0
 
@@ -93,27 +106,26 @@ def _cmd_pages(args: argparse.Namespace) -> int:
     active = paths()
     book = current(load(active.ledger, active.key_file))
     if book is None:
-        _say("No book registered yet.", file=sys.stderr)
+        _say(f"{GLYPH[BOOK]} ?", file=sys.stderr)
         return 1
     info = BookInfo(
         title=book.title, author=book.author, pages=args.pages, isbn=book.isbn
     )
-    _say(f"{register(active, info).label}: last page {args.pages}")
+    _say(book_line(register(active, info)))
     return 0
 
 
 def _cmd_process(args: argparse.Namespace) -> int:
     if args.now and not os.environ.get("BOOK_GUARD_ROOT"):
-        _say("--now only works in a BOOK_GUARD_ROOT sandbox", file=sys.stderr)
+        _say(GLYPH[NO], file=sys.stderr)
         return 2
     result, _snap = process(paths(), now=args.now.timestamp() if args.now else None)
-    _say(
-        f"read {len(result.read)}, duplicates {result.duplicates}, "
-        f"deferred {len(result.deferred)}"
-    )
+    counts = (len(result.read), result.duplicates, len(result.deferred))
+    _say("  ".join(f"{g} {n}" for g, n in zip(GLYPH_COUNTS, counts, strict=True)))
     for record in result.read:
-        detail = record.reason if record.status != "ok" else f"page {record.page}"
-        _say(f"  {record.name}: {record.kind} {detail or record.isbn or ''}")
+        mark = GLYPH[OK] if record.status == "ok" else GLYPH[NO]
+        _logger.info("%s: %s", record.name, record.reason or record.status)
+        _say(f"  {record.name} {mark} {record.page or record.isbn or ''}".rstrip())
     return 0
 
 
@@ -123,21 +135,21 @@ def _cmd_status(args: argparse.Namespace) -> int:
     if args.json:
         _say(json.dumps(to_json(active, snap), indent=1, ensure_ascii=False))
     else:
-        _say("\n".join(status_lines(snap, recent=12)))
+        _say("\n".join(text_lines(snap, recent=12)))
     return 0
 
 
 def _cmd_regrant(args: argparse.Namespace) -> int:
     for grant in regrant(paths(), dry_run=args.dry_run):
         _say(
-            f"{'would grant' if args.dry_run else 'granted'} {grant.day} "
-            f"bonus for {grant.detail['grant_of']}"
+            f"{'○' if args.dry_run else GLYPH[OK]} {grant.day} "
+            f"{grant.detail['grant_of']}"
         )
     return 0
 
 
 def _read_summary() -> str:
-    _say("Summary (3-5 sentences; finish with an empty line):")
+    _say(f"{GLYPH[PENCIL]} ⏎⏎")
     lines: list[str] = []
     for line in sys.stdin:
         if not line.strip():
@@ -150,24 +162,24 @@ def _cmd_quiz(args: argparse.Namespace) -> int:
     active = paths()
     view = next_quiz(active, session_id=args.session)
     if view is None:
-        _say("Nothing waiting for a summary.")
+        _say(GLYPH[OK])
         return 0
-    _say(
-        f"{view.book.label if view.book else 'Unregistered book'}: {session_line(view)}"
-    )
+    _say(f"{view.book.label if view.book else GLYPH[BOOK] + ' ?'} {session_text(view)}")
     try:
         verdict = quiz_one(active, view, _read_summary(), model=args.model)
     except ClaudeUnavailableError as exc:
         _logger.warning("grader unavailable: %s", exc)
-        _say(f"Grader unavailable ({exc}); the session stays open.", file=sys.stderr)
+        _say(GLYPH[WARN], file=sys.stderr)
         return 1
-    _say(("PASSED: " if verdict.passed else "FAILED: ") + verdict.feedback)
+    _say(GLYPH[OK] if verdict.passed else GLYPH[NO])
+    for topic in verdict.missing:
+        _say(f"  - {topic}")
     return 0 if verdict.passed else 1
 
 
 def _cmd_lock(args: argparse.Namespace) -> int:
     if args.today and args.production:
-        _say("--today is for demos only", file=sys.stderr)
+        _say(GLYPH[NO], file=sys.stderr)
         return 2
     return run_gate(paths(), production=args.production, today=args.today)
 

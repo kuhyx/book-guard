@@ -147,7 +147,7 @@ def test_cli_attach_waits_for_an_index_run(
     book.write_text(LONG_TEXT, encoding="utf-8")
     with _indexer.index_lock(bg_paths):
         assert _cli.main(["attach", str(book)]) == 1
-    assert "an index run is going" in capsys.readouterr().out
+    assert capsys.readouterr().out == "◐\n"
 
 
 def test_cli_index_without_fastembed_says_why_and_keeps_the_book(

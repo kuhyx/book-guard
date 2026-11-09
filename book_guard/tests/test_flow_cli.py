@@ -19,6 +19,7 @@ from book_guard._http import UnavailableError
 from book_guard._inbox import InboxResult
 from book_guard._openlibrary import BookInfo
 from book_guard._photos import REJECTED
+from book_guard._pictos import BOOK, CAMERA, GLYPH, NO, OK, OVERLAP, WARN
 from book_guard._quiz import Verdict
 from book_guard._state import snapshot
 from book_guard.tests._flow_helpers import (
@@ -47,11 +48,11 @@ def _offline(*_args: object, **_kwargs: object) -> Any:
 def test_search(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
     monkeypatch.setattr(_cli, "search_title", _offline)
     assert _cli.main(["search", "war"]) == 1
-    assert "Open Library unreachable: no route to host" in capsys.readouterr().err
+    assert capsys.readouterr().err == f"{GLYPH[WARN]}\n"
 
     monkeypatch.setattr(_cli, "search_title", lambda _t: [])
     assert _cli.main(["search", "war"]) == 1
-    assert capsys.readouterr().out == "No matches.\n"
+    assert capsys.readouterr().out == f"{GLYPH[NO]}\n"
 
     hits = [
         BookInfo(title="War", author="Tol", pages=900, isbn=ISBN13),
@@ -60,9 +61,8 @@ def test_search(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
     monkeypatch.setattr(_cli, "search_title", lambda _t: hits)
     assert _cli.main(["search", "war"]) == 0
     out = capsys.readouterr().out
-    assert f"1. War -- Tol (900 p) ISBN {ISBN13}\n" in out
-    assert "2. Peace -- ? (? p) ISBN -\n" in out
-    assert out.endswith("Register one with: book-guard add <ISBN>\n")
+    assert f"1. War -- Tol ▤900 {ISBN13}\n" in out
+    assert out.endswith("2. Peace -- ? ▤? -\n")
 
 
 def test_add_and_attach(
@@ -71,26 +71,26 @@ def test_add_and_attach(
     info = BookInfo(title="War", author="Tol", pages=900, isbn=ISBN13)
     monkeypatch.setattr(_grading, "lookup_book", lambda _paths, _isbn: info)
     assert _cli.main(["add", ISBN13, "--pages", "1225"]) == 0
-    assert capsys.readouterr().out == "Now reading: War -- Tol, last page 1225\n"
+    assert capsys.readouterr().out == f"{GLYPH[OK]} {GLYPH[BOOK]} War -- Tol ▤1225\n"
 
     book = tmp_path / "war.txt"
     book.write_text(LONG_TEXT, encoding="utf-8")
     assert _cli.main(["add", ISBN13, "--file", str(book)]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert lines[1].startswith("Attached war.txt:")
+    assert lines[1:] == [GLYPH[OK]]
 
 
 def test_attach_without_a_book(tmp_path: Path, capsys: Out) -> None:
     assert _cli.main(["attach", str(tmp_path / "war.txt")]) == 1
-    assert capsys.readouterr().err.startswith("Not attached: register the book first")
+    assert capsys.readouterr().err == f"{GLYPH[NO]}\n"
 
 
 def test_pages(bg_paths: Paths, capsys: Out) -> None:
     assert _cli.main(["pages", "300"]) == 1
-    assert capsys.readouterr().err == "No book registered yet.\n"
+    assert capsys.readouterr().err == f"{GLYPH[BOOK]} ?\n"
     add_book(bg_paths, pages=None)
     assert _cli.main(["pages", "412"]) == 0
-    assert capsys.readouterr().out == "War -- Tol: last page 412\n"
+    assert capsys.readouterr().out == f"{GLYPH[OK]} {GLYPH[BOOK]} War -- Tol ▤412\n"
 
 
 def test_process_now_needs_the_sandbox(
@@ -98,7 +98,7 @@ def test_process_now_needs_the_sandbox(
 ) -> None:
     monkeypatch.delenv("BOOK_GUARD_ROOT", raising=False)
     assert _cli.main(["process", "--now", "2026-10-05T18:00:00+00:00"]) == 2
-    assert "BOOK_GUARD_ROOT sandbox" in capsys.readouterr().err
+    assert capsys.readouterr().err == f"{GLYPH[NO]}\n"
 
 
 def test_process_reports_what_it_read(
@@ -128,10 +128,10 @@ def test_process_reports_what_it_read(
     ]
     out = capsys.readouterr().out.splitlines()
     assert out[:4] == [
-        "read 3, duplicates 1, deferred 1",
-        "  page.jpg: page page 42",
-        "  isbn.jpg: isbn page None",
-        "  late.jpg: other uploaded too late",
+        f"{GLYPH[CAMERA]} 3  {GLYPH[OVERLAP]} 1  ◷ 1",
+        f"  page.jpg {GLYPH[OK]} 42",
+        f"  isbn.jpg {GLYPH[OK]} {ISBN13}",
+        f"  late.jpg {GLYPH[NO]}",
     ]
     assert not (tmp_path / "sandbox").exists()  # the override still wins
 
@@ -139,7 +139,7 @@ def test_process_reports_what_it_read(
 def test_status_text_and_json(bg_paths: Paths, capsys: Out) -> None:
     add_book(bg_paths)
     assert _cli.main(["status"]) == 0
-    assert "Book: War -- Tol, last page 300" in capsys.readouterr().out
+    assert f"{GLYPH[BOOK]} War -- Tol ▤300" in capsys.readouterr().out
     assert _cli.main(["status", "--json"]) == 0
     doc = json.loads(capsys.readouterr().out)
     assert doc["book"]["isbn"] == ISBN13
@@ -147,7 +147,7 @@ def test_status_text_and_json(bg_paths: Paths, capsys: Out) -> None:
 
 def test_quiz_nothing_waiting(capsys: Out) -> None:
     assert _cli.main(["quiz"]) == 0
-    assert capsys.readouterr().out == "Nothing waiting for a summary.\n"
+    assert capsys.readouterr().out == f"{GLYPH[OK]}\n"
 
 
 @pytest.mark.parametrize(
@@ -173,15 +173,17 @@ def test_quiz_grades(
 
     def quiz_one(_paths: Paths, _view: Any, text: str, *, model: str) -> Verdict:
         got.append((text, model))
-        return Verdict(passed=passed, feedback="Noted.")
+        return Verdict(
+            passed=passed, feedback="Noted.", missing=() if passed else ("the ending",)
+        )
 
     monkeypatch.setattr(_cli, "quiz_one", quiz_one)
     monkeypatch.setattr(sys, "stdin", io.StringIO(stdin))
     assert _cli.main(["quiz", "--model", "sonnet"]) == code
     assert got == [(summary, "sonnet")]
     out = capsys.readouterr().out
-    assert out.startswith("Unregistered book: p. 10-11")
-    assert out.endswith(("PASSED: " if passed else "FAILED: ") + "Noted.\n")
+    assert out.startswith(f"{GLYPH[BOOK]} ? 10-11")
+    assert (GLYPH[OK] in out, "  - the ending\n" in out) == (passed, not passed)
 
 
 def test_quiz_grader_down(
@@ -199,13 +201,13 @@ def test_quiz_grader_down(
     assert _cli.main(["quiz", "--session", "session:nope"]) == 0  # not waiting
     assert _cli.main(["quiz"]) == 1
     captured = capsys.readouterr()
-    assert "War -- Tol: p. 10-11" in captured.out
-    assert "Grader unavailable (offline); the session stays open." in captured.err
+    assert "War -- Tol 10-11" in captured.out
+    assert captured.err == f"{GLYPH[WARN]}\n"
 
 
 def test_lock(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
     assert _cli.main(["lock", "--production", "--today", "2026-10-15"]) == 2
-    assert capsys.readouterr().err == "--today is for demos only\n"
+    assert capsys.readouterr().err == f"{GLYPH[NO]}\n"
     calls: list[dict[str, Any]] = []
 
     def run_gate(_paths: Paths, **kwargs: Any) -> int:
@@ -224,8 +226,7 @@ def test_lock(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
 def test_no_command_is_a_usage_error(capsys: Out) -> None:
     with pytest.raises(SystemExit) as exc:
         _cli.main([])
-    assert exc.value.code == 2
-    assert "usage: book-guard" in capsys.readouterr().err
+    assert (exc.value.code, "usage: book-guard" in capsys.readouterr().err) == (2, True)
 
 
 def test_python_dash_m(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
@@ -234,7 +235,7 @@ def test_python_dash_m(monkeypatch: pytest.MonkeyPatch, capsys: Out) -> None:
     with pytest.raises(SystemExit) as exc:
         runpy.run_module("book_guard", run_name="__main__")
     assert exc.value.code == 0
-    assert "Book: (none)" in capsys.readouterr().out
+    assert f"{GLYPH[BOOK]} ?" in capsys.readouterr().out
 
 
 def test_add_with_no_source_reachable_fails(
@@ -246,4 +247,4 @@ def test_add_with_no_source_reachable_fails(
 
     monkeypatch.setattr(_grading, "lookup_book", offline)
     assert _cli.main(["add", ISBN13]) == 1
-    assert capsys.readouterr().out.startswith("No book source reachable")
+    assert capsys.readouterr().out == f"{GLYPH[NO]}\n"
