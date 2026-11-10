@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/icon_pickers.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -56,23 +57,17 @@ class SessionTimes extends StatelessWidget {
     final end = session.endedAt;
     final first = session.photoStart;
     if (start == null || end == null || first == null) return;
-    final newStart = await showTimePicker(
+    final picked = await showIconTimeRangePicker(
       context: context,
-      helpText: 'When did you start reading?',
-      initialTime: TimeOfDay.fromDateTime(start.toLocal()),
+      initialStart: TimeOfDay.fromDateTime(start.toLocal()),
+      initialEnd: TimeOfDay.fromDateTime(end.toLocal()),
     );
-    if (newStart == null || !context.mounted) return;
-    final newEnd = await showTimePicker(
-      context: context,
-      helpText: 'When did you stop?',
-      initialTime: TimeOfDay.fromDateTime(end.toLocal()),
-    );
-    if (newEnd == null || !context.mounted) return;
-    final startAt = onDayOf(first, newStart);
+    if (picked == null || !context.mounted) return;
+    final startAt = onDayOf(first, picked.start);
     final response = await api.sendQueued('session_times', {
       'session_id': session.id,
       'start': startAt.toIso8601String(),
-      'end': onDayOf(startAt, newEnd).toIso8601String(),
+      'end': onDayOf(startAt, picked.end).toIso8601String(),
     }, 'Times for ${session.span}');
     if (!context.mounted) return;
     response.ok

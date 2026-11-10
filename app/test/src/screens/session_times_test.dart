@@ -1,10 +1,29 @@
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/icon_time_dialog.dart';
+import 'package:book_guard_app/src/screens/picker_parts.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/no_words.dart';
+
+/// Turns wheel [index] (start h, start m, end h, end m) by [notches].
+Future<void> scrollWheel(WidgetTester tester, int index, int notches) async {
+  final at = tester.getCenter(find.byType(NumberWheel).at(index));
+  final mouse = TestPointer(1, PointerDeviceKind.mouse)..hover(at);
+  for (var i = 0; i < notches.abs(); i++) {
+    await tester.sendEventToBinding(mouse.scroll(Offset(0, notches * 40.0)));
+  }
+  await tester.pumpAndSettle();
+}
+
+Future<void> confirm(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.check));
+  await tester.pumpAndSettle();
+}
 
 SessionInfo _session({String status = 'needs-quiz'}) => SessionInfo.fromJson({
   'id': 'session:a-b',
@@ -42,12 +61,9 @@ void main() {
     expect(find.text('Read 12:27-14:29 (121 min)'), findsOneWidget);
     await tester.tap(find.text('Correct the times'));
     await tester.pumpAndSettle();
-    expect(find.text('When did you start reading?'), findsOneWidget);
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    expect(find.text('When did you stop?'), findsOneWidget);
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
+    expect(find.byType(IconTimeRangeDialog), findsOneWidget);
+    expect(find.byType(NumberWheel), findsNWidgets(4));
+    await confirm(tester);
     final sent = api.sent.single;
     expect(sent.type, 'session_times');
     expect(sent.body['session_id'], 'session:a-b');
@@ -65,23 +81,48 @@ void main() {
     await pump(tester, _session());
     await tester.tap(find.text('Correct the times'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
+    await scrollWheel(tester, 0, 1);
+    await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
     expect(api.sent, isEmpty);
     await tester.tap(find.text('Correct the times'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
+    await tester.tapAt(Offset.zero);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(api.sent, isEmpty);
+    expect(api.sent, isEmpty, reason: 'a dismiss sends nothing');
     await tester.tap(find.text('Correct the times'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
+    await confirm(tester);
     expect(find.text('53 pages need at least 44 minutes.'), findsOneWidget);
+  });
+
+  testWidgets('an end before the start shows +1 and ends the next day', (
+    tester,
+  ) async {
+    api.onSend = (r) async => const GuardResponse(ok: true, message: 'ok');
+    await pump(tester, _session());
+    await tester.tap(find.text('Correct the times'));
+    await tester.pumpAndSettle();
+    expect(find.text('+1'), findsNothing);
+    await scrollWheel(tester, 2, -3); // end 14:29 -> 11:29, start 12:27
+    expect(find.text('+1'), findsOneWidget);
+    await scrollWheel(tester, 1, 1); // the start minute moves, not the hour
+    await confirm(tester);
+    final sent = api.sent.single;
+    expect('${sent.body['start']}', startsWith('2026-10-03T12:28'));
+    expect('${sent.body['end']}', startsWith('2026-10-04T11:29'));
+  });
+
+  testWidgets('the times picker paints no words', (tester) async {
+    await pump(tester, _session());
+    await tester.tap(find.text('Correct the times'));
+    await tester.pumpAndSettle();
+    await scrollWheel(tester, 2, -3);
+    expectNoWords(
+      tester,
+      find.byType(IconTimeRangeDialog),
+      spoken: [Icons.check, Icons.close, Icons.play_arrow, Icons.stop],
+    );
   });
 
   testWidgets('a graded session shows its times, no button', (tester) async {

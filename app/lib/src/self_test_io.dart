@@ -6,6 +6,9 @@ import 'package:book_guard_app/src/page_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+// phone-slot: not-shared-storage -- the path below is a doc example; the
+// folder is getExternalStorageDirectory(), which is per package.
+
 /// On-device check of the page reader against labelled photos, driven
 /// over adb with no screen interaction:
 ///

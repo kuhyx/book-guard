@@ -1,11 +1,11 @@
-import 'package:book_guard_app/src/screens/monday_first.dart';
+import 'package:book_guard_app/src/screens/icon_date_dialog.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:book_guard_app/src/screens/pace_panel.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/no_words.dart';
 import '../../support/pace_inputs.dart';
 
 void main() {
@@ -23,7 +23,21 @@ void main() {
   }
 
   Finder inDialog(Finder finder) =>
-      find.descendant(of: find.byType(DatePickerDialog), matching: finder);
+      find.descendant(of: find.byType(IconDateDialog), matching: finder);
+
+  PickerDay pickerDay(WidgetTester tester, int day) => tester.widget(
+    find.byWidgetPredicate((w) => w is PickerDay && w.day == day),
+  );
+
+  Future<void> confirm(WidgetTester tester) async {
+    await tester.tap(inDialog(find.byIcon(Icons.check)));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> cancel(WidgetTester tester) async {
+    await tester.tap(inDialog(find.byIcon(Icons.close)));
+    await tester.pumpAndSettle();
+  }
 
   testWidgets("shows this week, the month grid and today's card", (
     tester,
@@ -89,18 +103,40 @@ void main() {
     await tapVisible(tester, find.text('Any day: Thu 15.10'));
     await tester.pumpAndSettle();
     await tester.tap(inDialog(find.text('20')));
-    await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
+    expect(pickerDay(tester, 20).selected, isTrue);
+    expect(find.byType(IconDateDialog), findsOneWidget, reason: 'tap selects');
+    await confirm(tester);
+    expect(find.byType(IconDateDialog), findsNothing);
     expect(find.text('Any day: Tue 20.10'), findsOneWidget);
     expect(find.textContaining('Tue 20.10, projected'), findsOneWidget);
+  });
+
+  testWidgets('both day pickers paint no words', (tester) async {
+    await pump(tester);
+    for (final opener in ['Any day: Thu 15.10', 'on Thu 15.10']) {
+      await tapVisible(tester, find.text(opener));
+      await tester.pumpAndSettle();
+      expectNoWords(
+        tester,
+        find.byType(IconDateDialog),
+        spoken: [Icons.check, Icons.close],
+      );
+      // Dismissing (a tap outside) is a cancel too.
+      await tester.tap(inDialog(find.text('20')));
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+      expect(find.byType(IconDateDialog), findsNothing);
+      expect(find.text(opener), findsOneWidget);
+    }
   });
 
   testWidgets('cancelling the any-day picker changes nothing', (tester) async {
     await pump(tester);
     await tapVisible(tester, find.text('Any day: Thu 15.10'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
+    await tester.tap(inDialog(find.text('20')));
+    await cancel(tester);
     expect(find.text('Any day: Thu 15.10'), findsOneWidget);
   });
 
@@ -132,8 +168,7 @@ void main() {
     await tapVisible(tester, find.text('on Thu 15.10'));
     await tester.pumpAndSettle();
     await tester.tap(inDialog(find.text('24')));
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
+    await confirm(tester);
     expect(find.text('on Sat 24.10'), findsOneWidget);
     await tapVisible(tester, find.byTooltip('5 pages more'));
     await tester.pump();
@@ -143,40 +178,15 @@ void main() {
     );
   });
 
-  testWidgets('both date pickers start the week on Monday, as the grid does', (
-    tester,
-  ) async {
+  testWidgets('the simulation day picker starts at today', (tester) async {
     await pump(tester);
-    for (final opener in ['Any day: Thu 15.10', 'on Thu 15.10']) {
-      await tapVisible(tester, find.text(opener));
-      await tester.pumpAndSettle();
-      final monday = tester.getCenter(inDialog(find.text('M'))).dx;
-      for (final weekend in inDialog(find.text('S')).evaluate()) {
-        expect(
-          monday,
-          lessThan(tester.getCenter(find.byWidget(weekend.widget)).dx),
-        );
-      }
-      // Thu 1 October sits in the fourth column.
-      expect(
-        tester.getCenter(inDialog(find.text('1'))).dx,
-        greaterThan(tester.getCenter(inDialog(find.text('W'))).dx),
-      );
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-    }
-  });
-
-  test('the Monday-first delegate loads synchronously and never reloads', () {
-    const delegate = MondayFirstLocalizations.delegate;
-    const locale = Locale('pl');
-    expect(delegate.isSupported(locale), isTrue);
-    expect(delegate.shouldReload(delegate), isFalse);
-    expect(
-      delegate.load(locale),
-      isA<SynchronousFuture<MaterialLocalizations>>(),
-    );
-    expect(const MondayFirstLocalizations().firstDayOfWeekIndex, 1);
+    await tapVisible(tester, find.text('on Thu 15.10'));
+    await tester.pumpAndSettle();
+    expect(pickerDay(tester, 14).enabled, isFalse);
+    expect(pickerDay(tester, 15).enabled, isTrue);
+    await tester.tap(inDialog(find.text('14')));
+    await confirm(tester);
+    expect(find.text('on Thu 15.10'), findsOneWidget);
   });
 
   testWidgets('cancelling the simulation day picker keeps the day', (
@@ -185,8 +195,7 @@ void main() {
     await pump(tester);
     await tapVisible(tester, find.text('on Thu 15.10'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
+    await cancel(tester);
     expect(find.text('on Thu 15.10'), findsOneWidget);
   });
 

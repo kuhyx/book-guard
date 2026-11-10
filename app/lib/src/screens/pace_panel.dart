@@ -1,5 +1,5 @@
 import 'package:book_guard_app/src/pace/day_views.dart';
-import 'package:book_guard_app/src/screens/monday_first.dart';
+import 'package:book_guard_app/src/screens/icon_pickers.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
@@ -37,17 +37,11 @@ class _PacePanelState extends State<PacePanel> {
   DateTime get _last => utcDay(_inputs.today.year + 1, 12, 31);
 
   Future<DateTime?> _pick(DateTime initial, DateTime first) async {
-    final picked = await showDatePicker(
+    final picked = await showIconDatePicker(
       context: context,
       initialDate: initial,
       firstDate: first,
       lastDate: _last,
-      // The month grid starts on Monday; so must the picker.
-      builder: (context, child) => Localizations.override(
-        context: context,
-        delegates: const [MondayFirstLocalizations.delegate],
-        child: child,
-      ),
     );
     return picked == null
         ? null
