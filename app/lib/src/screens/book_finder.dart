@@ -38,7 +38,12 @@ class _BookFinderState extends State<BookFinder> {
   final _query = TextEditingController();
   final _author = TextEditingController();
   final _isbn = TextEditingController();
+  final _titleFocus = FocusNode();
   List<BookHit> _hits = const [];
+
+  /// A registered ISBN no catalogue knew: search hits name it, instead of
+  /// registering their own edition.
+  String? _unknown;
 
   /// The title of the last search that came back empty, shown as a miss.
   String? _missed;
@@ -49,6 +54,7 @@ class _BookFinderState extends State<BookFinder> {
     _query.dispose();
     _author.dispose();
     _isbn.dispose();
+    _titleFocus.dispose();
     super.dispose();
   }
 
@@ -98,32 +104,71 @@ class _BookFinderState extends State<BookFinder> {
     ];
   }
 
-  Future<void> _answer(Future<GuardResponse> request) async {
+  Future<GuardResponse?> _answer(Future<GuardResponse> request) async {
     final response = await request;
-    if (!mounted) return;
+    if (!mounted) return null;
     response.ok
         ? showToast(context, response.message)
         : showError(context, response.message);
+    return response;
   }
 
+  /// A hit registers its own edition -- or, after an unknown ISBN, names
+  /// that one. Pages stay blank then: the hit's median is another edition's.
   Future<void> _register(BookHit hit) => _run(() async {
+    final unknown = _unknown;
     await _answer(
-      widget.api.send('register', {'isbn': hit.isbn, 'pages': hit.pages}),
+      widget.api.send(
+        'register',
+        unknown == null
+            ? {'isbn': hit.isbn, 'pages': hit.pages}
+            : {'isbn': unknown, 'title': hit.title, 'author': hit.author},
+      ),
     );
-    if (mounted) setState(() => _hits = const []);
+    if (mounted) {
+      setState(() {
+        _hits = const [];
+        _unknown = null;
+      });
+    }
   });
 
-  /// Registers a typed ISBN; the title/author fields name it if Open
-  /// Library does not know it.
-  Future<void> _registerIsbn() => _run(
-    () => _answer(
+  /// Registers a typed ISBN; the title/author fields name it if no
+  /// catalogue knows it. Unknown with no title typed sends the user to the
+  /// title search, whose pick then names this ISBN.
+  Future<void> _registerIsbn() => _run(() async {
+    final isbn = _isbn.text.trim();
+    final title = _query.text.trim();
+    final response = await _answer(
       widget.api.send('register', {
-        'isbn': _isbn.text.trim(),
-        'title': _query.text.trim(),
+        'isbn': isbn,
+        'title': title,
         'author': _author.text.trim(),
       }),
-    ),
-  );
+    );
+    if (response == null || !response.ok) return;
+    final unknown = response.data?['known'] == false && title.isEmpty;
+    setState(() => _unknown = unknown ? isbn : null);
+    if (unknown) _titleFocus.requestFocus();
+  });
+
+  /// A red outline and a "nothing found" icon while the ISBN is unknown.
+  InputDecoration _isbnDecoration(BuildContext context) {
+    const label = 'ISBN (optional)';
+    if (_unknown == null) return const InputDecoration(labelText: label);
+    final error = Theme.of(context).colorScheme.error;
+    final border = OutlineInputBorder(borderSide: BorderSide(color: error));
+    return InputDecoration(
+      labelText: label,
+      enabledBorder: border,
+      focusedBorder: border,
+      suffixIcon: Icon(
+        Icons.search_off,
+        color: error,
+        semanticLabel: 'No catalogue knows this ISBN',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -133,6 +178,7 @@ class _BookFinderState extends State<BookFinder> {
       const SectionHeader('Find a book'),
       TextField(
         controller: _query,
+        focusNode: _titleFocus,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _search(),
         decoration: const InputDecoration(
@@ -164,8 +210,8 @@ class _BookFinderState extends State<BookFinder> {
             '${hit.author.isEmpty ? '?' : hit.author} - '
             '${hit.pages ?? '?'} p - ISBN ${hit.isbn ?? 'none'}',
           ),
-          trailing: const Icon(Icons.add),
-          enabled: hit.isbn != null && !_busy,
+          trailing: Icon(_unknown == null ? Icons.add : Icons.link),
+          enabled: (_unknown != null || hit.isbn != null) && !_busy,
           onTap: () => _register(hit),
         ),
       const SectionHeader('Or enter the ISBN'),
@@ -175,7 +221,7 @@ class _BookFinderState extends State<BookFinder> {
             child: TextField(
               controller: _isbn,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'ISBN (optional)'),
+              decoration: _isbnDecoration(context),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

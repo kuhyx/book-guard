@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:book_guard_app/src/book_formats.dart';
+import 'package:book_guard_app/src/guard_response.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
@@ -127,6 +128,55 @@ void main() {
     });
     expect(find.text('done register'), findsOneWidget);
     expect(queries, isEmpty);
+  });
+
+  testWidgets('an ISBN no catalogue knows is named from a title search', (
+    tester,
+  ) async {
+    api.onSend = (request) async => GuardResponse(
+      ok: true,
+      message: 'done ${request.type}',
+      data: const {'known': false},
+    );
+    await pump(tester);
+    await tester.enterText(field('ISBN (optional)'), '9781529115659');
+    await tapVisible(tester, find.text('Register'));
+    await settle(tester);
+    final title = tester.widget<TextField>(field('Title, e.g. Atomic Habits'));
+    expect(title.focusNode?.hasFocus, isTrue);
+    await search(tester, 'Dune');
+    // Hits link to the typed ISBN instead of adding their own edition.
+    expect(find.byIcon(Icons.link), findsNWidgets(2));
+    expect(find.byIcon(Icons.add), findsNothing);
+    await tapVisible(tester, find.widgetWithText(ListTile, 'Dune'));
+    await settle(tester);
+    expect(api.sent.last.type, 'register');
+    // Pages stay blank: the median of other editions is not this copy.
+    expect(api.sent.last.body, {
+      'isbn': '9781529115659',
+      'title': 'Dune',
+      'author': 'Frank Herbert',
+    });
+    expect(find.byIcon(Icons.link), findsNothing);
+  });
+
+  testWidgets('a known ISBN keeps hits adding their own edition', (
+    tester,
+  ) async {
+    api.onSend = (request) async => GuardResponse(
+      ok: true,
+      message: 'done ${request.type}',
+      data: const {'known': true},
+    );
+    await pump(tester);
+    await tester.enterText(field('ISBN (optional)'), '9780441013593');
+    await tapVisible(tester, find.text('Register'));
+    await settle(tester);
+    await search(tester, 'Dune');
+    expect(find.byIcon(Icons.link), findsNothing);
+    await tapVisible(tester, find.widgetWithText(ListTile, 'Dune'));
+    await settle(tester);
+    expect(api.sent.last.body, {'isbn': '9780441013593', 'pages': 604});
   });
 
   test('every format the PC reads is pickable', () {

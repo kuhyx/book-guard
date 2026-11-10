@@ -7,6 +7,7 @@ kept out of ``_actions`` so the handlers can import it without a cycle.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import logging
 from typing import TYPE_CHECKING, Final
 
@@ -17,7 +18,7 @@ from book_guard._constants import GRADER_GRACE
 from book_guard._flock import exclusive
 from book_guard._grader_wait import stop, waited_out
 from book_guard._http import UnavailableError
-from book_guard._lookup import lookup_book
+from book_guard._lookup import lookup_book, remember
 from book_guard._openlibrary import BookInfo
 from book_guard._prompt import Context
 from book_guard._publish import write_next_file
@@ -47,23 +48,42 @@ def register_isbn(
     title: str = "",
     author: str = "",
 ) -> tuple[bool, str]:
-    """Look ``isbn`` up everywhere and register it: (registered, a line).
+    """Look ``isbn`` up everywhere and register it: (registered, a line)."""
+    ok, line, _known = register_lookup(
+        paths, isbn, pages=pages, title=title, author=author
+    )
+    return ok, line
+
+
+def register_lookup(
+    paths: Paths,
+    isbn: str,
+    *,
+    pages: int | None = None,
+    title: str = "",
+    author: str = "",
+) -> tuple[bool, str, bool]:
+    """:func:`register_isbn`, plus whether any catalogue knew the ISBN.
 
     An ISBN no source knows is still registered -- with no page count, which
     the app or ``book-guard pages N`` fills in -- so an obscure book never
     blocks reading. Such a book is named by ``title``/``author`` when the
-    caller has them, else "ISBN <n>". Only when no source answered at all is
-    nothing registered. The lookup runs outside the ledger lock (it can take
-    a minute); only the write takes it.
+    caller has them (and that name is cached for the ISBN), else "ISBN <n>";
+    the app reads ``known == False`` as its cue to offer a title search.
+    Only when no source answered at all is nothing registered. The lookup
+    runs outside the ledger lock (it can take a minute); only the write
+    takes it.
     """
     try:
-        info = lookup_book(paths, isbn)
+        found = lookup_book(paths, isbn)
     except UnavailableError as exc:
         _logger.warning("ISBN lookup for %s failed: %s", isbn, exc)
-        return False, f"No book source reachable ({exc}); try again later"
-    info = info or BookInfo(
+        return False, f"No book source reachable ({exc}); try again later", False
+    info = found or BookInfo(
         title=title or f"ISBN {isbn}", author=author, pages=None, isbn=isbn
     )
+    if found is None and title:
+        remember(paths, isbn, replace(info, pages=pages))
     with exclusive(paths):
         book = register(paths, info, pages=pages)
     tail = (
@@ -71,7 +91,7 @@ def register_isbn(
         if book.pages
         else "; set the last page of your copy (app, or: book-guard pages N)"
     )
-    return True, f"Now reading: {book.label}{tail}"
+    return True, f"Now reading: {book.label}{tail}", found is not None
 
 
 def switch_book(

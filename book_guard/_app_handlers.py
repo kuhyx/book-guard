@@ -15,7 +15,7 @@ from book_guard._books import current, normalise_chapters, register
 from book_guard._booktext import BookTextError
 from book_guard._ebook_sessions import record as record_ebook_session
 from book_guard._flock import exclusive
-from book_guard._grading import quiz_one, register_isbn, switch_book
+from book_guard._grading import quiz_one, register_lookup, switch_book
 from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book
 from book_guard._notes import upsert as upsert_note
@@ -49,14 +49,14 @@ def _register(paths: Paths, request: dict[str, Any]) -> Response:
     isbn = normalise_isbn(request.get("isbn"))
     if isbn is None:
         return Response(ok=False, message="That is not a 10- or 13-digit ISBN.")
-    ok, message = register_isbn(
+    ok, message, known = register_lookup(
         paths,
         isbn,
         pages=_positive_int(request.get("pages")),
         title=_text(request.get("title")),
         author=_text(request.get("author")),
     )
-    return Response(ok=ok, message=message)
+    return Response(ok=ok, message=message, data={"known": known} if ok else None)
 
 
 def _switch_book(paths: Paths, request: dict[str, Any]) -> Response:

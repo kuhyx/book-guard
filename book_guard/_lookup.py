@@ -131,6 +131,15 @@ def _store(paths: Paths, isbn: str, info: BookInfo | None, now: datetime) -> Non
     write_json(paths.isbn_cache, cache, indent=1)
 
 
+def remember(paths: Paths, isbn: str, info: BookInfo) -> None:
+    """Cache a name the user gave a book no source knows, so it stays named.
+
+    Treated like any other answer: final once it has a page count, else
+    re-asked after :data:`RECHECK` in case a catalogue has caught up.
+    """
+    _store(paths, isbn, info, datetime.now(tz=UTC))
+
+
 def _ask(
     paths: Paths,
     name: str,

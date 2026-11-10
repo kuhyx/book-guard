@@ -136,8 +136,20 @@ def test_register_through_open_library(
     response = HANDLERS["register"](
         bg_paths, {"isbn": "978-0-14-044913-6", "pages": "1225"}
     )
-    assert response == Response(True, "Now reading: War -- Tol, last page 1225")
+    assert response == Response(
+        True, "Now reading: War -- Tol, last page 1225", data={"known": True}
+    )
     assert seen == [ISBN13]
+
+
+def test_register_says_when_no_catalogue_knows_it(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The app's cue to offer a title search for the typed ISBN.
+    monkeypatch.setattr(_grading, "lookup_book", lambda _paths, _isbn: None)
+    response = HANDLERS["register"](bg_paths, {"isbn": ISBN13})
+    assert response.ok
+    assert response.data == {"known": False}
 
 
 def test_register_offline_is_not_ok(
