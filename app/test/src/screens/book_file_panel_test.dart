@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 
 void main() {
   group('pickBookFile', () {
@@ -64,32 +65,33 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('lists every group with its extensions', (tester) async {
+    testWidgets('lists every extension, a divider between the groups', (
+      tester,
+    ) async {
       await open(tester, []);
-      expect(find.text('Attach book file'), findsOneWidget);
-      expect(find.text('The PC can read these formats:'), findsOneWidget);
-      for (final group in bookFormatGroups) {
-        expect(find.text(group.label), findsOneWidget);
-      }
+      // No heading or sentence: the chips and two icon buttons.
+      expect(iconLabeled('Choose file'), findsOneWidget);
+      expect(iconLabeled('Cancel'), findsOneWidget);
       // Each extension is its own widget, so none breaks mid-name.
       for (final e in bookFormatGroups.expand((g) => g.extensions)) {
         expect(find.text('.$e'), findsOneWidget);
       }
       expect(find.byType(Wrap), findsNWidgets(bookFormatGroups.length));
+      expect(find.byType(Divider), findsNWidgets(bookFormatGroups.length - 1));
     });
 
-    testWidgets('Choose file is true', (tester) async {
+    testWidgets('the folder icon answers true', (tester) async {
       final answers = <bool>[];
       await open(tester, answers);
-      await tester.tap(find.text('Choose file'));
+      await tester.tap(iconLabeled('Choose file'));
       await tester.pumpAndSettle();
       expect(answers, [true]);
     });
 
-    testWidgets('Cancel and a tap outside are false', (tester) async {
+    testWidgets('the close icon and a tap outside are false', (tester) async {
       final answers = <bool>[];
       await open(tester, answers);
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(iconLabeled('Cancel'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -114,7 +116,7 @@ void main() {
       );
     }
 
-    testWidgets('a running job shows its progress and no Retry', (
+    testWidgets('a running job shows its progress and no retry icon', (
       tester,
     ) async {
       await pump(
@@ -127,25 +129,33 @@ void main() {
           updatedAt: DateTime.now(),
         ),
       );
-      expect(find.text('a.epub: indexing 1 / 4 passages...'), findsOneWidget);
+      expect(find.text('a.epub'), findsOneWidget);
+      expect(find.text('1/4'), findsOneWidget);
+      expect(
+        tester.widget<Icon>(iconLabeled('embedding')).icon,
+        Icons.scatter_plot,
+      );
       final bar = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
       expect(bar.value, 0.25);
-      expect(find.text('Retry'), findsNothing);
+      expect(iconLabeled('Retry'), findsNothing);
     });
 
-    testWidgets('a finished job has neither bar nor Retry', (tester) async {
+    testWidgets('a finished job is a green check, no bar, no retry', (
+      tester,
+    ) async {
       await pump(
         tester,
         const IndexJob(file: 'a.epub', stage: 'done', total: 9),
       );
-      expect(find.text('a.epub: indexed (9 passages).'), findsOneWidget);
+      expect(find.text('9'), findsOneWidget);
+      expect(tester.widget<Icon>(iconLabeled('done')).icon, Icons.check_circle);
       expect(find.byType(LinearProgressIndicator), findsNothing);
-      expect(find.text('Retry'), findsNothing);
+      expect(iconLabeled('Retry'), findsNothing);
     });
 
-    testWidgets('a failed job shows the reason in red and a working Retry', (
+    testWidgets('a failed job is a red error icon and a working retry', (
       tester,
     ) async {
       await pump(
@@ -156,14 +166,17 @@ void main() {
           error: 'a.mobi: no text',
         ),
       );
-      final text = tester.widget<Text>(find.text('a.mobi: no text'));
-      expect(text.style?.color, isNotNull);
+      final icon = tester.widget<Icon>(iconLabeled('failed'));
+      expect(icon.icon, Icons.error);
+      expect(icon.color, isNotNull);
+      // The reason is never painted (it goes to the error log).
+      expect(find.textContaining('no text'), findsNothing);
       expect(find.byType(LinearProgressIndicator), findsNothing);
-      await tester.tap(find.text('Retry'));
+      await tester.tap(iconLabeled('Retry'));
       expect(retries, 1);
     });
 
-    testWidgets('a job silent for 30 minutes offers Retry too', (tester) async {
+    testWidgets('a job silent for 30 minutes offers retry too', (tester) async {
       await pump(
         tester,
         IndexJob(
@@ -173,21 +186,22 @@ void main() {
         ),
       );
       expect(
-        find.textContaining('no progress for over 30 minutes'),
-        findsOneWidget,
+        tester.widget<Icon>(iconLabeled('embedding')).icon,
+        Icons.timer_off,
       );
       expect(find.byType(LinearProgressIndicator), findsNothing);
-      await tester.tap(find.text('Retry'));
+      await tester.tap(iconLabeled('Retry'));
       expect(retries, 1);
     });
 
-    testWidgets('Retry is disabled without a callback', (tester) async {
+    testWidgets('retry is disabled without a callback', (tester) async {
       await pump(
         tester,
         const IndexJob(file: 'a.epub', stage: 'failed'),
         canRetry: false,
       );
-      await tester.tap(find.text('Retry'));
+      expect(pressable(tester, 'Retry'), isFalse);
+      await tester.tap(iconLabeled('Retry'));
       expect(retries, 0);
     });
   });

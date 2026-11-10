@@ -6,10 +6,12 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:book_guard_app/src/summary_store.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_read.dart';
 
 const _id = 'session:a-b';
 final _graded = DateTime.utc(2020); // before any marker made "now"
@@ -35,11 +37,20 @@ void main() {
 
   setUp(() => api = FakeApi());
 
-  Future<void> pump(WidgetTester tester, SessionInfo session) async {
+  Future<void> pump(
+    WidgetTester tester,
+    SessionInfo session, {
+    Pace? pace,
+  }) async {
     await pumpTab(
       tester,
       SingleChildScrollView(
-        child: SummaryPanel(api: api, session: session, onChanged: () async {}),
+        child: SummaryPanel(
+          api: api,
+          session: session,
+          onChanged: () async {},
+          pace: pace,
+        ),
       ),
     );
     await settle(tester);
@@ -51,11 +62,14 @@ void main() {
   Future<void> submitFailing(WidgetTester tester) async {
     api.onSend = (_) async => const GuardResponse(
       ok: true,
-      message: 'Too thin. Rewrite the summary and send it again.',
+      code: 'failed',
       passed: false,
+      data: {
+        'missing': ['two events'],
+      },
     );
     await tester.enterText(find.byType(TextField), 'x' * 160);
-    await tester.tap(find.text('Submit summary'));
+    await tester.tap(spoken('Submit summary'));
     await settle(tester);
   }
 
@@ -64,13 +78,12 @@ void main() {
   ) async {
     await pump(tester, _session());
     await submitFailing(tester);
-    expect(find.textContaining('Rewrite the summary'), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
+    expect(find.text('“two events”'), findsOneWidget);
     expect(field(tester).enabled, isTrue);
     expect(field(tester).controller?.text, 'x' * 160);
     expect(await api.loadDraft(_id), 'x' * 160);
     expect(await api.gradingSince(_id), isNull);
-    // The credit is still owed after a fail: the rewrite earns the same.
-    expect(find.textContaining('Passing credits'), findsOneWidget);
   });
 
   testWidgets('a rewrite failing again unlocks the box once more', (
@@ -82,41 +95,43 @@ void main() {
     expect(field(tester).controller?.text, 'x' * 160);
     expect(await api.loadDraft(_id), 'x' * 160);
     expect(await api.gradingSince(_id), isNull);
-    expect(find.textContaining('Passing credits'), findsOneWidget);
     // And again: there is no limit.
-    await tester.tap(find.text('Submit summary'));
+    await tester.tap(spoken('Submit summary'));
     await settle(tester);
     expect(field(tester).enabled, isTrue);
     expect(await api.loadDraft(_id), 'x' * 160);
   });
 
-  testWidgets('a passing rewrite is final: draft forgotten, no credit hint', (
+  testWidgets('a passing rewrite is final: draft forgotten, green tick', (
     tester,
   ) async {
     await pump(tester, _session(retry: true));
     api.onSend = (_) async =>
-        const GuardResponse(ok: true, message: 'Well read.', passed: true);
+        const GuardResponse(ok: true, code: 'passed', passed: true);
     await tester.enterText(find.byType(TextField), 'x' * 160);
-    await tester.tap(find.text('Submit summary'));
+    await tester.tap(spoken('Submit summary'));
     await settle(tester);
     expect(await api.loadDraft(_id), '');
     expect(await api.gradingSince(_id), isNull);
-    expect(find.textContaining('Passing credits'), findsNothing);
+    expect(cueOf(CueKind.ok), findsOneWidget);
+    expect(cueOf(CueKind.error), findsNothing);
   });
 
-  testWidgets('the rewrite shows the feedback and starts from the old text', (
+  testWidgets('the rewrite shows topics, never the prose, from the old text', (
     tester,
   ) async {
     await pump(tester, _session(retry: true));
-    expect(find.text('Name two events.'), findsOneWidget);
-    expect(find.textContaining('no limit on rewrites'), findsOneWidget);
+    // The grader's prose is not painted; the missing topics are, quoted,
+    // under a red cross with their count and the retry arrow.
+    expect(find.text('Name two events.'), findsNothing);
+    expect(cueOf(CueKind.error), findsOneWidget);
     expect(
-      find.text(
-        'To be accepted, add:\n- what he did in the village\n'
-        '- who he worked for',
-      ),
+      find.descendant(of: cueOf(CueKind.error), matching: find.text('2')),
       findsOneWidget,
     );
+    expect(find.text('“what he did in the village”'), findsOneWidget);
+    expect(find.text('“who he worked for”'), findsOneWidget);
+    expect(spoken('rewrite'), findsOneWidget);
     expect(field(tester).controller?.text, 'Xi in the village');
     expect(field(tester).enabled, isTrue);
   });
@@ -166,9 +181,13 @@ void main() {
     expect(statusText(_session(status: 'odd')), 'odd');
   });
 
-  test('the credit is known offline, bonus and outage rule included', () {
+  testWidgets('the gaming bonus is a bolt on the button, known offline', (
+    tester,
+  ) async {
     final big = SessionInfo.fromJson(const {
       'id': 's',
+      'start_page': 1,
+      'end_page': 54,
       'pages': 53,
       'minutes': 49,
       'status': 'needs-quiz',
@@ -179,24 +198,16 @@ void main() {
           'pages_today': today,
           'bonus_today': bonus,
         });
-    expect(
-      expectedCredit(big, pace: pace()),
-      'Passing credits 53 pages and +1h gaming. If no grader answers for 5 '
-      'minutes, it is credited without grading.',
-    );
+    await pump(tester, big, pace: pace());
+    expect(spoken('gaming bonus'), findsOneWidget);
     // 10 + 53 short of 64; a bonus already earned today; no pace known; a
     // PC too old to send today's requirement.
     final old = Pace.fromJson(const {'pages_today': 10});
     for (final short in [pace(required: 64), pace(bonus: true), null, old]) {
-      expect(
-        expectedCredit(big, pace: short),
-        startsWith('Passing credits 53 pages. '),
-      );
+      await tester.pumpWidget(const SizedBox());
+      await pump(tester, big, pace: short);
+      expect(spoken('gaming bonus'), findsNothing);
     }
-    expect(
-      expectedCredit(_session(), pace: pace(required: 0)),
-      startsWith('Passing credits 0 pages. '),
-    );
   });
 
   testWidgets('a retry without a missing list shows no empty list', (
@@ -209,7 +220,7 @@ void main() {
     });
     expect(bare.retry?.missing, isEmpty);
     await pump(tester, bare);
-    expect(find.textContaining('To be accepted'), findsNothing);
-    expect(find.textContaining('Passing credits'), findsOneWidget);
+    expect(find.textContaining('“'), findsNothing);
+    expect(cueOf(CueKind.error), findsOneWidget);
   });
 }

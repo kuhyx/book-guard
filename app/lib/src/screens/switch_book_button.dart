@@ -4,12 +4,15 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/iso_offset.dart';
 import 'package:book_guard_app/src/library_store.dart';
 import 'package:book_guard_app/src/local_session.dart';
+import 'package:book_guard_app/src/ui/hold_button.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
+import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// "Read this now" for [book]: queues a `switch_book` request (after a
-/// confirmation when a session is open) and hides itself once queued or when
-/// the book is already the current one.
+/// The read-now button for [book]: queues a `switch_book` request (after a
+/// hold-to-confirm when a session is open) and hides itself once queued or
+/// when the book is already the current one.
 class SwitchBookButton extends StatefulWidget {
   /// Creates the button for [book].
   const new({
@@ -29,7 +32,7 @@ class SwitchBookButton extends StatefulWidget {
   /// The live snapshot: tells whether a session is open.
   final GuardState? state;
 
-  /// Called with the ISBN once "Read this now" is queued.
+  /// Called with the ISBN once the switch is queued.
   final ValueChanged<String>? onSwitched;
 
   @override
@@ -37,7 +40,7 @@ class SwitchBookButton extends StatefulWidget {
 }
 
 class _SwitchBookButtonState extends State<SwitchBookButton> {
-  /// Whether "Read this now" was queued from this button.
+  /// Whether the switch was queued from this button.
   bool _switched = false;
 
   /// Whether a paper session (start photo, no stop yet) or an in-app one
@@ -65,17 +68,22 @@ class _SwitchBookButtonState extends State<SwitchBookButton> {
       final go = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          content: const Text(
-            'A session is open: take its stop photo first. Switch anyway?',
+          content: Icon(
+            Icons.warning_amber,
+            size: 48,
+            color: context.statusColors.warning,
+            semanticLabel: 'A session is open: take its stop photo first',
           ),
           actions: [
-            TextButton(
+            IconButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              icon: const Icon(Icons.close, semanticLabel: 'Cancel'),
             ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Switch anyway'),
+            // The switch happens only once the ring is full.
+            HoldButton(
+              icon: Icons.auto_stories,
+              semanticLabel: 'Switch anyway',
+              onConfirmed: () => Navigator.of(context).pop(true),
             ),
           ],
         ),
@@ -86,15 +94,15 @@ class _SwitchBookButtonState extends State<SwitchBookButton> {
     final response = await widget.api.sendQueued('switch_book', {
       'isbn': book.isbn,
       'at': isoWithOffset(DateTime.now()),
-    }, 'Switch to ${book.title}');
+    });
     if (!mounted) return;
     if (!response.ok) {
-      showError(context, response.message);
+      showReply(context, response);
       return;
     }
     setState(() => _switched = true);
     widget.onSwitched?.call(book.isbn);
-    showToast(context, response.message);
+    showReply(context, response);
   }
 
   @override
@@ -102,10 +110,11 @@ class _SwitchBookButtonState extends State<SwitchBookButton> {
     if (widget.book.current || _switched) return const SizedBox.shrink();
     return Align(
       alignment: Alignment.centerLeft,
-      child: FilledButton.icon(
+      child: GlyphButton(
+        icon: Icons.auto_stories,
+        semanticLabel: 'Read this now',
+        filled: true,
         onPressed: _readNow,
-        icon: const Icon(Icons.auto_stories),
-        label: const Text('Read this now'),
       ),
     );
   }

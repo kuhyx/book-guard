@@ -1,5 +1,7 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
+import 'package:book_guard_app/src/screens/grader_note.dart';
+import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/fake_reader.dart';
+import '../../support/finders_read.dart';
 import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
@@ -40,15 +43,15 @@ void main() {
     );
   }
 
-  Future<void> open(WidgetTester tester, String button) async {
-    await tapVisible(tester, find.text(button));
+  Future<void> open(WidgetTester tester, Finder button) async {
+    await tapVisible(tester, button);
     await settle(tester, 10);
   }
 
   testWidgets('the box is drawn while dragging', (tester) async {
     final reader = FakeReader(fakeScan([]), boxed: 7);
     await pump(tester, reader, state: readingState());
-    await open(tester, 'Start reading');
+    await open(tester, spoken('Start reading'));
     final photo = tester.getTopLeft(find.byType(Image));
     final k = _scale(tester);
     final gesture = await tester.startGesture(photo + const Offset(15, 50) * k);
@@ -58,7 +61,7 @@ void main() {
     await tester.pump();
     await gesture.up();
     await settle(tester, 10);
-    expect(find.text('Page 7?'), findsOneWidget);
+    expect(chosenPage(7), findsOneWidget);
   });
 
   testWidgets("a start is judged against this phone's last stop", (
@@ -101,8 +104,8 @@ void main() {
             XFile.fromData(_bytes, path: '/DCIM/IMG.jpg'),
       ),
     );
-    await open(tester, 'Start reading');
-    expect(find.text('Page 51?'), findsOneWidget);
+    await open(tester, spoken('Start reading'));
+    expect(chosenPage(51), findsOneWidget);
   });
 
   testWidgets('the newest PC session is the last end', (tester) async {
@@ -132,8 +135,8 @@ void main() {
       ],
     });
     await pump(tester, reader, state: state);
-    await open(tester, 'Start reading');
-    expect(find.text('Page 51?'), findsOneWidget);
+    await open(tester, spoken('Start reading'));
+    expect(chosenPage(51), findsOneWidget);
   });
 
   testWidgets('a Claude outage is explained next to a summary that waits', (
@@ -152,13 +155,17 @@ void main() {
     });
     await pump(tester, FakeReader(null), state: state);
     await settle(tester);
-    expect(find.textContaining('unavailable since'), findsNothing);
+    expect(find.byType(GraderNoteChip), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await api.markGrading('session:q'); // sent, no verdict yet
     await pump(tester, FakeReader(null), state: state);
     await settle(tester);
+    expect(find.byType(GraderNoteChip), findsOneWidget);
     expect(
-      find.textContaining('unavailable since 03.10 12:27'),
+      find.descendant(
+        of: find.byType(GraderNoteChip),
+        matching: find.text('03.10 12:27'),
+      ),
       findsOneWidget,
     );
   });
@@ -187,12 +194,16 @@ void main() {
         journal: journal,
       ),
     );
+    // One photo waits (outbox + 1); reading since page 51 (stop + 51).
     expect(
-      find.text('1 photo(s) taken here are not read by the PC yet.'),
+      find.descendant(of: find.byType(SessionPrompt), matching: find.text('1')),
       findsOneWidget,
     );
     expect(
-      find.text('Reading since p. 51 - photograph the page where you stop.'),
+      find.descendant(
+        of: buttonSpoken('Stop reading'),
+        matching: find.text('51'),
+      ),
       findsOneWidget,
     );
   });

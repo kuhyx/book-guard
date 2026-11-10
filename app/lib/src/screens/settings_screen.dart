@@ -3,11 +3,14 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/screens/reading_settings.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// The phone's dufs login (URL, user, password) and, once connected, the
-/// way to the reading settings.
+/// The phone's dufs login (link, person and key fields) and, once
+/// connected, the way to the reading settings. A save with a field empty
+/// reddens the empty ones and shows an error cue.
 class SettingsScreen extends StatefulWidget {
   /// Creates the screen.
   const new({required this.store, required this.onSaved, super.key, this.api});
@@ -29,6 +32,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _url = TextEditingController();
   final _user = TextEditingController();
   final _password = TextEditingController();
+
+  /// A save was tried: the empty fields are red.
+  bool _tried = false;
 
   @override
   void initState() {
@@ -59,7 +65,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       password: _password.text.trim(),
     );
     if (!login.complete) {
-      showError(context, 'Fill in all three fields.');
+      setState(() => _tried = true);
+      showCue(
+        context,
+        const Cue(CueKind.error, semanticLabel: 'Fill in all three fields'),
+      );
       return;
     }
     await widget.store.save(login);
@@ -67,44 +77,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
   }
 
+  /// Whether [c] is empty after a save was tried.
+  bool _red(TextEditingController c) => _tried && c.text.trim().isEmpty;
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Connection')),
+    appBar: AppBar(),
     body: ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        const Text(
-          'book-guard reads your photos and summaries from the dufs share. '
-          'Use the "bookguard" login (scoped to the Reading folder).',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextField(
+        IconField(
+          icon: Icons.link,
+          semanticLabel: 'dufs URL',
           controller: _url,
-          decoration: const InputDecoration(labelText: 'dufs URL'),
           keyboardType: TextInputType.url,
+          errorBorder: _red(_url),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextField(
+        IconField(
+          icon: Icons.person,
+          semanticLabel: 'User',
           controller: _user,
-          decoration: const InputDecoration(labelText: 'User'),
+          errorBorder: _red(_user),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextField(
+        IconField(
+          icon: Icons.key,
+          semanticLabel: 'Password',
           controller: _password,
-          decoration: const InputDecoration(labelText: 'Password'),
-          obscureText: true,
+          obscure: true,
+          errorBorder: _red(_password),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: AppSpacing.lg),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GlyphButton(
+            icon: Icons.check,
+            semanticLabel: 'Save',
+            filled: true,
+            onPressed: _save,
+          ),
+        ),
         if (widget.api case final api?) ...[
           const SizedBox(height: AppSpacing.lg),
-          ListTile(
-            leading: const Icon(Icons.text_fields),
-            title: const Text('Reading'),
-            subtitle: const Text('Text size in the in-app reader'),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ReadingSettingsScreen(api: api),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GlyphButton(
+              icon: Icons.text_fields,
+              semanticLabel: 'Reading',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ReadingSettingsScreen(api: api),
+                ),
               ),
             ),
           ),

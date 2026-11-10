@@ -1,10 +1,12 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/screens/edit_book_screen.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 import '../../support/states.dart';
 
 void main() {
@@ -42,7 +44,10 @@ void main() {
   testWidgets('describes a fully registered book', (tester) async {
     await pump(tester);
     expect(find.text('Atomic Habits'), findsOneWidget);
-    expect(find.text('James Clear - p. 320 - ebook attached'), findsOneWidget);
+    expect(find.text('James Clear'), findsOneWidget);
+    expect(find.text('320'), findsOneWidget);
+    expect(iconLabeled('Ebook attached'), findsOneWidget);
+    expect(iconLabeled('Last page not set'), findsNothing);
   });
 
   testWidgets('describes what a bare book is still missing', (tester) async {
@@ -52,10 +57,19 @@ void main() {
         'book': {'title': 'Bare'},
       }),
     );
-    expect(
-      find.text('Unknown author - last page not set - no ebook file'),
-      findsOneWidget,
-    );
+    expect(iconLabeled('Last page not set'), findsOneWidget);
+    expect(find.text('?'), findsOneWidget);
+    expect(iconLabeled('No ebook file'), findsOneWidget);
+    expect(iconLabeled('Ebook attached'), findsNothing);
+  });
+
+  testWidgets('no book is an outline illustration, no sentence', (
+    tester,
+  ) async {
+    await pump(tester, state: sampleState({'book': null}));
+    expect(iconLabeled('No book yet'), findsOneWidget);
+    expect(iconLabeled('Edit book'), findsNothing);
+    expect(iconLabeled('Attach book file'), findsNothing);
   });
 
   testWidgets('a known chapter or chapter count shows on the card', (
@@ -73,13 +87,8 @@ void main() {
         },
       }),
     );
-    expect(
-      find.text(
-        'Unknown author - last page not set - no ebook file\n'
-        'Chapter 1 of 1: Wstęp',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('1/1'), findsOneWidget);
+    expect(find.text('Wstęp'), findsOneWidget);
     await pump(
       tester,
       state: sampleState({
@@ -92,18 +101,19 @@ void main() {
         },
       }),
     );
-    expect(find.textContaining('\n2 chapters'), findsOneWidget);
+    expect(iconLabeled('Chapters'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
   });
 
   testWidgets('Edit opens the form; saving refreshes', (tester) async {
     await pump(tester);
-    await tapVisible(tester, find.byTooltip('Edit book'));
+    await tapLabeled(tester, 'Edit book');
     await tester.pumpAndSettle();
-    expect(find.text('Edit book'), findsOneWidget);
-    await tapVisible(tester, find.text('Save'));
+    expect(find.byType(EditBookScreen), findsOneWidget);
+    await tapLabeled(tester, 'Save');
     await tester.pumpAndSettle();
     expect(api.sent.single.type, 'edit_book');
-    expect(find.text('Fill from ISBN'), findsNothing);
+    expect(find.byType(EditBookScreen), findsNothing);
     expect(changed, 1);
   });
 
@@ -111,7 +121,7 @@ void main() {
     tester,
   ) async {
     await pump(tester);
-    await tapVisible(tester, find.byTooltip('Edit book'));
+    await tapLabeled(tester, 'Edit book');
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -131,9 +141,9 @@ void main() {
       tester,
       BookTab(api: api, state: sampleState(), onChanged: () async {}),
     );
-    await tapVisible(tester, find.text('Attach book file'));
+    await tapLabeled(tester, 'Attach book file');
     await settle(tester);
-    await tester.tap(find.text('Choose file'));
+    await tester.tap(iconLabeled('Choose file'));
     await settle(tester);
     expect(calls.single.method, 'openFile');
     // flutter_test runs as Android: no filter, the extension is checked later.

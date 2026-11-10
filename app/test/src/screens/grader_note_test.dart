@@ -37,26 +37,28 @@ void main() {
     expect(graderNote(state, waiting: true, now: now), isNull);
   });
 
-  test('today: the time, when it is back, and who grades instead', () {
+  test('today: the times, as numerals only', () {
     final note = graderNote(
       _down(until: '2026-10-18T16:40:00'),
       waiting: true,
       now: now,
-    );
-    expect(note, contains('since 08:25'));
-    expect(note, contains('until 16:40'));
-    expect(note, contains('local model'));
-    expect(note, isNot(contains('once it is back')));
+    )!;
+    expect((note.since, note.until), ('08:25', '16:40'));
+    expect(graderNote(_down(), waiting: true, now: now)!.until, isNull);
   });
 
-  test('another day names the date', () {
+  test('another day names the date as numerals', () {
     String? since(String at) =>
-        graderNote(_down(since: at), waiting: true, now: now);
-    expect(since('2026-10-17T16:25:00'), contains('since yesterday 16:25'));
-    expect(since('2026-10-15T16:25:00'), contains('since 15.10 16:25'));
+        graderNote(_down(since: at), waiting: true, now: now)?.since;
+    expect(since('2026-10-17T16:25:00'), '17.10 16:25');
+    expect(since('2026-10-15T16:25:00'), '15.10 16:25');
     expect(
-      graderNote(_down(until: '2026-10-19T16:40:00'), waiting: true, now: now),
-      contains('until tomorrow 16:40'),
+      graderNote(
+        _down(until: '2026-10-19T16:40:00'),
+        waiting: true,
+        now: now,
+      )?.until,
+      '19.10 16:40',
     );
   });
 }

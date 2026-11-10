@@ -1,26 +1,18 @@
+import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/pace_panel.dart';
-import 'package:book_guard_app/src/screens/session_screen.dart';
+import 'package:book_guard_app/src/screens/session_rows.dart';
+import 'package:book_guard_app/src/screens/status_cards.dart';
+import 'package:book_guard_app/src/screens/todo_rows.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// Human text for each session status the PC reports.
-const sessionStatusText = {
-  'needs-check-photo': 'photograph the check page',
-  'needs-quiz': 'write the summary',
-  'credited': 'credited',
-  'failed-quiz': 'not counted: summary failed',
-  'too-fast': 'not counted: under 50 s per page',
-};
+export 'package:book_guard_app/src/screens/session_status_icon.dart'
+    show statusText;
 
-/// [session]'s status in words; a failed summary waiting for its rewrite
-/// says so.
-String statusText(SessionInfo session) => session.retry != null
-    ? 'summary failed: rewrite it'
-    : sessionStatusText[session.status] ?? session.status;
-
-/// Pace, what to do next, and recent sessions.
+/// Pace, what to do next, and recent sessions: glyphs and numbers only.
 class StatusTab extends StatelessWidget {
   /// Creates the tab.
   const new({
@@ -29,6 +21,7 @@ class StatusTab extends StatelessWidget {
     required this.onRefresh,
     super.key,
     this.api,
+    this.waiting = 0,
   });
 
   /// The latest snapshot, or null before one arrived.
@@ -43,155 +36,104 @@ class StatusTab extends StatelessWidget {
   /// For opening a session's history; null hides the link.
   final GuardApi? api;
 
+  /// Items still waiting on the phone for the PC.
+  final int waiting;
+
   @override
   Widget build(BuildContext context) {
     final s = state;
-    final theme = Theme.of(context);
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (error != null)
-            Card(
-              color: theme.colorScheme.errorContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text('$error'),
-              ),
-            ),
-          if (s == null && error == null)
-            const EmptyState(
-              icon: Icons.hourglass_empty,
-              title: 'Waiting for the PC',
-              message: 'book-guard has not written its status yet.',
-            ),
-          if (s != null) ..._body(context, s),
+            _ErrorCard(error: error!, since: s?.generatedAt, waiting: waiting),
+          if (s == null && error == null) const _Waiting(),
+          if (s != null) ..._body(s),
         ],
       ),
     );
   }
 
-  /// The month: pages against the target, and the line today.
-  List<Widget> _monthCard(ThemeData theme, Pace pace) {
-    final progress = pace.target == 0
-        ? 0.0
-        : (pace.pages / pace.target).clamp(0.0, 1.0);
-    final behind = pace.behind > 0;
-    return [
-      Text(pace.month, style: theme.textTheme.labelLarge),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        '${pace.pages} / ${pace.target} pages',
-        style: theme.textTheme.headlineSmall,
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      LinearProgressIndicator(value: progress),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        behind
-            ? "${pace.behind} pages behind today's line "
-                  '(${pace.required})'
-            : 'On pace (line today: ${pace.required})',
-        style: TextStyle(color: behind ? theme.colorScheme.error : null),
-      ),
-    ];
-  }
+  List<Widget> _body(GuardState s) => [
+    Align(
+      alignment: Alignment.centerLeft,
+      child: LockMark(locked: s.locked, reason: s.reason),
+    ),
+    const SizedBox(height: AppSpacing.md),
+    PaceCard(pace: s.pace),
+    if (s.paceInputs case final inputs?) PacePanel(inputs: inputs),
+    for (final t in s.todo) TodoRow(t),
+    for (final session in s.sessions.reversed)
+      SessionRow(session: session, api: api),
+  ];
+}
 
-  /// One number a day: today's pages against it first, the month after.
-  List<Widget> _dayCard(ThemeData theme, Pace pace, int asks) {
-    final read = pace.pagesToday;
-    final met = pace.bonusToday || read >= asks;
-    final short = asks - read;
-    final more = '$short more ${short == 1 ? 'page' : 'pages'}';
-    // A sick day asks nothing; its requirement still earns the hour.
-    final sick = pace.todayQuota == 0 && asks > 0;
-    return [
-      Text('Today: $read / $asks pages', style: theme.textTheme.headlineSmall),
-      const SizedBox(height: AppSpacing.sm),
-      LinearProgressIndicator(
-        value: asks == 0 ? 1.0 : (read / asks).clamp(0.0, 1.0),
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      Text(switch ((sick, met)) {
-        (true, true) => 'Sick day: +1h earned',
-        (true, false) =>
-          'Sick day: nothing asked; $more still '
-              '${short == 1 ? 'earns' : 'earn'} the +1h',
-        (false, true) => 'On pace: PC open, +1h earned',
-        (false, false) => '$more today: on pace, PC open, +1h',
-      }),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        '${pace.month}: ${pace.pages} / ${pace.target} pages',
-        style: theme.textTheme.bodyMedium,
-      ),
-    ];
-  }
+/// Before the first snapshot: an hourglass.
+class _Waiting extends StatelessWidget {
+  const new();
 
-  List<Widget> _body(BuildContext context, GuardState s) {
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(AppSpacing.xl),
+    child: Center(
+      child: Icon(
+        Icons.hourglass_empty,
+        size: 96,
+        color: Theme.of(context).hintColor,
+        semanticLabel: 'waiting for the PC',
+      ),
+    ),
+  );
+}
+
+/// A failed fetch: an unreachable PC is the cloud glyph with when the shown
+/// snapshot is from and how much waits on the phone; any other failure is
+/// the error glyph (with the HTTP status when it has one).
+class _ErrorCard extends StatelessWidget {
+  const new({required this.error, required this.since, required this.waiting});
+
+  final Object error;
+  final DateTime? since;
+  final int waiting;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pace = s.pace;
-    final asks = pace.todayRequired;
-    return [
-      Text(
-        s.locked ? 'PC locked: ${s.reason}' : s.reason,
-        style: theme.textTheme.titleMedium?.copyWith(
-          color: s.locked ? theme.colorScheme.error : null,
-        ),
-      ),
-      const SizedBox(height: AppSpacing.md),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (pace.daily && asks != null)
-                ..._dayCard(theme, pace, asks)
-              else
-                ..._monthCard(theme, pace),
-              if (pace.excused > 0)
-                Text('Sick days excused: ${pace.excused} pages off the target'),
-              if (pace.carriedDebt > 0)
-                Text(
-                  'Includes ${pace.carriedDebt} pages carried from last month',
-                ),
-            ],
-          ),
-        ),
-      ),
-      if (s.paceInputs case final inputs?) PacePanel(inputs: inputs),
-      if (s.todo.isNotEmpty) ...[
-        const SectionHeader('Next'),
-        for (final t in s.todo)
-          ListTile(leading: const Icon(Icons.arrow_right), title: Text(t)),
-      ],
-      if (s.sessions.isNotEmpty) ...[
-        const SectionHeader('Sessions'),
-        for (final session in s.sessions.reversed)
-          Builder(
-            builder: (context) => ListTile(
-              title: Text(
-                '${session.span} '
-                '(${session.pages} p, ${session.minutes} min)',
-              ),
-              subtitle: Text(statusText(session)),
-              trailing: api == null || session.detail.isEmpty
-                  ? null
-                  : const Icon(Icons.chevron_right),
-              onTap: switch (api) {
-                final api? when session.detail.isNotEmpty =>
-                  () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => SessionScreen(api: api, session: session),
-                    ),
-                  ),
-                _ => null,
-              },
+    final status = error is DavException ? (error as DavException).status : -1;
+    final offline = status == 0;
+    final at = since?.toLocal();
+    final tint = theme.colorScheme.onErrorContainer;
+    return Card(
+      color: theme.colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Icon(
+              offline ? Icons.cloud_off : Icons.error,
+              color: tint,
+              semanticLabel: offline ? 'PC unreachable' : 'request failed',
             ),
-          ),
-      ],
-    ];
+            if (status > 0) IconNum(Icons.http, '$status', tint: tint),
+            if (offline && at != null)
+              IconNum(
+                Icons.history,
+                '${at.day.toString().padLeft(2, '0')}.'
+                '${at.month.toString().padLeft(2, '0')} '
+                '${at.hour.toString().padLeft(2, '0')}:'
+                '${at.minute.toString().padLeft(2, '0')}',
+                tint: tint,
+              ),
+            if (offline && waiting > 0)
+              IconNum(Icons.outbox, '$waiting', tint: tint),
+          ],
+        ),
+      ),
+    );
   }
 }

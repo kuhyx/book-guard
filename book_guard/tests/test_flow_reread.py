@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import pytest
 
 from book_guard import _photos, _reread
 from book_guard._photos import OK, REJECTED
+from book_guard._requests import Response
 from book_guard._vision import OTHER, PAGE, Reading
 from book_guard.tests._flow_helpers import T0, rec, seed_photos
 
@@ -40,30 +42,30 @@ def _reader(reading: Reading, seen: list[Box | None]) -> object:
 
 
 @pytest.mark.parametrize(
-    ("request_body", "message"),
+    ("request_body", "code"),
     [
-        ({"photo": "a.jpg"}, "Draw a box around the page number first."),
-        ({"box": _BOX}, "Draw a box around the page number first."),
-        ({"photo": "nope.jpg", "box": _BOX}, "No readable photo named nope.jpg."),
+        ({"photo": "a.jpg"}, "no_box"),
+        ({"box": _BOX}, "no_box"),
+        ({"photo": "nope.jpg", "box": _BOX}, "no_photo"),
     ],
 )
 def test_bad_requests(
-    bg_paths: Paths, request_body: dict[str, object], message: str
+    bg_paths: Paths, request_body: dict[str, object], code: str
 ) -> None:
     response = _reread.box_photo(bg_paths, request_body)
-    assert (response.ok, response.message) == (False, message)
+    assert response == Response(ok=False, code=code)
 
 
 def test_photo_without_capture_time(bg_paths: Paths) -> None:
     name = _rejected(bg_paths, taken=False)
     response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX})
-    assert response.message == f"No readable photo named {name}."
+    assert response == Response(ok=False, code="no_photo")
 
 
 def test_an_accepted_page_is_left_alone(bg_paths: Paths) -> None:
     seed_photos(bg_paths, rec("start_b", 51, T0))
     response = _reread.box_photo(bg_paths, {"photo": "start_b.jpg", "box": _BOX})
-    assert (response.ok, response.message) == (False, "Already read as p. 51.")
+    assert response == Response(ok=False, code="already_read", data={"page": 51})
 
 
 def test_filed_photo_gone(bg_paths: Paths) -> None:
@@ -71,7 +73,7 @@ def test_filed_photo_gone(bg_paths: Paths) -> None:
     for path in bg_paths.processed.iterdir():
         path.unlink()
     response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX})
-    assert response.message == f"{name} is no longer on the PC."
+    assert response == Response(ok=False, code="photo_gone")
 
 
 def test_box_turns_a_rejection_into_a_page(
@@ -83,13 +85,16 @@ def test_box_turns_a_rejection_into_a_page(
         _reread, "read", _reader(Reading(PAGE, 7, None, "words", rotation=90), seen)
     )
     response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX})
-    assert (response.ok, response.message) == (True, "Read as p. 7.")
+    assert response == Response(ok=True, code="read", data={"page": 7})
     assert seen == [(10, 20, 30, 40)]
     (record,) = _photos.load(bg_paths.photos).values()
     assert (record.kind, record.page, record.status) == (PAGE, 7, OK)
 
 
-def test_box_still_unreadable(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_box_still_unreadable(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO)
     name = _rejected(bg_paths)
     monkeypatch.setattr(
         _reread,
@@ -97,7 +102,8 @@ def test_box_still_unreadable(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) 
         _reader(Reading(OTHER, None, None, "", reason="no page number found"), []),
     )
     response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX})
-    assert response.message == "Still no page number: no page number found"
+    assert response == Response(ok=False, code="no_page")
+    assert "still no page number: no page number found" in caplog.text
     (record,) = _photos.load(bg_paths.photos).values()
     assert (record.status, record.reason) == (REJECTED, "no page number found")
 
@@ -114,7 +120,7 @@ def test_the_phones_page_in_a_box_request_is_the_hint(
 
     monkeypatch.setattr(_reread, "read", read)
     request: dict[str, object] = {"photo": name, "box": _BOX, "page": 51}
-    assert _reread.box_photo(bg_paths, request).message == "Read as p. 51."
+    assert _reread.box_photo(bg_paths, request).data == {"page": 51}
     assert hints == [51]
 
 

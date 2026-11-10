@@ -8,9 +8,11 @@ import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/ebook_entry.dart';
 import 'package:book_guard_app/src/screens/photo_delivery.dart';
 import 'package:book_guard_app/src/screens/photo_history.dart';
+import 'package:book_guard_app/src/screens/photo_status.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/session_buttons.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -69,7 +71,7 @@ class ReadTab extends StatefulWidget {
 
 class _ReadTabState extends State<ReadTab> {
   bool _busy = false;
-  String? _photoNote;
+  PhotoStatus? _photoStatus;
 
   int? get _openStart {
     final local = widget.local;
@@ -88,7 +90,12 @@ class _ReadTabState extends State<ReadTab> {
       await action();
     } on Exception catch (error) {
       unawaited(widget.api.errors.log(stage, '$error'));
-      if (mounted) showError(context, '$error');
+      if (mounted) {
+        showCue(
+          context,
+          const Cue(CueKind.error, semanticLabel: 'photo step failed'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
       unawaited(widget.onChanged());
@@ -132,7 +139,7 @@ class _ReadTabState extends State<ReadTab> {
     final api = widget.api;
     final attempt = {'attempt': capture.id};
     if (!mounted) return;
-    if (widget.reader != null) _note('Reading the page number...');
+    if (widget.reader != null) _show(PhotoStatus.reading);
     final review = await reviewPhoto(
       context,
       reader: widget.reader,
@@ -150,14 +157,12 @@ class _ReadTabState extends State<ReadTab> {
     if (review == null) {
       // Back, or the screen went away: the photo stays on the phone.
       await api.errors.event('photo', 'review-left', attempt);
-      return _note(
-        'Photo kept on the phone - finish it with the button above.',
-      );
+      return _show(PhotoStatus.kept);
     }
     if (review.retake) {
       await api.captures.drop(capture);
       await api.errors.event('photo', 'discarded', attempt);
-      return _note('Photo discarded - take it again.');
+      return _show(PhotoStatus.discarded);
     }
     await api.errors.event('photo', 'reviewed', {
       ...attempt,
@@ -179,22 +184,14 @@ class _ReadTabState extends State<ReadTab> {
       name: name,
       attempt: capture.id,
       page: review.page,
-      onSent: _note,
+      onSent: _show,
     );
     if (!mounted) return;
-    _note(sent.note);
-    switch (sent.good) {
-      case true:
-        showToast(context, sent.note);
-      case false:
-        showError(context, sent.note);
-      case null:
-        break;
-    }
+    _show(sent.status);
   }
 
-  void _note(String text) {
-    if (mounted) setState(() => _photoNote = text);
+  void _show(PhotoStatus status) {
+    if (mounted) setState(() => _photoStatus = status);
   }
 
   @override
@@ -205,7 +202,7 @@ class _ReadTabState extends State<ReadTab> {
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         if (_busy) const LinearProgressIndicator(),
-        SessionPrompt(reading: reading, waiting: widget.local?.waiting ?? 0),
+        SessionPrompt(waiting: widget.local?.waiting ?? 0),
         const SizedBox(height: AppSpacing.md),
         SessionButtons(
           reading: reading,
@@ -221,9 +218,13 @@ class _ReadTabState extends State<ReadTab> {
           paperStart: reading,
           onChanged: widget.onChanged,
         ),
-        if (_photoNote case final note?) ...[
+        if (_photoStatus case final status?) ...[
           const SizedBox(height: AppSpacing.sm),
-          Text(note),
+          Align(
+            alignment: Alignment.centerLeft,
+            // A new status is a new chip: it buzzes once as it appears.
+            child: PhotoStatusChip(status, key: ObjectKey(status)),
+          ),
         ],
         if (quiz.isNotEmpty)
           SummaryPanel(

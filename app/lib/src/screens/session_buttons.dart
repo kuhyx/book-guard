@@ -1,5 +1,7 @@
 import 'package:book_guard_app/src/capture.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/photo_mark.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -43,33 +45,50 @@ class SessionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (photo, resume) = (onPhoto, onResume);
+    final since = reading;
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
-        FilledButton.icon(
+        // Camera (file on the desktop) + play to start; + stop and the page
+        // reading began at to stop.
+        GlyphButton(
+          filled: true,
+          icon: desktop ? Icons.upload_file : Icons.photo_camera,
+          semanticLabel: since == null ? 'Start reading' : 'Stop reading',
           onPressed: photo == null
               ? null
-              : () => photo(reading == null ? 'start' : 'stop'),
-          icon: Icon(desktop ? Icons.upload_file : Icons.photo_camera),
-          label: Text(reading == null ? 'Start reading' : 'Stop reading'),
+              : () => photo(since == null ? 'start' : 'stop'),
+          badge: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(since == null ? Icons.play_arrow : Icons.stop),
+              if (since != null) Text('$since'),
+            ],
+          ),
         ),
         for (final c in captures)
-          FilledButton.tonalIcon(
+          GlyphButton(
+            icon: Icons.restore,
+            semanticLabel: 'Finish the stored photo',
             onPressed: resume == null ? null : () => resume(c),
-            icon: const Icon(Icons.restore),
-            label: Text(
-              'Finish the ${c.label} photo from '
-              '${_clock(c.takenAt.toLocal())}',
+            badge: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LabelMark(c.label),
+                const SizedBox(width: AppSpacing.sm),
+                Text(_clock(c.takenAt.toLocal())),
+              ],
             ),
           ),
         for (final s in checks)
-          FilledButton.tonalIcon(
+          GlyphButton(
+            icon: Icons.fact_check,
+            semanticLabel: 'Photograph the check page',
             onPressed: photo == null
                 ? null
                 : () => photo('check${s.checkPage}'),
-            icon: const Icon(Icons.fact_check),
-            label: Text('Photograph page ${s.checkPage}'),
+            badge: Text('${s.checkPage}'),
           ),
       ],
     );

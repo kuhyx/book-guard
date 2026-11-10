@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 
 const _session = SessionInfo(
   id: 's1',
@@ -60,19 +61,28 @@ void main() {
       'feedback': 'Specific and consistent.',
     });
     await pump(tester);
-    expect(find.text('p. 7-51'), findsOneWidget);
+    expect(find.text('7-51'), findsOneWidget);
     expect(find.text('Czerwony cesarz'), findsOneWidget);
-    expect(find.text('44 pages in 43 min - credited'), findsOneWidget);
-    expect(find.text('start - p. 7'), findsOneWidget);
-    expect(find.text('end - p. ?'), findsOneWidget);
+    expect(find.text('44'), findsOneWidget);
+    expect(find.text('43'), findsOneWidget);
+    expect(
+      tester.widget<Icon>(iconLabeled('credited')).icon,
+      Icons.check_circle,
+    );
+    // Each photo twice: its thumbnail and its read-out row.
+    expect(iconLabeled('start'), findsNWidgets(2));
+    expect(iconLabeled('end'), findsNWidgets(2));
+    expect(find.text('7'), findsNWidgets(2));
+    expect(find.text('?'), findsNWidgets(2));
     expect(find.text('Xi was born in 1953.'), findsOneWidget);
     expect(find.text('Specific and consistent.'), findsOneWidget);
-    await tapVisible(tester, find.text('start photo, p. 7'));
+    expect(iconLabeled('Grader'), findsOneWidget);
+    await tapVisible(tester, iconLabeled('start').last);
     await tester.pumpAndSettle();
     expect(find.text('KRÓTKI PRZEWODNIK'), findsOneWidget);
-    await tapVisible(tester, find.text('end photo, p. ?'));
+    await tapVisible(tester, iconLabeled('end').last);
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('start - p. 7'));
+    await tapVisible(tester, iconLabeled('start').first);
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
     expect(api.fetched, contains('processed/a-start.jpg'));
@@ -81,19 +91,21 @@ void main() {
   testWidgets('no summary yet, no grader section', (tester) async {
     api.files['sessions/s1.json'] = _json({'status': 'needs-quiz'});
     await pump(tester);
-    expect(find.text('No summary written yet.'), findsOneWidget);
-    expect(find.text('Grader'), findsNothing);
+    expect(tester.widget<Icon>(iconLabeled('No summary yet')).size, 64);
+    expect(iconLabeled('Grader'), findsNothing);
   });
 
-  testWidgets('a missing or odd detail file says so', (tester) async {
-    await pump(tester);
-    expect(
-      find.text("The PC has not written this session's details yet."),
-      findsOneWidget,
+  testWidgets('a missing or odd detail file is an hourglass outline', (
+    tester,
+  ) async {
+    final waiting = iconLabeled(
+      "The PC has not written this session's details yet",
     );
+    await pump(tester);
+    expect(waiting, findsOneWidget);
     api.files['sessions/s1.json'] = _json([1, 2]);
     await pump(tester);
-    expect(find.textContaining('has not written'), findsOneWidget);
+    expect(waiting, findsOneWidget);
   });
 
   testWidgets('a spinner while the details download', (tester) async {

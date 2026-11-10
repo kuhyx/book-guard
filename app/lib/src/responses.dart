@@ -40,12 +40,6 @@ class Responses {
     final text = await dav.getText('$_dir/$id.json');
     if (text == null) return null;
     await dav.delete('$_dir/$id.json');
-    final json = jsonDecode(text) as Map<String, dynamic>;
-    return GuardResponse(
-      ok: json['ok'] == true,
-      message: '${json['message'] ?? ''}',
-      passed: json['passed'] as bool?,
-      data: json['data'] as Map<String, dynamic>?,
-    );
+    return GuardResponse.fromJson(jsonDecode(text) as Map<String, dynamic>);
   }
 }

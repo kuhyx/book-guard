@@ -8,7 +8,7 @@ import 'package:book_guard_app/src/screens/ebook_scroll.dart';
 import 'package:book_guard_app/src/screens/ebook_session.dart';
 import 'package:book_guard_app/src/screens/ebook_words.dart';
 import 'package:book_guard_app/src/screens/reading_style.dart';
-import 'package:design_system/design_system.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -128,10 +128,18 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
       await api.startReading(start);
       final paper = widget.paperStart;
       if (paper != null && mounted) {
-        showToast(
+        // Reading here closed the open paper start: its page is shown and
+        // the next paper photo is a new start.
+        showCue(
           context,
-          'Reading here closed the open start photo of p. $paper: take a '
-          'new start photo when you go back to paper.',
+          const Cue(
+            CueKind.warn,
+            icon: Icons.photo_camera,
+            semanticLabel:
+                'Reading here closed the open start photo: take a new '
+                'start photo when you go back to paper',
+          ),
+          badge: Text('$paper'),
         );
       }
     }
@@ -163,7 +171,16 @@ class _EbookReaderScreenState extends State<EbookReaderScreen> {
         await api.cancelReading(_isbn);
       case ReaderExit.tooFast:
         await api.cancelReading(_isbn);
-        if (mounted) showToast(context, 'Too fast to count - not saved');
+        if (mounted) {
+          showCue(
+            context,
+            const Cue(
+              CueKind.warn,
+              icon: Icons.fast_forward,
+              semanticLabel: 'Too fast to count: not saved',
+            ),
+          );
+        }
       case ReaderExit.stop:
         done = await api.stopReading(start!, offset, _map, now);
     }

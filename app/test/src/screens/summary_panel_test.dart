@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/grader_note.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_read.dart';
 
 final _session = SessionInfo.fromJson(const {
   'id': 'session:a-b',
@@ -54,17 +56,40 @@ void main() {
     api.onSend = (_) => answer.future;
     await pump(tester);
     await tester.enterText(find.byType(TextField), 'x' * 160);
-    await tester.tap(find.text('Submit summary'));
+    await tester.tap(spoken('Submit summary'));
     await tester.pump();
     expect(field(tester).enabled, isFalse);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(busyBar(), findsOneWidget);
     await tester.pumpWidget(const SizedBox()); // leave the tab
     await pump(tester);
-    expect(find.textContaining('Sent to the grader at'), findsOneWidget);
+    // Back later: the hourglass chip with the time it went out.
+    expect(cueWith(Icons.hourglass_top), findsOneWidget);
     expect(field(tester).enabled, isFalse);
     expect(field(tester).controller?.text, 'x' * 160);
-    answer.complete(const GuardResponse(ok: true, message: 'late'));
+    answer.complete(const GuardResponse(ok: true, code: 'passed'));
     await settle(tester);
+  });
+
+  testWidgets('the length bar fills to 150 characters and ticks', (
+    tester,
+  ) async {
+    await pump(tester);
+    double? fill() => tester
+        .widget<LinearProgressIndicator>(
+          find.byWidgetPredicate(
+            (w) => w is LinearProgressIndicator && w.value != null,
+          ),
+        )
+        .value;
+    expect(fill(), 0);
+    expect(spoken('long enough'), findsNothing);
+    await tester.enterText(find.byType(TextField), 'x' * 75);
+    await tester.pump();
+    expect(fill(), 0.5);
+    await tester.enterText(find.byType(TextField), 'x' * 150);
+    await tester.pump();
+    expect(fill(), 1);
+    expect(spoken('long enough'), findsOneWidget);
   });
 
   testWidgets('a graded summary forgets its draft and marker', (tester) async {
@@ -83,8 +108,43 @@ void main() {
     });
     await api.markGrading(_session.id);
     await pump(tester, state: state);
-    expect(find.textContaining('local model'), findsOneWidget);
+    expect(find.byType(GraderNoteChip), findsOneWidget);
     await tester.pump(const Duration(minutes: 1, seconds: 1));
-    expect(find.textContaining('local model'), findsNothing);
+    expect(find.byType(GraderNoteChip), findsNothing);
+  });
+
+  testWidgets('a failure that arrives later unlocks the box', (tester) async {
+    // Offline: the request is queued, no verdict yet.
+    api.onSend = (_) async => const GuardResponse(ok: true, code: 'queued');
+    Widget panel(SessionInfo session) => SingleChildScrollView(
+      child: SummaryPanel(api: api, session: session, onChanged: () async {}),
+    );
+    await pumpTab(tester, panel(_session));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'x' * 160);
+    await tester.tap(spoken('Submit summary'));
+    await settle(tester);
+    expect(field(tester).enabled, isFalse, reason: 'with the grader');
+    // The PC fails it later: the home screen settles the marker and
+    // rebuilds the panel with the session's retry.
+    final failed = SessionInfo.fromJson({
+      'id': 'session:a-b',
+      'start_page': 51,
+      'end_page': 104,
+      'status': 'needs-quiz',
+      'retry': {
+        'summary': 'x' * 160,
+        'missing': ['the letter'],
+        'graded_at': DateTime.now()
+            .add(const Duration(minutes: 1))
+            .toUtc()
+            .toIso8601String(),
+      },
+    });
+    await api.settleGrading(failed);
+    await pumpTab(tester, panel(failed));
+    await settle(tester);
+    expect(field(tester).enabled, isTrue, reason: 'the rewrite can start');
+    expect(find.text('“the letter”'), findsOneWidget, reason: 'its topic');
   });
 }

@@ -54,12 +54,14 @@ void main() {
     test('drops a request file and returns the answer', () async {
       share.answer = (request) => {
         'ok': true,
-        'message': 'graded ${request['summary']}',
+        'code': 'passed',
         'passed': true,
+        'data': {'echo': request['summary']},
       };
       final response = await api.send('summary', {'summary': 'fine'});
       expect(response.ok, isTrue);
-      expect(response.message, 'graded fine');
+      expect(response.code, 'passed');
+      expect(response.data, {'echo': 'fine'});
       expect(response.passed, isTrue);
 
       final put = share.requests.first;
@@ -79,7 +81,7 @@ void main() {
     test("carries a lookup's data back", () async {
       share.answer = (_) => {
         'ok': true,
-        'message': 'Found',
+        'code': 'found',
         'data': {'title': 'Cesarz', 'pages': 406},
       };
       final response = await api.send('lookup', {'isbn': '978'});
@@ -90,7 +92,7 @@ void main() {
       share.answer = (_) => {'ok': 'yes'};
       final response = await api.send('set_pages', {'pages': 3});
       expect(response.ok, isFalse);
-      expect(response.message, '');
+      expect(response.code, isNull);
       expect(response.passed, isNull);
     });
 
@@ -117,7 +119,7 @@ void main() {
       final response = await slow.send('summary', const {});
       expect(response.ok, isFalse);
       expect(response.passed, isNull);
-      expect(response.message, contains('has not answered yet'));
+      expect(response.code, 'not_yet');
     });
   });
 

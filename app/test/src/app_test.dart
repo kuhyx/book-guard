@@ -10,6 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_api.dart';
+import '../support/finders_a.dart';
 import '../support/states.dart';
 
 void main() {
@@ -41,7 +42,7 @@ void main() {
     await pump(tester, desktop: true);
     await settle(tester);
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.byTooltip('Connection'), findsNothing);
+    expect(iconLabeled('connection'), findsNothing);
     final dav = davs.single;
     expect(dav.baseUrl, Uri.base.resolve('/dav').toString());
     expect(dav.user, isEmpty);
@@ -56,11 +57,9 @@ void main() {
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(davs, isEmpty);
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Password'),
-      'secret',
-    );
-    await tapVisible(tester, find.text('Save'));
+    // The settings fields: url, user, password.
+    await tester.enterText(fieldAt(2), 'secret');
+    await tapVisible(tester, mainButton);
     await settle(tester);
     expect(find.byType(HomeScreen), findsOneWidget);
     final dav = davs.single;
@@ -82,11 +81,11 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(davs.single.baseUrl, 'https://h');
 
-    await tester.tap(find.byTooltip('Connection'));
+    await tester.tap(iconLabeled('connection'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'User'), 'v');
-    await tapVisible(tester, find.text('Save'));
+    await tester.enterText(fieldAt(1), 'v');
+    await tapVisible(tester, mainButton);
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsNothing);
     expect(find.byType(HomeScreen), findsOneWidget);

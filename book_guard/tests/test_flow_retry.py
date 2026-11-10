@@ -121,4 +121,4 @@ def test_a_session_graded_once_keeps_its_times(bg_paths: Paths) -> None:
     response = _retime.set_times(
         bg_paths, {"session_id": session.session_id, "start": T0.isoformat()}
     )
-    assert response.message == "This session was already graded."
+    assert (response.ok, response.code) == (False, "already_graded")

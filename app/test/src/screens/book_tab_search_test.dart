@@ -5,12 +5,14 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 
 const Map<String, Object> _docs = {
   'docs': [
@@ -87,7 +89,7 @@ void main() {
     ),
   );
 
-  Finder field(String label) => find.widgetWithText(TextField, label);
+  Finder field(String label) => inputLabeled(label);
 
   Future<void> search(
     WidgetTester tester,
@@ -102,12 +104,9 @@ void main() {
 
   testWidgets('no book yet: only the search is offered', (tester) async {
     await pump(tester);
-    expect(
-      find.text('None yet - search below, or photograph the barcode.'),
-      findsOneWidget,
-    );
-    expect(find.text('Set'), findsNothing);
+    expect(iconLabeled('No book yet'), findsOneWidget);
     expect(find.byIcon(Icons.attach_file), findsNothing);
+    expect(find.byIcon(Icons.search), findsOneWidget);
   });
 
   testWidgets('search lists hits; a hit without ISBN is disabled', (
@@ -117,11 +116,12 @@ void main() {
     await search(tester, '  Dune ');
     expect(queries.single['title'], 'Dune');
     expect(queries.single.containsKey('author'), isFalse);
-    expect(
-      find.text('Frank Herbert - 604 p - ISBN 9780441013593'),
-      findsOneWidget,
-    );
-    expect(find.text('? - ? p - ISBN none'), findsOneWidget);
+    expect(find.text('Frank Herbert'), findsOneWidget);
+    expect(find.text('604'), findsOneWidget);
+    expect(find.text('9780441013593'), findsOneWidget);
+    // The hit without an ISBN shows no ISBN number at all.
+    expect(iconLabeled('ISBN'), findsOneWidget);
+    expect(find.text('?'), findsOneWidget);
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
     expect(tiles.map((t) => t.enabled), [true, false]);
     expect(changed, 1);
@@ -143,19 +143,19 @@ void main() {
     await settle(tester);
     expect(api.sent.single.type, 'register');
     expect(api.sent.single.body, {'isbn': '9780441013593', 'pages': 604});
-    expect(find.text('done register'), findsOneWidget);
+    expect(cueGlyph(Icons.check_circle), findsOneWidget);
     expect(find.text('Dune Notes'), findsNothing);
     expect(changed, 2);
   });
 
   testWidgets('a refused registration is shown as an error', (tester) async {
-    api.onSend = (_) async =>
-        const GuardResponse(ok: false, message: 'Unknown ISBN');
+    api.onSend = (_) async => const GuardResponse(ok: false, code: 'bad_isbn');
     await pump(tester);
     await search(tester, 'Dune');
     await tapVisible(tester, find.widgetWithText(ListTile, 'Dune'));
     await settle(tester);
-    expect(find.text('Unknown ISBN'), findsOneWidget);
+    expect(cueGlyph(Icons.qr_code_2), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
   });
 
   testWidgets('both catalogues failing is shown, not thrown', (tester) async {
@@ -163,13 +163,14 @@ void main() {
     bnStatus = 500;
     await pump(tester);
     await search(tester, 'Dune');
-    expect(
-      find.text(
-        'Exception: Neither Open Library nor Biblioteka Narodowa answered',
-      ),
-      findsOneWidget,
-    );
+    expect(cueOf(CueKind.error), findsOneWidget);
+    expect(find.textContaining('Exception'), findsNothing);
     expect(find.byType(ListTile), findsNothing);
+    // The reason is kept in the error log, not on screen.
+    expect(
+      await api.errors.diagnostics(),
+      contains('Neither Open Library nor Biblioteka Narodowa answered'),
+    );
   });
 
   testWidgets('one catalogue failing still shows the other', (tester) async {
@@ -178,7 +179,7 @@ void main() {
     await pump(tester);
     await search(tester, 'Czerwony cesarz');
     expect(find.text('Czerwony cesarz'), findsWidgets);
-    expect(find.textContaining('ISBN 9788368380002'), findsOneWidget);
+    expect(find.text('9788368380002'), findsOneWidget);
   });
 
   testWidgets('national hits come first; a repeated ISBN is listed once', (
@@ -187,14 +188,20 @@ void main() {
     bibs = [_bnBib('9780441013593')];
     await pump(tester);
     await search(tester, 'Dune');
-    final subtitles = [
+    final titles = [
       for (final tile in tester.widgetList<ListTile>(find.byType(ListTile)))
-        (tile.subtitle! as Text).data,
+        (tile.title! as Text).data,
     ];
-    expect(subtitles, [
-      'Herbert F. - ? p - ISBN 9780441013593',
-      '? - ? p - ISBN none',
-    ]);
+    expect(titles.length, 2);
+    expect(
+      find.descendant(
+        of: find.byType(ListTile).first,
+        matching: find.text('Herbert F.'),
+      ),
+      findsOneWidget,
+    );
+    // Listed once: the repeated ISBN is shown for the national hit only.
+    expect(find.text('9780441013593'), findsOneWidget);
   });
 
   testWidgets('a result arriving after the tab closed is dropped', (
@@ -207,9 +214,9 @@ void main() {
     await tapVisible(tester, find.widgetWithText(ListTile, 'Dune'));
     await tester.pump();
     await tester.pumpWidget(const SizedBox());
-    answer.complete(const GuardResponse(ok: true, message: 'late'));
+    answer.complete(const GuardResponse(ok: true, code: 'registered'));
     await settle(tester);
-    expect(find.text('late'), findsNothing);
+    expect(find.byType(StatusCue), findsNothing);
     expect(changed, 2);
   });
 }

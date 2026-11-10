@@ -5,12 +5,14 @@ import 'package:book_guard_app/src/guard_response.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 
 const Map<String, Object> _docs = {
   'docs': [
@@ -65,7 +67,7 @@ void main() {
     ),
   );
 
-  Finder field(String label) => find.widgetWithText(TextField, label);
+  Finder field(String label) => inputLabeled(label);
 
   Future<void> search(
     WidgetTester tester,
@@ -93,21 +95,25 @@ void main() {
     await pump(tester);
     await tapVisible(tester, find.byIcon(Icons.search));
     await settle(tester);
-    expect(find.text('Enter a title to search.'), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
+    expect(fieldIsRed(tester, 'Title, e.g. Atomic Habits'), isTrue);
     expect(queries, isEmpty);
+    // Typing clears the red border.
+    await tester.enterText(field('Title, e.g. Atomic Habits'), 'D');
+    await tester.pump();
+    expect(fieldIsRed(tester, 'Title, e.g. Atomic Habits'), isFalse);
   });
 
-  testWidgets('no hits says so, and a later hit clears it', (tester) async {
+  testWidgets('no hits shows the empty-search glyph; a later hit clears it', (
+    tester,
+  ) async {
     docs = const {'docs': <Object>[]};
     await pump(tester);
     await search(tester, 'Czerwony Cesarz', author: 'Sheridan');
-    expect(
-      find.text("No books found for 'Czerwony Cesarz' - enter the ISBN below."),
-      findsOneWidget,
-    );
+    expect(find.byIcon(Icons.search_off), findsOneWidget);
     docs = _docs;
     await search(tester, 'Dune');
-    expect(find.textContaining('No books found'), findsNothing);
+    expect(find.byIcon(Icons.search_off), findsNothing);
     expect(find.text('Dune Notes'), findsOneWidget);
   });
 
@@ -118,7 +124,7 @@ void main() {
     await tester.enterText(field('Title, e.g. Atomic Habits'), ' Cesarz ');
     await tester.enterText(field('Author (optional)'), 'Sheridan');
     await tester.enterText(field('ISBN (optional)'), ' 9788368380002 ');
-    await tapVisible(tester, find.text('Register'));
+    await tapVisible(tester, find.byIcon(Icons.library_add));
     await settle(tester);
     expect(api.sent.single.type, 'register');
     expect(api.sent.single.body, {
@@ -126,21 +132,21 @@ void main() {
       'title': 'Cesarz',
       'author': 'Sheridan',
     });
-    expect(find.text('done register'), findsOneWidget);
+    expect(cueGlyph(Icons.check_circle), findsOneWidget);
     expect(queries, isEmpty);
   });
 
   testWidgets('an ISBN no catalogue knows is named from a title search', (
     tester,
   ) async {
-    api.onSend = (request) async => GuardResponse(
+    api.onSend = (request) async => const GuardResponse(
       ok: true,
-      message: 'done ${request.type}',
-      data: const {'known': false},
+      code: 'registered',
+      data: {'known': false},
     );
     await pump(tester);
     await tester.enterText(field('ISBN (optional)'), '9781529115659');
-    await tapVisible(tester, find.text('Register'));
+    await tapVisible(tester, find.byIcon(Icons.library_add));
     await settle(tester);
     final title = tester.widget<TextField>(field('Title, e.g. Atomic Habits'));
     expect(title.focusNode?.hasFocus, isTrue);
@@ -163,14 +169,14 @@ void main() {
   testWidgets('a known ISBN keeps hits adding their own edition', (
     tester,
   ) async {
-    api.onSend = (request) async => GuardResponse(
+    api.onSend = (request) async => const GuardResponse(
       ok: true,
-      message: 'done ${request.type}',
-      data: const {'known': true},
+      code: 'registered',
+      data: {'known': true},
     );
     await pump(tester);
     await tester.enterText(field('ISBN (optional)'), '9780441013593');
-    await tapVisible(tester, find.text('Register'));
+    await tapVisible(tester, find.byIcon(Icons.library_add));
     await settle(tester);
     await search(tester, 'Dune');
     expect(find.byIcon(Icons.link), findsNothing);

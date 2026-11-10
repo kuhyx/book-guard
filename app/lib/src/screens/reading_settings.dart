@@ -6,9 +6,9 @@ import 'package:book_guard_app/src/screens/reading_style.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// The in-app reader's settings: the text size, with a line of the book's
-/// own typography to judge it by. The reader itself shows nothing but text,
-/// so this is where the size is chosen; it reads it on opening.
+/// The in-app reader's settings: the text size (a number), with a line of
+/// the book's own glyphs to judge it by. The reader itself shows nothing
+/// but text, so this is where the size is chosen; it reads it on opening.
 class ReadingSettingsScreen extends StatefulWidget {
   /// Creates the screen.
   const new({required this.api, super.key});
@@ -43,13 +43,19 @@ class _ReadingSettingsScreenState extends State<ReadingSettingsScreen> {
   Widget build(BuildContext context) {
     final size = _size;
     return Scaffold(
-      appBar: AppBar(title: const Text('Reading')),
+      appBar: AppBar(),
       body: size == null
           ? const SizedBox.shrink()
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                Text('Text size: ${size.round()}'),
+                Row(
+                  children: [
+                    const Icon(Icons.text_fields, semanticLabel: 'Text size'),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text('${size.round()}'),
+                  ],
+                ),
                 Slider(
                   value: size,
                   min: ReadingStyle.minFont,
@@ -67,8 +73,9 @@ class _ReadingSettingsScreenState extends State<ReadingSettingsScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(ReadingStyle.sideMargin),
                     child: Text(
-                      'Pchnąć w tę łódź jeża lub ośm skrzyń fig. '
-                      'The quick brown fox jumps over the lazy dog.',
+                      // Digits and single letters, the accented ones too:
+                      // the glyphs to judge a size by, no words.
+                      '0123456789 A a Ą ą Ć ć Ę ę Ł ł Ń ń Ó ó Ś ś Ź ź Ż ż',
                       key: ReadingSettingsScreen.previewKey,
                       style: ReadingStyle.text(size),
                       textScaler: ReadingStyle.scaler,

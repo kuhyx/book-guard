@@ -3,12 +3,14 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/ebook_entry.dart';
 import 'package:book_guard_app/src/screens/ebook_reader.dart';
 import 'package:book_guard_app/src/screens/reading_settings.dart';
+import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/ebook_fixture.dart';
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 import '../../support/states.dart';
 
 void main() {
@@ -72,17 +74,18 @@ void main() {
 
   testWidgets('nothing without a page map', (tester) async {
     await pump(tester, sampleState());
-    expect(find.textContaining('Read in app'), findsNothing);
+    expect(iconLabeled('Read in app'), findsNothing);
     await pump(tester, ebookState(reader: false));
-    expect(find.textContaining('Read in app'), findsNothing);
+    expect(iconLabeled('Read in app'), findsNothing);
     await pump(tester, GuardState.fromJson(const {}));
-    expect(find.textContaining('Read in app'), findsNothing);
+    expect(iconLabeled('Read in app'), findsNothing);
   });
 
   testWidgets('downloads the book and opens the reader', (tester) async {
     await pump(tester, ebookState(latestPage: 20));
-    expect(find.text('Read in app (≈ p. 20)'), findsOneWidget);
-    await tester.tap(find.text('Read in app (≈ p. 20)'));
+    expect(iconLabeled('Read in app'), findsOneWidget);
+    expect(find.text('≈ 20'), findsOneWidget);
+    await tester.tap(iconLabeled('Read in app'));
     await tester.pumpAndSettle();
     expect(find.byType(EbookReaderScreen), findsOneWidget);
     await tester.binding.handlePopRoute(); // the system back
@@ -91,10 +94,18 @@ void main() {
     expect(changed, 1);
   });
 
-  testWidgets('says when the book is not downloaded yet', (tester) async {
+  testWidgets('a download glyph shows the book is not downloaded yet', (
+    tester,
+  ) async {
     api.files.clear();
     await pump(tester, ebookState());
-    expect(find.textContaining('when the PC is reachable'), findsOneWidget);
+    expect(
+      iconLabeled(
+        'The book for in-app reading downloads when the PC is reachable',
+      ),
+      findsOneWidget,
+    );
+    expect(iconLabeled('Read in app'), findsNothing);
   });
 
   testWidgets('a running session is continued', (tester) async {
@@ -108,13 +119,16 @@ void main() {
       ),
     );
     await pump(tester, ebookState());
-    expect(find.textContaining('Continue reading in app'), findsOneWidget);
+    expect(iconLabeled('Continue reading in app'), findsOneWidget);
+    expect(iconLabeled('Read in app'), findsNothing);
+    // The clock glyph and the start time (local) show beside the reader.
+    expect(iconLabeled('Since'), findsOneWidget);
   });
 
   testWidgets('a stopped session asks for its summary at once', (tester) async {
     await keep(stopped());
     await pump(tester, ebookState());
-    expect(find.text('Summary for ≈ p. 20-25'), findsOneWidget);
+    expect(find.byType(SummaryPanel), findsOneWidget);
     // Once the PC lists it, the Read tab's own summary panel has it.
     await pump(
       tester,
@@ -130,7 +144,7 @@ void main() {
         ],
       ),
     );
-    expect(find.text('Summary for ≈ p. 20-25'), findsNothing);
+    expect(find.byType(SummaryPanel), findsNothing);
     expect(await api.appSessions(), isEmpty);
   });
 
@@ -139,7 +153,7 @@ void main() {
     final kept = (await api.appSessions()).single;
     await api.store.write('refused/${kept.requestId}', Uint8List(1));
     await pump(tester, ebookState());
-    expect(find.text('Summary for ≈ p. 20-25'), findsNothing);
+    expect(find.byType(SummaryPanel), findsNothing);
     expect(await api.appSessions(), isEmpty);
   });
 
@@ -148,16 +162,16 @@ void main() {
   ) async {
     await keep(stopped());
     await pump(tester, ebookState());
-    expect(find.text('Summary for ≈ p. 20-25'), findsOneWidget);
+    expect(find.byType(SummaryPanel), findsOneWidget);
     final kept = (await api.appSessions()).single;
     await api.store.write('refused/${kept.requestId}', Uint8List(1));
     await pump(tester, ebookState()); // the same snapshot, fetched again
-    expect(find.text('Summary for ≈ p. 20-25'), findsNothing);
+    expect(find.byType(SummaryPanel), findsNothing);
   });
 
   testWidgets('stopping in the reader shows the summary box', (tester) async {
     await pump(tester, ebookState(latestPage: 20));
-    await tester.tap(find.text('Read in app (≈ p. 20)'));
+    await tester.tap(iconLabeled('Read in app'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 4; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.audioVolumeDown);
@@ -171,13 +185,22 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(EbookReaderScreen), findsNothing);
-    expect(find.textContaining('Summary for ≈ p. 20-'), findsOneWidget);
+    expect(find.byType(SummaryPanel), findsOneWidget);
+    // The saved session is shown as a glyph and its page range.
+    expect(cueGlyph(Icons.chrome_reader_mode), findsOneWidget);
+    expect(
+      find.descendant(
+        of: cueGlyph(Icons.chrome_reader_mode),
+        matching: find.textContaining('≈20-'),
+      ),
+      findsOneWidget,
+    );
     expect(changed, 1);
   });
 
   testWidgets('the reading settings are a tap away', (tester) async {
     await pump(tester, ebookState(latestPage: 20));
-    await tester.tap(find.byTooltip('Reading settings'));
+    await tester.tap(iconLabeled('Reading settings'));
     await tester.pumpAndSettle();
     expect(find.byType(ReadingSettingsScreen), findsOneWidget);
   });

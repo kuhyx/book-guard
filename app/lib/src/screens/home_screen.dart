@@ -6,16 +6,16 @@ import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:book_guard_app/src/screens/home_nav_bar.dart';
+import 'package:book_guard_app/src/screens/late_cue.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
-import 'package:book_guard_app/src/screens/offline_note.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
-import 'package:design_system/design_system.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Four tabs over one live snapshot: Status, Read, Book, Library.
+/// Four icon tabs over one live snapshot: status, read, book, library.
 ///
 /// The snapshot is refetched every [refreshEvery] and after every action,
 /// because the PC changes it on its own (a photo read, a check page named).
@@ -132,25 +132,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     setState(() {
       _state = state;
-      _error = error == null ? null : explainOffline(error, state, waiting);
+      _error = error;
       _journal = journal;
       _captures = captures;
       _waiting = waiting;
     });
     if (answers.isEmpty) return;
-    // One message: a second snackbar would hide the first.
-    final text = [for (final a in answers) '${a.what}: ${a.response.message}']
-        .join('\n');
-    answers.every((a) => a.response.ok && (a.response.passed ?? true))
-        ? showToast(context, text)
-        : showError(context, text);
+    // One cue: a second snackbar would hide the first.
+    showLateAnswers(context, answers);
   }
 
   Future<void> _copyDiagnostics() async {
     final text = await widget.api.errors.diagnostics();
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
-      showToast(context, 'Diagnostics copied - paste them to Claude.');
+      showCue(
+        context,
+        const Cue(
+          CueKind.ok,
+          icon: Icons.content_paste,
+          semanticLabel: 'diagnostics copied',
+        ),
+      );
     }
   }
 
@@ -170,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         error: _error,
         onRefresh: refresh,
         api: widget.api,
+        waiting: _waiting,
       ),
       ReadTab(
         api: widget.api,
@@ -191,26 +195,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Book Guard'),
         actions: [
           IconButton(
-            tooltip: 'Copy diagnostics',
             icon: Badge(
               isLabelVisible: _waiting > 0,
               label: Text('$_waiting'),
-              child: const Icon(Icons.bug_report_outlined),
+              child: const Icon(
+                Icons.bug_report_outlined,
+                semanticLabel: 'copy diagnostics',
+              ),
             ),
             onPressed: _copyDiagnostics,
           ),
           IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, semanticLabel: 'refresh'),
             onPressed: refresh,
           ),
           if (widget.settingsPage != null)
             IconButton(
-              tooltip: 'Connection',
-              icon: const Icon(Icons.settings),
+              icon: const Icon(Icons.settings, semanticLabel: 'connection'),
               onPressed: _openSettings,
             ),
         ],

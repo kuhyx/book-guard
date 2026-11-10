@@ -39,6 +39,9 @@ UNGRADED: Final = (
     " minutes, so this summary is credited without grading."
 )
 
+ALREADY_CREDITED: Final = "This session was already credited."
+"""The verdict's feedback when a second summary arrives for a credited session."""
+
 
 def register_isbn(
     paths: Paths,
@@ -163,6 +166,6 @@ def quiz_one(
             # Inside the same lock: a second exclusive() here would deadlock.
             save_unlocked(paths, entry.entry_id, summary)
     if entry is None:
-        return Verdict(passed=False, feedback="This session was already credited.")
+        return Verdict(passed=False, feedback=ALREADY_CREDITED)
     write_next_file(paths, snapshot(paths))
     return _told(verdict)

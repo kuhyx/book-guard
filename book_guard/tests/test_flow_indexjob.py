@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -11,6 +12,7 @@ import pytest
 from book_guard import _attach, _indexjob
 from book_guard._app_handlers import HANDLERS
 from book_guard._booktext import BookTextError
+from book_guard._requests import Response
 from book_guard.tests._flow_helpers import add_book
 from book_guard.tests._index_helpers import drop, fail
 
@@ -140,10 +142,12 @@ def test_requeue_needs_a_failed_file(bg_paths: Paths) -> None:
         _attach.requeue(bg_paths, "a.epub")
 
 
-def test_retry_book_request(bg_paths: Paths) -> None:
+def test_retry_book_request(bg_paths: Paths, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
     fail(bg_paths)
     ok = HANDLERS["retry_book"](bg_paths, {"file": "bad.epub"})
-    assert (ok.ok, ok.message) == (True, "bad.epub queued again")
+    assert ok == Response(ok=True, code="requeued")
+    assert "bad.epub queued again" in caplog.text
     refused = HANDLERS["retry_book"](bg_paths, {"file": "gone.epub"})
-    assert not refused.ok
-    assert "no failed book file" in refused.message
+    assert refused == Response(ok=False, code="bad_file")
+    assert "no failed book file" in caplog.text

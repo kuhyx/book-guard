@@ -1,10 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:book_guard_app/src/screens/failed_photos.dart';
+import 'package:book_guard_app/src/screens/photo_mark.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// One failed photo: its thumbnail, what went wrong and what can be done.
+/// One failed photo: its thumbnail, a glyph for what went wrong, the number
+/// the phone read (if any) and what can be done about it.
 class FailedPhotoCard extends StatelessWidget {
   /// Creates the card for [failed].
   const new({
@@ -26,10 +30,10 @@ class FailedPhotoCard extends StatelessWidget {
   /// Whether a "this should not fail" report was already filed.
   final bool reported;
 
-  /// "Box the number"; null hides the button.
+  /// Box the number; null hides the button.
   final VoidCallback? onBox;
 
-  /// "This should not fail"; null disables the button.
+  /// File a report; null disables the button.
   final VoidCallback? onReport;
 
   /// Hides the card on this device.
@@ -38,6 +42,7 @@ class FailedPhotoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bytes = this.bytes;
+    final page = failed.entry.page;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.sm),
@@ -48,7 +53,10 @@ class FailedPhotoCard extends StatelessWidget {
               width: 72,
               height: 96,
               child: bytes == null
-                  ? const Icon(Icons.image_not_supported)
+                  ? const Icon(
+                      Icons.image_not_supported,
+                      semanticLabel: 'photo gone',
+                    )
                   : Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 144),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -56,24 +64,37 @@ class FailedPhotoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${failed.entry.label}: ${failed.reason}'),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      LabelMark(failed.entry.label),
+                      RejectBadge(failed.reason),
+                      if (page != null) Text('$page'),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
                     children: [
                       if (onBox case final onBox?)
-                        TextButton(
+                        GlyphButton(
+                          icon: Icons.crop_free,
+                          semanticLabel: 'Box the number',
                           onPressed: onBox,
-                          child: const Text('Box the number'),
                         ),
-                      TextButton(
+                      GlyphButton(
+                        icon: reported ? Icons.flag : Icons.outlined_flag,
+                        semanticLabel: reported
+                            ? 'Reported'
+                            : 'This should not fail',
                         onPressed: reported ? null : onReport,
-                        child: Text(
-                          reported ? 'Reported' : 'This should not fail',
-                        ),
                       ),
-                      TextButton(
+                      GlyphButton(
+                        icon: Icons.close,
+                        semanticLabel: 'Dismiss',
                         onPressed: onDismiss,
-                        child: const Text('Dismiss'),
                       ),
                     ],
                   ),

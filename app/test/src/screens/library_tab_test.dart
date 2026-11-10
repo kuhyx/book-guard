@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/fake_share.dart';
+import '../../support/finders_book.dart';
 import '../../support/library_api.dart';
 import '../../support/library_json.dart';
 import '../../support/states.dart';
@@ -15,9 +16,9 @@ void main() {
 
   setUp(() => share = FakeShare());
 
-  test('dmy is day.month.year, or a dash', () {
+  test('dmy is DD.MM.YYYY, or a dash', () {
     expect(dmy(null), '-');
-    expect(dmy(DateTime(2026, 10, 5, 12)), '5.10.2026');
+    expect(dmy(DateTime(2026, 10, 5, 12)), '05.10.2026');
   });
 
   testWidgets('a spinner until the first copy arrives', (tester) async {
@@ -26,7 +27,7 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     hung.release();
     await settle(tester);
-    expect(find.text('No books yet'), findsOneWidget);
+    expect(iconLabeled('No books yet'), findsOneWidget);
   });
 
   testWidgets('lists every book with its dates and counts', (tester) async {
@@ -35,18 +36,26 @@ void main() {
     await pumpTab(tester, LibraryTab(api: libraryApi(share), state: null));
     await settle(tester);
     expect(find.text('Atomic Habits'), findsOneWidget);
+    final atomic = find.widgetWithText(Card, 'Atomic Habits');
+    expect(glyphNumber(atomic, 'James Clear'), findsOneWidget);
+    expect(glyphNumber(atomic, '81/320'), findsOneWidget);
+    expect(glyphNumber(atomic, '02.10.2026'), findsOneWidget);
+    expect(glyphNumber(atomic, '14.10.2026'), findsOneWidget);
+    expect(glyphNumber(atomic, '2'), findsOneWidget);
+    expect(glyphNumber(atomic, '1'), findsOneWidget);
+    final done = find.widgetWithText(Card, 'Done Book');
+    expect(glyphNumber(done, '200/200'), findsOneWidget);
+    expect(glyphNumber(done, '20.09.2026'), findsOneWidget);
     expect(
-      find.text(
-        'James Clear\np. 81/320 - 2.10.2026 - 14.10.2026\n'
-        '2 sessions, 1 note',
-      ),
+      find.descendant(of: done, matching: iconLabeled('Finished')),
       findsOneWidget,
     );
+    final fresh = find.widgetWithText(Card, 'Next Book');
+    expect(glyphNumber(fresh, '0/?'), findsOneWidget);
     expect(
-      find.textContaining('p. 200/200 - finished 20.9.2026'),
-      findsOneWidget,
+      find.descendant(of: fresh, matching: iconLabeled('Finished')),
+      findsNothing,
     );
-    expect(find.textContaining('p. 0/? - not started'), findsOneWidget);
     expect(find.byIcon(Icons.auto_stories), findsOneWidget);
     expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
     expect(find.byIcon(Icons.book_outlined), findsOneWidget);
@@ -87,7 +96,7 @@ void main() {
     );
     await pump('2026-10-15T10:00:00Z');
     await settle(tester);
-    expect(find.text('No books yet'), findsOneWidget);
+    expect(iconLabeled('No books yet'), findsOneWidget);
     putLibrary(share, libraryJson());
     await pump('2026-10-15T10:00:10Z');
     await settle(tester);
@@ -95,7 +104,7 @@ void main() {
     putLibrary(share, {'books': <Object>[]});
     await tester.drag(find.byType(ListView), const Offset(0, 400));
     await tester.pumpAndSettle();
-    expect(find.text('No books yet'), findsOneWidget);
+    expect(iconLabeled('No books yet'), findsOneWidget);
   });
 
   testWidgets('tapping a book opens its screen', (tester) async {
@@ -106,12 +115,6 @@ void main() {
     await tester.tap(find.text('Done Book'));
     await tester.pumpAndSettle();
     expect(find.byType(LibraryBookScreen), findsOneWidget);
-  });
-
-  test('counted pluralises', () {
-    expect(counted(0, 'note'), '0 notes');
-    expect(counted(1, 'note'), '1 note');
-    expect(counted(2, 'session'), '2 sessions');
   });
 
   testWidgets('notes still only on the phone count too, also after a visit', (
@@ -127,13 +130,16 @@ void main() {
     await api.saveNote(note('phone', books.first.isbn));
     await pumpTab(tester, LibraryTab(api: api, state: null));
     await settle(tester);
-    expect(find.textContaining('2 sessions, 2 notes'), findsOneWidget);
+    final atomic = find.widgetWithText(Card, 'Atomic Habits');
+    expect(glyphNumber(atomic, '2'), findsNWidgets(2));
     await tester.tap(find.text('Done Book'));
     await tester.pumpAndSettle();
     await api.saveNote(note('later', books[1].isbn));
     await tester.pageBack();
     await settle(tester);
-    expect(find.textContaining('1 note'), findsOneWidget);
+    final book = find.widgetWithText(Card, 'Done Book');
+    expect(glyphNumber(book, '0'), findsOneWidget);
+    expect(glyphNumber(book, '1'), findsOneWidget);
   });
 
   testWidgets('closing the tab while loading is harmless', (tester) async {

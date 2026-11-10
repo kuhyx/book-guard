@@ -125,18 +125,15 @@ class GuardApi {
     return await _responses.wait(id) ?? _notYet;
   }
 
-  static const _notYet = GuardResponse(
-    ok: false,
-    message: 'The PC has not answered yet - it will when it is on.',
-  );
+  /// The PC has not answered yet; it will when it is on.
+  static const _notYet = GuardResponse(ok: false, code: 'not_yet');
 
   /// Queues one request on the device and, if the PC is reachable, waits
   /// for its answer. Offline it stays queued; the answer is picked up by
-  /// [collectAnswers] later. [what] names it for that later message.
+  /// [collectAnswers] later, named by its [type].
   Future<GuardResponse> sendQueued(
     String type,
     Map<String, Object?> body,
-    String what,
   ) async {
     final id = newId();
     final payload = {'id': id, 'type': type, ...body};
@@ -144,14 +141,10 @@ class GuardApi {
       'requests/$id.json',
       Uint8List.fromList(utf8.encode(jsonEncode(payload))),
     );
-    await store.write('$_pending$id', Uint8List.fromList(utf8.encode(what)));
+    await store.write('$_pending$id', Uint8List.fromList(utf8.encode(type)));
     if (await flush() > 0) {
-      return const GuardResponse(
-        ok: true,
-        message:
-            'Saved on the phone - it goes to the PC (and is graded) as soon '
-            'as the PC is reachable.',
-      );
+      // Kept on the phone: it goes to the PC (and is graded) once reachable.
+      return const GuardResponse(ok: true, code: 'queued');
     }
     final answer = await _responses.wait(id);
     if (answer == null) return _notYet;

@@ -25,6 +25,19 @@ class BookHit {
   final String? isbn;
 }
 
+/// Open Library answered with an HTTP [status] other than 200. Its text is
+/// the bare number, so a screen that paints the error shows no sentence.
+class OpenLibraryException implements Exception {
+  /// Creates the error for [status].
+  const new(this.status);
+
+  /// The HTTP status.
+  final int status;
+
+  @override
+  String toString() => '$status';
+}
+
 /// Open Library title search, called directly from the app (it sends
 /// `Access-Control-Allow-Origin: *`, so the desktop web build can too).
 class OpenLibrary {
@@ -43,7 +56,7 @@ class OpenLibrary {
     });
     final response = await _client.get(uri);
     if (response.statusCode != 200) {
-      throw Exception('Open Library answered ${response.statusCode}');
+      throw OpenLibraryException(response.statusCode);
     }
     final json =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;

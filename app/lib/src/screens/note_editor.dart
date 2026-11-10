@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:book_guard_app/src/library.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Asks for a note's text, and optionally its page and chapter; returns
-/// the note to save, or null if cancelled. [existing] is edited in place
+/// Asks for a note's text, and optionally its page and chapter (one chip
+/// per chapter; tap the chosen one again for none); returns the note to
+/// save, or null if cancelled. [existing] is edited in place
 /// (same id); otherwise a new note gets [newId].
 Future<Note?> editNote(
   BuildContext context, {
@@ -33,6 +38,9 @@ class _NoteDialogState extends State<_NoteDialog> {
   );
   late String _chapter = widget.existing?.chapter ?? '';
 
+  /// A save was tried with no text: the field is red until it is typed in.
+  bool _empty = false;
+
   @override
   void dispose() {
     _text.dispose();
@@ -42,7 +50,12 @@ class _NoteDialogState extends State<_NoteDialog> {
 
   void _save() {
     final text = _text.text.trim();
-    if (text.isEmpty) return; // Notes are never deleted: no empty save.
+    if (text.isEmpty) {
+      // Notes are never deleted: no empty save.
+      setState(() => _empty = true);
+      unawaited(HapticFeedback.heavyImpact());
+      return;
+    }
     final now = DateTime.now();
     final old = widget.existing;
     Navigator.of(context).pop(
@@ -65,47 +78,59 @@ class _NoteDialogState extends State<_NoteDialog> {
       chapters.add(_chapter);
     }
     return AlertDialog(
-      title: Text(widget.existing == null ? 'New note' : 'Edit note'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            IconField(
+              icon: Icons.edit_note,
+              semanticLabel: 'Note',
               controller: _text,
               autofocus: true,
               minLines: 3,
               maxLines: 10,
-              decoration: const InputDecoration(labelText: 'Note'),
+              errorBorder: _empty,
+              onChanged: (_) {
+                if (_empty) setState(() => _empty = false);
+              },
             ),
             const SizedBox(height: AppSpacing.sm),
-            TextField(
+            IconField(
+              icon: Icons.bookmark_border,
+              semanticLabel: 'Page (optional)',
               controller: _page,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Page (optional)'),
             ),
             if (chapters.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              DropdownButtonFormField<String>(
-                initialValue: _chapter,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Chapter'),
-                items: [
-                  const DropdownMenuItem(value: '', child: Text('None')),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Icon(Icons.list, semanticLabel: 'Chapter'),
                   for (final c in chapters)
-                    DropdownMenuItem(value: c, child: Text(c)),
+                    ChoiceChip(
+                      label: Text(c),
+                      selected: c == _chapter,
+                      onSelected: (on) =>
+                          setState(() => _chapter = on ? c : ''),
+                    ),
                 ],
-                onChanged: (value) => setState(() => _chapter = value ?? ''),
               ),
             ],
           ],
         ),
       ),
       actions: [
-        TextButton(
+        IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          icon: const Icon(Icons.close, semanticLabel: 'Cancel'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        IconButton.filled(
+          onPressed: _save,
+          icon: const Icon(Icons.check, semanticLabel: 'Save'),
+        ),
       ],
     );
   }

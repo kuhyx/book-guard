@@ -12,7 +12,8 @@ be part of a credited session.
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import TYPE_CHECKING, Any, Final
 
 from book_guard import _ledger, _photos
 from book_guard._flock import exclusive
@@ -25,23 +26,25 @@ from book_guard._vision import PAGE
 if TYPE_CHECKING:
     from book_guard._paths import Paths
 
+_logger: Final = logging.getLogger(__name__)
+
 
 def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
     """Re-read photo ``request["photo"]`` inside ``request["box"]``."""
     name = request.get("photo")
     box = parse_box(request.get("box"))
     if not isinstance(name, str) or box is None:
-        return Response(ok=False, message="Draw a box around the page number first.")
+        return Response(ok=False, code="no_box")
     with exclusive(paths):
         records = _photos.load(paths.photos)
         record = next((r for r in records.values() if r.name == name), None)
         if record is None or not record.taken_at:
-            return Response(ok=False, message=f"No readable photo named {name}.")
+            return Response(ok=False, code="no_photo")
         if record.kind == PAGE and record.status == OK:
-            return Response(ok=False, message=f"Already read as p. {record.page}.")
+            return Response(ok=False, code="already_read", data={"page": record.page})
         filed = paths.processed / f"{record.sha[:12]}-{record.name}"
         if not filed.is_file():
-            return Response(ok=False, message=f"{name} is no longer on the PC.")
+            return Response(ok=False, code="photo_gone")
         others = {sha: r for sha, r in records.items() if sha != record.sha}
         ledger = _ledger.load(paths.ledger, paths.key_file)
         context = context_for(name, record.taken, others, ledger)
@@ -59,5 +62,6 @@ def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
         )
         _photos.save(paths.photos, records)
     if reading.page_number is None:
-        return Response(ok=False, message=f"Still no page number: {reading.reason}")
-    return Response(ok=True, message=f"Read as p. {reading.page_number}.")
+        _logger.info("box on %s: still no page number: %s", name, reading.reason)
+        return Response(ok=False, code="no_page")
+    return Response(ok=True, code="read", data={"page": reading.page_number})

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_a.dart';
+import '../../support/no_words.dart';
 import '../../support/states.dart';
 
 // The one-number card (from the PC's resplit): today first, then the month.
@@ -50,76 +52,72 @@ void main() {
 
   testWidgets('a daily day short of its number: today first', (tester) async {
     await _pump(tester, state: daily(today: 10, asks: 30, carried: 20));
-    expect(find.text('Today: 10 / 30 pages'), findsOneWidget);
+    expect(find.text('10 / 30'), findsOneWidget);
+    expect(find.byIcon(Icons.today), findsOneWidget);
     expect(bar(tester), closeTo(10 / 30, 1e-9));
-    expect(
-      find.text('20 more pages today: on pace, PC open, +1h'),
-      findsOneWidget,
-    );
-    expect(find.text('2026-10: 480 / 1000 pages'), findsOneWidget);
-    expect(
-      find.text('Includes 20 pages carried from last month'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('line'), findsNothing);
-    expect(find.textContaining('excused'), findsNothing);
+    expect(iconLabeled('pages still to read'), findsOneWidget);
+    expect(find.text('20'), findsNWidgets(2)); // still to read, carried
+    expect(find.text('10 · 2026'), findsOneWidget);
+    expect(find.text('480 / 1000'), findsOneWidget);
+    expect(iconLabeled('carried from last month'), findsOneWidget);
+    expect(iconLabeled("today's line"), findsNothing);
+    expect(iconLabeled('sick days excused'), findsNothing);
+    expect(iconLabeled('met'), findsNothing);
+    expectNoWords(tester);
 
     await _pump(tester, state: daily(today: 29, asks: 30));
-    expect(
-      find.text('1 more page today: on pace, PC open, +1h'),
-      findsOneWidget,
-    );
+    expect(find.text('1'), findsOneWidget);
   });
 
   testWidgets('a daily day that met its number, or has the bonus', (
     tester,
   ) async {
     await _pump(tester, state: daily(today: 35, asks: 30));
-    expect(find.text('Today: 35 / 30 pages'), findsOneWidget);
+    expect(find.text('35 / 30'), findsOneWidget);
     expect(bar(tester), 1);
-    expect(find.text('On pace: PC open, +1h earned'), findsOneWidget);
+    expect(iconLabeled('met'), findsOneWidget);
+    expect(iconLabeled('pages still to read'), findsNothing);
+    expect(iconLabeled('one hour earned'), findsOneWidget);
 
     await _pump(tester, state: daily(today: 5, asks: 30, bonus: true));
-    expect(find.text('On pace: PC open, +1h earned'), findsOneWidget);
+    expect(iconLabeled('met'), findsOneWidget);
 
     await _pump(tester, state: daily(today: 0, asks: 0));
     expect(bar(tester), 1);
-    expect(find.text('On pace: PC open, +1h earned'), findsOneWidget);
+    expect(iconLabeled('met'), findsOneWidget);
   });
 
   testWidgets('a sick day asks nothing but still earns the hour', (
     tester,
   ) async {
     await _pump(tester, state: daily(today: 5, asks: 15, quota: 0));
-    expect(find.text('Today: 5 / 15 pages'), findsOneWidget);
-    expect(
-      find.text('Sick day: nothing asked; 10 more pages still earn the +1h'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('PC open'), findsNothing);
+    expect(find.text('5 / 15'), findsOneWidget);
+    expect(iconLabeled('sick day'), findsOneWidget);
+    expect(find.text('10'), findsOneWidget); // still to read for the hour
+    expect(iconLabeled('met'), findsNothing);
 
     await _pump(tester, state: daily(today: 14, asks: 15, quota: 0));
-    expect(
-      find.text('Sick day: nothing asked; 1 more page still earns the +1h'),
-      findsOneWidget,
-    );
+    expect(find.text('1'), findsOneWidget);
 
     await _pump(tester, state: daily(today: 15, asks: 15, quota: 0));
-    expect(find.text('Sick day: +1h earned'), findsOneWidget);
+    expect(iconLabeled('sick day'), findsOneWidget);
+    expect(iconLabeled('met'), findsOneWidget);
+    expectNoWords(tester);
   });
 
   testWidgets('excused sick pages show in both cards', (tester) async {
-    const line = 'Sick days excused: 45 pages off the target';
     await _pump(tester, state: daily(today: 10, asks: 30, excused: 45));
-    expect(find.text(line), findsOneWidget);
+    expect(iconLabeled('sick days excused'), findsOneWidget);
+    expect(find.text('45'), findsOneWidget);
     await _pump(
       tester,
       state: sampleState({
         'pace': {...fullState()['pace'] as Map<String, dynamic>, 'excused': 45},
       }),
     );
-    expect(find.text(line), findsOneWidget);
-    expect(find.text("130 pages behind today's line (250)"), findsOneWidget);
+    expect(iconLabeled('sick days excused'), findsOneWidget);
+    expect(find.text('130'), findsOneWidget);
+    expect(find.text('250'), findsOneWidget);
   });
 
   testWidgets('an older PC (not daily) keeps the month card', (tester) async {
@@ -133,11 +131,11 @@ void main() {
         },
       }),
     );
-    expect(find.text('2026-09'), findsOneWidget);
-    expect(find.text('120 / 320 pages'), findsOneWidget);
+    expect(find.text('09 · 2026'), findsOneWidget);
+    expect(find.text('120 / 320'), findsOneWidget);
     expect(bar(tester), closeTo(120 / 320, 1e-9));
-    expect(find.text("130 pages behind today's line (250)"), findsOneWidget);
-    expect(find.textContaining('Today:'), findsNothing);
-    expect(find.textContaining('excused'), findsNothing);
+    expect(find.text('130'), findsOneWidget);
+    expect(find.byIcon(Icons.today), findsNothing);
+    expect(iconLabeled('sick days excused'), findsNothing);
   });
 }

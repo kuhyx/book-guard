@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_read.dart';
 import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
@@ -50,17 +53,18 @@ void main() {
   ) async {
     api.readings['start_IMG_1.jpg'] = reading(page: 7);
     await pump(tester, photo: _photo('IMG_1.jpg'));
-    expect(
-      find.text('Photograph the open page (number visible) when you start.'),
-      findsOneWidget,
-    );
     expect(find.byIcon(Icons.photo_camera), findsOneWidget);
-    await tapVisible(tester, find.text('Start reading'));
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    await tapVisible(tester, spoken('Start reading'));
     await settle(tester);
     expect(cameras, [true]);
     expect(api.photos, {'start_IMG_1.jpg': _bytes});
-    // The note under the buttons and the toast both say what the PC saw.
-    expect(find.text('Read as page 7.'), findsNWidgets(2));
+    // One green chip with the page the PC read.
+    expect(cueOf(CueKind.ok), findsOneWidget);
+    expect(
+      find.descendant(of: cueOf(CueKind.ok), matching: find.text('7')),
+      findsOneWidget,
+    );
     expect(find.byType(LinearProgressIndicator), findsNothing);
     expect(changed, 1);
   });
@@ -72,9 +76,16 @@ void main() {
       desktop: true,
       photo: _photo('p.jpg'),
     );
-    expect(find.textContaining('Reading since p. 55'), findsOneWidget);
+    // Mid-session: stop glyph and the page reading began at.
+    expect(
+      find.descendant(
+        of: buttonSpoken('Stop reading'),
+        matching: find.text('55'),
+      ),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.upload_file), findsOneWidget);
-    await tapVisible(tester, find.text('Stop reading'));
+    await tapVisible(tester, spoken('Stop reading'));
     await settle(tester);
     expect(cameras, [false]);
     expect(api.photos.keys, ['stop_p.jpg']);
@@ -82,34 +93,28 @@ void main() {
 
   testWidgets('a check page gets its own button and file name', (tester) async {
     await pump(tester, state: sampleState(), photo: _photo('c.jpg'));
-    await tapVisible(tester, find.text('Photograph page 12'));
+    expect(find.text('12'), findsOneWidget);
+    await tapVisible(tester, find.byIcon(Icons.fact_check));
     await settle(tester);
     expect(api.photos.keys, ['check12_c.jpg']);
   });
 
-  testWidgets('a photo the PC rejects says so and how to fix it', (
-    tester,
-  ) async {
+  testWidgets('a photo the PC rejects wears its reject glyph', (tester) async {
     api.readings['start_x.jpg'] = reading(kind: 'other', page: null);
     await pump(tester, photo: _photo('x.jpg'));
-    await tapVisible(tester, find.text('Start reading'));
+    await tapVisible(tester, spoken('Start reading'));
     await settle(tester);
-    expect(
-      find.text(
-        'Not accepted: not a page. Retake it with the page number in view.',
-      ),
-      findsNWidgets(2),
-    );
+    expect(rejected(RejectGlyph.notPage), findsOneWidget);
+    expect(cueOf(CueKind.ok), findsNothing);
   });
 
-  testWidgets('a photo the PC has not read yet says so', (tester) async {
+  testWidgets('a photo the PC has not read yet is a warning cue', (
+    tester,
+  ) async {
     await pump(tester, photo: _photo('x.jpg'));
-    await tapVisible(tester, find.text('Start reading'));
+    await tapVisible(tester, spoken('Start reading'));
     await settle(tester);
-    expect(
-      find.text('The PC has not read it yet - it will when it is on.'),
-      findsNWidgets(2),
-    );
+    expect(cueOf(CueKind.warn), findsOneWidget);
   });
 
   testWidgets('buttons stay locked until the PC has read the photo', (
@@ -127,19 +132,18 @@ void main() {
         photoSource: ({required camera}) async => _photo('s.jpg'),
       ),
     );
-    await tapVisible(tester, find.text('Start reading'));
+    await tapVisible(tester, spoken('Start reading'));
     await settle(tester);
-    expect(find.text('Uploaded - waiting for the PC...'), findsOneWidget);
-    final button = tester.widget<FilledButton>(
-      find.ancestor(
-        of: find.text('Start reading'),
-        matching: find.byWidgetPredicate((w) => w is FilledButton),
-      ),
-    );
+    expect(cueWith(Icons.cloud_upload), findsOneWidget);
+    final button = tester.widget<FilledButton>(buttonSpoken('Start reading'));
     expect(button.onPressed, isNull);
     read.complete(reading(name: 'start_s.jpg', page: 3));
     await settle(tester);
-    expect(find.text('Read as page 3.'), findsNWidgets(2));
+    expect(cueOf(CueKind.ok), findsOneWidget);
+    expect(
+      find.descendant(of: cueOf(CueKind.ok), matching: find.text('3')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a result arriving after the tab closed is dropped', (
@@ -156,12 +160,12 @@ void main() {
         photoSource: ({required camera}) async => _photo('s.jpg'),
       ),
     );
-    await tapVisible(tester, find.text('Start reading'));
+    await tapVisible(tester, spoken('Start reading'));
     await settle(tester);
     await tester.pumpWidget(const SizedBox());
     read.complete(reading(page: 3));
     await settle(tester);
-    expect(find.text('Read as page 3.'), findsNothing);
+    expect(cueOf(CueKind.ok), findsNothing);
   });
 
   testWidgets('defaults to image_picker, gallery on the desktop', (
@@ -190,7 +194,7 @@ void main() {
         onChanged: () async => changed++,
       ),
     );
-    await tapVisible(tester, find.text('Start reading'));
+    await tapVisible(tester, spoken('Start reading'));
     await settle(tester);
     expect(calls.single.method, 'pickImage');
     // 1 = ImageSource.gallery; no resize/quality options are sent.

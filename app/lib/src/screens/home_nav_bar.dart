@@ -24,23 +24,23 @@ class HomeNavBar extends StatelessWidget {
   Widget build(BuildContext context) => NavigationBar(
     selectedIndex: selected,
     onDestinationSelected: onSelected,
+    labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
     destinations: [
-      const NavigationDestination(icon: Icon(Icons.insights), label: 'Status'),
-      NavigationDestination(
-        icon: Badge(
-          isLabelVisible: readWaiting,
-          child: const Icon(Icons.menu_book),
-        ),
-        label: 'Read',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.library_books),
-        label: 'Book',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.local_library),
-        label: 'Library',
-      ),
+      _tab(Icons.insights, 'status'),
+      _tab(Icons.menu_book, 'read', dot: readWaiting),
+      _tab(Icons.library_books, 'book'),
+      _tab(Icons.local_library, 'library'),
     ],
+  );
+}
+
+/// One icon-only destination: no label and no tooltip, so nothing is
+/// painted but the glyph; the name is only spoken.
+NavigationDestination _tab(IconData glyph, String name, {bool dot = false}) {
+  final icon = Icon(glyph, semanticLabel: name);
+  return NavigationDestination(
+    icon: dot ? Badge(child: icon) : icon,
+    label: '',
+    tooltip: '',
   );
 }

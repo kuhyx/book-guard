@@ -46,11 +46,9 @@ void main() {
       'a queued summary waits on the phone, its answer comes later',
       () async {
         share.down = true;
-        final queued = await api.sendQueued('summary', {
-          's': 1,
-        }, 'Summary p. 51-103');
+        final queued = await api.sendQueued('summary', {'s': 1});
         expect(queued.ok, isTrue);
-        expect(queued.message, contains('Saved on the phone'));
+        expect(queued.code, 'queued');
         share.down = false;
         expect(await api.collectAnswers(), isEmpty); // sent, not answered yet
         await api.flush();
@@ -60,25 +58,25 @@ void main() {
         final id = request.split('/').last.replaceAll('.json', '');
         share.putText(
           'Reading/responses/$id.json',
-          jsonEncode({'ok': true, 'message': 'Credited', 'passed': true}),
+          jsonEncode({'ok': true, 'code': 'passed', 'passed': true}),
         );
         final answer = (await api.collectAnswers()).single;
-        expect(answer.what, 'Summary p. 51-103');
+        expect(answer.what, 'summary');
         expect(answer.response.passed, isTrue);
         expect(await api.collectAnswers(), isEmpty);
       },
     );
 
     test('online, a queued request is answered at once', () async {
-      share.answer = (r) => {'ok': true, 'message': 'graded ${r['type']}'};
-      final response = await api.sendQueued('summary', {}, 'what');
-      expect(response.message, 'graded summary');
+      share.answer = (r) => {'ok': true, 'code': 'saved'};
+      final response = await api.sendQueued('summary', {});
+      expect(response.code, 'saved');
       expect(await store.list('pending/'), isEmpty);
     });
 
     test('online but unanswered: not yet, and kept for later', () async {
-      final response = await api.sendQueued('summary', {}, 'what');
-      expect(response.message, contains('has not answered yet'));
+      final response = await api.sendQueued('summary', {});
+      expect(response.code, 'not_yet');
       expect(await store.list('pending/'), hasLength(1));
     });
 

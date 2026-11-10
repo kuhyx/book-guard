@@ -3,7 +3,7 @@ import 'package:book_guard_app/src/screens/icon_pickers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../support/no_words.dart';
+import '../../support/no_letters.dart';
 
 void main() {
   late List<DateTime?> results;
@@ -63,7 +63,7 @@ void main() {
       last: DateTime.utc(2026, 12, 3),
     );
     expect(find.text('2026 · 11'), findsOneWidget);
-    expectNoWords(
+    expectNoLetters(
       tester,
       find.byType(IconDateDialog),
       spoken: [

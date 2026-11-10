@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from book_guard import _app_handlers, _ledger
@@ -22,23 +23,21 @@ if TYPE_CHECKING:
 
 def test_edit_book_validates_and_needs_a_book(bg_paths: Paths) -> None:
     edit = HANDLERS["edit_book"]
-    assert edit(bg_paths, {"pages": -3}) == Response(
-        ok=False, message="The last page must be a positive number."
-    )
-    assert edit(bg_paths, {"isbn": "12"}) == Response(
-        ok=False, message="That is not a 10- or 13-digit ISBN."
-    )
-    assert edit(bg_paths, {"pages": 5}) == Response(
-        ok=False, message="No book registered yet."
-    )
+    assert edit(bg_paths, {"pages": -3}) == Response(ok=False, code="bad_pages")
+    assert edit(bg_paths, {"isbn": "12"}) == Response(ok=False, code="bad_isbn")
+    assert edit(bg_paths, {"pages": 5}) == Response(ok=False, code="no_book")
 
 
-def test_edit_book_keeps_what_the_form_did_not_send(bg_paths: Paths) -> None:
+def test_edit_book_keeps_what_the_form_did_not_send(
+    bg_paths: Paths, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO)
     add_book(bg_paths, pages=None)
     edit = HANDLERS["edit_book"]
     assert edit(bg_paths, {"pages": 412}) == Response(
-        ok=True, message="Saved: War -- Tol"
+        ok=True, code="saved", data={"pages": 412}
     )
+    assert "edited: War -- Tol" in caplog.text
     chapters = [
         {"start": 30, "title": "Two"},
         {"start": 1, "title": " One "},
@@ -75,27 +74,28 @@ def test_lookup_answers_with_fields(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     lookup = HANDLERS["lookup"]
-    assert lookup(bg_paths, {"isbn": "1"}).message.startswith("That is not")
+    assert lookup(bg_paths, {"isbn": "1"}) == Response(ok=False, code="bad_isbn")
     found = BookInfo(title="War", author="Tol", pages=900, isbn=ISBN13)
     monkeypatch.setattr(_app_handlers, "lookup_book", lambda _p, _i: found)
     assert lookup(bg_paths, {"isbn": ISBN13}) == Response(
         ok=True,
-        message="Found: War, 900 p",
+        code="found",
         data={"isbn": ISBN13, "title": "War", "author": "Tol", "pages": 900},
     )
     bare = BookInfo(title="War", author="", pages=None, isbn=ISBN13)
     monkeypatch.setattr(_app_handlers, "lookup_book", lambda _p, _i: bare)
-    assert lookup(bg_paths, {"isbn": ISBN13}).message == "Found: War"
+    assert lookup(bg_paths, {"isbn": ISBN13}).data == {
+        "isbn": ISBN13,
+        "title": "War",
+        "author": "",
+        "pages": None,
+    }
     monkeypatch.setattr(_app_handlers, "lookup_book", lambda _p, _i: None)
-    assert lookup(bg_paths, {"isbn": ISBN13}) == Response(
-        ok=False, message=f"No source knows ISBN {ISBN13}."
-    )
+    assert lookup(bg_paths, {"isbn": ISBN13}) == Response(ok=False, code="unknown_isbn")
 
     def offline(_p: Paths, _i: str) -> None:
         msg = "down"
         raise UnavailableError(msg)
 
     monkeypatch.setattr(_app_handlers, "lookup_book", offline)
-    assert lookup(bg_paths, {"isbn": ISBN13}).message == (
-        "No book source reachable (down)"
-    )
+    assert lookup(bg_paths, {"isbn": ISBN13}) == Response(ok=False, code="offline")

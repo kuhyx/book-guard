@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -29,14 +30,14 @@ Out = pytest.CaptureFixture[str]
 
 def test_note_upsert_update_and_stale_edit(bg_paths: Paths) -> None:
     add_book(bg_paths)
-    assert note(bg_paths) == (True, "Note saved.")
+    assert note(bg_paths) == (True, "note_saved")
     assert note(bg_paths, text="A shark.", updated_at="2026-10-06T10:00:00Z") == (
         True,
-        "Note updated.",
+        "note_updated",
     )
     assert note(bg_paths, text="old", updated_at="2026-10-01T00:00:00Z") == (
         True,
-        "A newer edit of this note is already saved.",
+        "note_kept",
     )
     assert note(bg_paths, text="A shark.", updated_at="2026-10-07T00:00:00Z")[0]
     (saved,) = _notes.load(bg_paths).values()
@@ -57,12 +58,16 @@ def test_note_upsert_update_and_stale_edit(bg_paths: Paths) -> None:
     ],
 )
 def test_note_refusals(
-    bg_paths: Paths, fields: dict[str, object], problem: str
+    bg_paths: Paths,
+    caplog: pytest.LogCaptureFixture,
+    fields: dict[str, object],
+    problem: str,
 ) -> None:
+    caplog.set_level(logging.INFO)
     add_book(bg_paths)
-    ok, message = note(bg_paths, **fields)
-    assert not ok
-    assert problem in message
+    assert note(bg_paths, **fields) == (False, "bad_note")
+    assert problem in caplog.text
+    assert not bg_paths.notes.exists()
 
 
 @pytest.mark.parametrize(

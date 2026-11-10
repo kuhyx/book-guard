@@ -67,7 +67,7 @@ class FakeApi extends GuardApi {
     final request = (type: type, body: body);
     sent.add(request);
     final answer = onSend;
-    if (answer == null) return GuardResponse(ok: true, message: 'done $type');
+    if (answer == null) return const GuardResponse(ok: true, code: 'saved');
     return await answer(request);
   }
 
@@ -120,11 +120,10 @@ class FakeApi extends GuardApi {
   Future<GuardResponse> sendQueued(
     String type,
     Map<String, Object?> body,
-    String what,
   ) async {
     if (offline) {
       sent.add((type: type, body: body));
-      return const GuardResponse(ok: true, message: 'Saved on the phone');
+      return const GuardResponse(ok: true, code: 'queued');
     }
     return await send(type, body);
   }

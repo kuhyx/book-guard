@@ -3,17 +3,22 @@ import 'dart:async';
 import 'package:book_guard_app/src/ebook_store.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/book_cues.dart';
 import 'package:book_guard_app/src/screens/ebook_reader.dart';
 import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:book_guard_app/src/screens/session_times.dart' show hhmm;
 import 'package:book_guard_app/src/screens/summary_panel.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// The Read tab's way into in-app reading: "Read in app (≈ p. N)" for the
-/// current book once the PC has a page map for it, and the summary box of
-/// a session stopped here that the PC does not list yet (offline, or not
-/// processed): it can be written at once and goes up through the outbox.
+/// The Read tab's way into in-app reading: a reader button with the
+/// estimated page (`≈ N`) for the current book once the PC has a page map
+/// for it (a clock and the start time while a session runs), and the
+/// summary box of a session stopped here that the PC does not list yet
+/// (offline, or not processed): it can be written at once and goes up
+/// through the outbox.
 ///
 /// The book's text and map are downloaded once and kept on the device, so
 /// the reader opens with the PC and the network both gone.
@@ -137,9 +142,15 @@ class _EbookEntryState extends State<EbookEntry> {
     await _load();
     unawaited(widget.onChanged());
     if (done != null && mounted) {
-      showToast(
+      // Saved: its summary is written below.
+      showCue(
         context,
-        'In-app reading ${done.info.span} saved - write its summary below.',
+        const Cue(
+          CueKind.ok,
+          icon: Icons.chrome_reader_mode,
+          semanticLabel: 'In-app reading saved: write its summary below',
+        ),
+        badge: Text(pageSpan(done.info)),
       );
     }
   }
@@ -172,20 +183,27 @@ class _EbookEntryState extends State<EbookEntry> {
             child: Row(
               children: [
                 Flexible(
-                  child: FilledButton.tonalIcon(
+                  child: GlyphButton(
+                    icon: Icons.chrome_reader_mode,
+                    semanticLabel: running == null
+                        ? 'Read in app'
+                        : 'Continue reading in app',
+                    filled: true,
                     onPressed: () => _open(ebook),
-                    icon: const Icon(Icons.chrome_reader_mode),
-                    label: Text(
-                      running == null
-                          ? 'Read in app (≈ p. ${_openingPage(ebook.map)})'
-                          : 'Continue reading in app (since '
-                                '${hhmm(running.startedAt)})',
-                    ),
+                    badge: running == null
+                        ? Text('≈ ${_openingPage(ebook.map)}')
+                        : IconNumber(
+                            Icons.schedule,
+                            hhmm(running.startedAt),
+                            semanticLabel: 'Since',
+                          ),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Reading settings',
-                  icon: const Icon(Icons.text_fields),
+                  icon: const Icon(
+                    Icons.text_fields,
+                    semanticLabel: 'Reading settings',
+                  ),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => ReadingSettingsScreen(api: widget.api),
@@ -196,11 +214,15 @@ class _EbookEntryState extends State<EbookEntry> {
             ),
           )
         else if (book?.ebook != null && _tried)
-          const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.sm),
-            child: Text(
-              'The book for in-app reading downloads when the PC is '
-              'reachable.',
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Icon(
+              Icons.cloud_download_outlined,
+              size: 32,
+              color: Theme.of(context).colorScheme.outline,
+              semanticLabel:
+                  'The book for in-app reading downloads when the PC is '
+                  'reachable',
             ),
           ),
         for (final s in stopped)

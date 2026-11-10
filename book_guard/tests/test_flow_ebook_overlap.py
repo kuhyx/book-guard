@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import logging
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,6 +15,7 @@ from book_guard import (
 )
 from book_guard._photo_context import context_for
 from book_guard._photos import load as load_photos
+from book_guard._requests import Response
 from book_guard._sessions import NEEDS_QUIZ
 from book_guard._state import OVERLAP, snapshot
 from book_guard.tests._ebook_flow import (
@@ -42,11 +44,14 @@ def test_two_app_sessions_cannot_overlap(mapped: Paths) -> None:
         started_at=(NOW - timedelta(minutes=90)).isoformat(),
         ended_at=(NOW - timedelta(minutes=10)).isoformat(),
     )
-    assert not other.ok
-    assert "overlaps" in other.message
+    assert other == Response(ok=False, code="overlap")
+    assert len(_ebook_sessions.load(mapped)) == 1
 
 
-def test_an_app_session_cannot_overlap_paper_reading(mapped: Paths) -> None:
+def test_an_app_session_cannot_overlap_paper_reading(
+    mapped: Paths, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.INFO)
     records = load_photos(mapped.photos)
     seed_photos(
         mapped,
@@ -55,8 +60,8 @@ def test_an_app_session_cannot_overlap_paper_reading(mapped: Paths) -> None:
         rec("b", 70, NOW - timedelta(minutes=90)),
     )
     response = send_session(mapped)
-    assert not response.ok
-    assert "paper" in response.message
+    assert response == Response(ok=False, code="paper_overlap")
+    assert "You were reading on paper then (p. 60-70)" in caplog.text
 
 
 def test_an_open_paper_start_does_not_block_an_app_session(mapped: Paths) -> None:
@@ -151,5 +156,5 @@ def test_sessions_at_other_times_do_not_clash(mapped: Paths) -> None:
         started_at=(NOW - timedelta(minutes=50)).isoformat(),
         ended_at=(NOW - timedelta(minutes=5)).isoformat(),
     )
-    assert later.ok, later.message
+    assert later.ok, later.code
     assert len(_ebook_sessions.load(mapped)) == 2

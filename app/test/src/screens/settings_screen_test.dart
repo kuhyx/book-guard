@@ -1,14 +1,16 @@
 import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:book_guard_app/src/screens/settings_screen.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 
-Finder _field(String label) => find.widgetWithText(TextField, label);
+Finder _field(String label) => inputLabeled(label);
 
 void main() {
   late int saved;
@@ -32,25 +34,39 @@ void main() {
     await settle(tester);
     expect(find.text('https://old.host'), findsOneWidget);
     expect(find.text('bookguard'), findsOneWidget);
+    // A link, a person and a key caption the three fields.
+    for (final icon in [Icons.link, Icons.person, Icons.key]) {
+      expect(find.byIcon(icon), findsOneWidget);
+    }
     final password = tester.widget<TextField>(_field('Password'));
     expect(password.obscureText, isTrue);
     expect(password.controller?.text, 'old');
   });
 
-  testWidgets('refuses to save an incomplete login', (tester) async {
+  testWidgets('refuses to save an incomplete login: red field, error cue', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(theme: buildLightTheme(), home: screen()),
     );
     await settle(tester);
     await tester.enterText(_field('Password'), '   ');
-    await tapVisible(tester, find.text('Save'));
+    expect(fieldIsRed(tester, 'Password'), isFalse);
+    await tapLabeled(tester, 'Save');
     await settle(tester);
-    expect(find.text('Fill in all three fields.'), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
+    expect(fieldIsRed(tester, 'Password'), isTrue);
+    expect(fieldIsRed(tester, 'User'), isFalse);
+    expect(fieldIsRed(tester, 'dufs URL'), isFalse);
     expect(saved, 0);
     expect(
       await const FlutterSecureStorage().read(key: 'dufs_password'),
       'old',
     );
+    // Typing into the red field takes the red away.
+    await tester.enterText(_field('Password'), 'x');
+    await tester.pump();
+    expect(fieldIsRed(tester, 'Password'), isFalse);
   });
 
   testWidgets('saves a trimmed login and pops back', (tester) async {
@@ -72,10 +88,10 @@ void main() {
     await tester.enterText(_field('dufs URL'), ' https://new.host// ');
     await tester.enterText(_field('User'), ' me ');
     await tester.enterText(_field('Password'), ' pw ');
-    await tapVisible(tester, find.text('Save'));
+    await tapLabeled(tester, 'Save');
     await tester.pumpAndSettle();
     expect(saved, 1);
-    expect(find.text('Connection'), findsNothing);
+    expect(find.byType(SettingsScreen), findsNothing);
     expect(find.text('open'), findsOneWidget);
     final login = await LoginStore().load();
     expect(
@@ -89,10 +105,10 @@ void main() {
       MaterialApp(theme: buildLightTheme(), home: screen()),
     );
     await settle(tester);
-    await tapVisible(tester, find.text('Save'));
+    await tapLabeled(tester, 'Save');
     await settle(tester);
     expect(saved, 1);
-    expect(find.text('Connection'), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsOneWidget);
   });
 
   testWidgets('closing before the keystore answers is harmless', (
@@ -118,7 +134,7 @@ void main() {
       ),
     );
     await settle(tester);
-    await tapVisible(tester, find.text('Reading'));
+    await tapLabeled(tester, 'Reading');
     await tester.pumpAndSettle();
     expect(find.byType(ReadingSettingsScreen), findsOneWidget);
   });
@@ -128,6 +144,7 @@ void main() {
       MaterialApp(theme: buildLightTheme(), home: screen()),
     );
     await settle(tester);
-    expect(find.text('Reading'), findsNothing);
+    expect(iconLabeled('Reading'), findsNothing);
+    expect(find.byIcon(Icons.text_fields), findsNothing);
   });
 }

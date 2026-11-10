@@ -6,12 +6,15 @@ import 'package:book_guard_app/src/screens/book_tab.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_a.dart';
+import '../../support/no_words.dart';
 import '../../support/states.dart';
 
 void main() {
@@ -41,8 +44,8 @@ void main() {
   }
 
   Badge readBadge(WidgetTester tester) => tester.widget<Badge>(
-    find.ancestor(
-      of: find.byIcon(Icons.menu_book),
+    find.descendant(
+      of: find.byType(NavigationBar),
       matching: find.byType(Badge),
     ),
   );
@@ -50,10 +53,10 @@ void main() {
   testWidgets('fetches on open and every refreshEvery', (tester) async {
     await pump(tester);
     expect(api.fetches, 1);
-    expect(find.text('PC locked: Read 20 pages to unlock'), findsOneWidget);
+    expect(find.byIcon(Icons.lock), findsOneWidget);
     await tester.pump(const Duration(seconds: 1));
     expect(api.fetches, 2);
-    await tester.tap(find.byTooltip('Refresh'));
+    await tester.tap(iconLabeled('refresh'));
     await settle(tester);
     expect(api.fetches, 3);
   });
@@ -62,22 +65,29 @@ void main() {
     await pump(tester);
     expect(readBadge(tester).isLabelVisible, isTrue);
     api.state = sampleState({'sessions': const <Object>[]});
-    await tester.tap(find.byTooltip('Refresh'));
+    await tester.tap(iconLabeled('refresh'));
     await settle(tester);
-    expect(readBadge(tester).isLabelVisible, isFalse);
+    expect(find.byType(Badge), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byType(Badge),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('switches between the three tabs', (tester) async {
     await pump(tester, desktop: true);
     expect(find.byType(StatusTab), findsOneWidget);
-    await tester.tap(find.text('Read'));
+    await tester.tap(navTab(Icons.menu_book));
     await settle(tester);
     expect(find.byType(ReadTab), findsOneWidget);
     expect(tester.widget<ReadTab>(find.byType(ReadTab)).desktop, isTrue);
-    await tester.tap(find.text('Book'));
+    await tester.tap(navTab(Icons.library_books));
     await settle(tester);
     expect(find.byType(BookTab), findsOneWidget);
-    await tester.tap(find.text('Status'));
+    await tester.tap(navTab(Icons.insights));
     await settle(tester);
     expect(find.byType(StatusTab), findsOneWidget);
   });
@@ -87,17 +97,18 @@ void main() {
   ) async {
     api.fetchError = shareDown();
     await pump(tester);
-    expect(find.text('dufs Reading/x failed (500)'), findsOneWidget);
+    expect(find.text('500'), findsOneWidget);
+    expect(find.byIcon(Icons.error), findsOneWidget);
     api.fetchError = null;
     await tester.pump(const Duration(seconds: 1));
     await settle(tester);
-    expect(find.text('dufs Reading/x failed (500)'), findsNothing);
-    expect(find.text('PC locked: Read 20 pages to unlock'), findsOneWidget);
+    expect(find.byIcon(Icons.error), findsNothing);
+    expect(find.byIcon(Icons.lock), findsOneWidget);
   });
 
   testWidgets('no settings button without a settings page', (tester) async {
     await pump(tester, desktop: true);
-    expect(find.byTooltip('Connection'), findsNothing);
+    expect(iconLabeled('connection'), findsNothing);
   });
 
   testWidgets('the settings button pushes the settings page', (tester) async {
@@ -105,14 +116,19 @@ void main() {
       tester,
       settingsPage: () => const Scaffold(body: Text('settings page')),
     );
-    await tester.tap(find.byTooltip('Connection'));
+    await tester.tap(iconLabeled('connection'));
     await tester.pumpAndSettle();
     expect(find.text('settings page'), findsOneWidget);
   });
 
+  testWidgets('the bar paints no title and no tooltip', (tester) async {
+    await pump(tester);
+    expectNoWords(tester);
+  });
+
   testWidgets('a fetch finishing after close is dropped', (tester) async {
     await pump(tester);
-    await tester.tap(find.byTooltip('Refresh'));
+    await tester.tap(iconLabeled('refresh'));
     await tester.pumpWidget(const SizedBox());
     api.fetchError = shareDown();
     await settle(tester);
@@ -137,63 +153,64 @@ void main() {
       ..fetchError = const DavException('Reading/state.json', 0, 'unreachable')
       ..offline = true;
     await pump(tester);
-    expect(find.textContaining('Working offline'), findsOneWidget);
-    expect(find.textContaining('Showing the state from 3.10'), findsOneWidget);
-    expect(find.textContaining('1 item(s) wait on the phone'), findsOneWidget);
-    expect(find.text('on pace'), findsOneWidget);
+    expect(find.byIcon(Icons.cloud_off), findsOneWidget);
+    expect(find.textContaining('03.10'), findsOneWidget);
+    expect(find.byIcon(Icons.outbox), findsOneWidget);
+    expect(find.byIcon(Icons.lock_open), findsOneWidget);
   });
 
-  testWidgets('offline with nothing cached or queued says so plainly', (
+  testWidgets('offline with nothing cached or queued is just the cloud', (
     tester,
   ) async {
     api.fetchError = const DavException('Reading/state.json', 0);
     await pump(tester);
-    expect(
-      find.text(
-        'Working offline - the PC cannot be reached. Photos, page numbers '
-        'and summaries all work offline.',
+    expect(find.byIcon(Icons.cloud_off), findsOneWidget);
+    expect(find.byIcon(Icons.outbox), findsNothing);
+    expect(find.byIcon(Icons.history), findsNothing);
+  });
+
+  testWidgets('late answers are one cue, the worst kind, with a count', (
+    tester,
+  ) async {
+    api.answers = [
+      (
+        what: 'summary',
+        response: const GuardResponse(ok: true, code: 'passed', passed: true),
       ),
+      (
+        what: 'reread',
+        response: const GuardResponse(ok: false, code: 'no_page'),
+      ),
+    ];
+    await pump(tester);
+    expect(shownCue, findsOneWidget);
+    expect(shownCueKind(tester), CueKind.error);
+    expect(inShownCue(Icons.crop_free), findsOneWidget);
+    expect(
+      find.descendant(of: shownCue, matching: find.text('2')),
       findsOneWidget,
     );
   });
 
-  testWidgets('late answers are shown once they arrive', (tester) async {
+  testWidgets('a good late answer is an ok cue', (tester) async {
     api.answers = [
       (
-        what: 'Summary for p. 51-103',
-        response: const GuardResponse(
-          ok: true,
-          message: 'Credited',
-          passed: true,
-        ),
-      ),
-      (
-        what: 'Re-read of a.jpg',
-        response: const GuardResponse(ok: false, message: 'Still no number'),
+        what: 'summary',
+        response: const GuardResponse(ok: true, code: 'passed', passed: true),
       ),
     ];
     await pump(tester);
-    expect(
-      find.text(
-        'Summary for p. 51-103: Credited\nRe-read of a.jpg: Still no number',
-      ),
-      findsOneWidget,
-    );
+    expect(shownCueKind(tester), CueKind.ok);
+    expect(inShownCue(Icons.check_circle), findsOneWidget);
   });
 
-  testWidgets('good late answers are a plain toast', (tester) async {
-    api.answers = [
-      (
-        what: 'Summary for p. 51-103',
-        response: const GuardResponse(
-          ok: true,
-          message: 'Credited',
-          passed: true,
-        ),
-      ),
-    ];
+  testWidgets('an unknown failed reply is an error, never a sentence', (
+    tester,
+  ) async {
+    api.answers = [(what: 'note', response: const GuardResponse(ok: false))];
     await pump(tester);
-    expect(find.text('Summary for p. 51-103: Credited'), findsOneWidget);
+    expect(shownCueKind(tester), CueKind.error);
+    expectNoWords(tester);
   });
 
   testWidgets('diagnostics go to the clipboard', (tester) async {
@@ -209,12 +226,11 @@ void main() {
     );
     await api.errors.log('photo', 'no page number found');
     await pump(tester);
-    await tester.tap(find.byTooltip('Copy diagnostics'));
+    await tester.tap(iconLabeled('copy diagnostics'));
     await settle(tester);
     expect(copied, contains('no page number found'));
-    expect(
-      find.text('Diagnostics copied - paste them to Claude.'),
-      findsOneWidget,
-    );
+    expect(shownCueKind(tester), CueKind.ok);
+    expect(inShownCue(Icons.check_circle), findsNothing);
+    expect(inShownCue(Icons.content_paste), findsOneWidget);
   });
 }

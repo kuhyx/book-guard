@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
+import 'package:book_guard_app/src/screens/book_cues.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
+import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -45,8 +49,11 @@ class _BookFinderState extends State<BookFinder> {
   /// registering their own edition.
   String? _unknown;
 
-  /// The title of the last search that came back empty, shown as a miss.
-  String? _missed;
+  /// Whether the last search came back empty (shown as a miss).
+  bool _missed = false;
+
+  /// A search was tried with no title: the title field is red.
+  bool _titleEmpty = false;
   bool _busy = false;
 
   @override
@@ -63,7 +70,7 @@ class _BookFinderState extends State<BookFinder> {
     try {
       await action();
     } on Exception catch (error) {
-      if (mounted) showError(context, '$error');
+      if (mounted) reportFailure(context, widget.api, 'finder', error);
     } finally {
       if (mounted) setState(() => _busy = false);
       unawaited(widget.onChanged());
@@ -73,7 +80,15 @@ class _BookFinderState extends State<BookFinder> {
   Future<void> _search() async {
     final title = _query.text.trim();
     if (title.isEmpty) {
-      showError(context, 'Enter a title to search.');
+      setState(() => _titleEmpty = true);
+      showCue(
+        context,
+        const Cue(
+          CueKind.error,
+          icon: Icons.title,
+          semanticLabel: 'Enter a title to search',
+        ),
+      );
       return;
     }
     await _run(() async {
@@ -81,7 +96,7 @@ class _BookFinderState extends State<BookFinder> {
       if (!mounted) return;
       setState(() {
         _hits = hits;
-        _missed = hits.isEmpty ? title : null;
+        _missed = hits.isEmpty;
       });
     });
   }
@@ -107,9 +122,7 @@ class _BookFinderState extends State<BookFinder> {
   Future<GuardResponse?> _answer(Future<GuardResponse> request) async {
     final response = await request;
     if (!mounted) return null;
-    response.ok
-        ? showToast(context, response.message)
-        : showError(context, response.message);
+    showReply(context, response);
     return response;
   }
 
@@ -152,82 +165,106 @@ class _BookFinderState extends State<BookFinder> {
     if (unknown) _titleFocus.requestFocus();
   });
 
-  /// A red outline and a "nothing found" icon while the ISBN is unknown.
-  InputDecoration _isbnDecoration(BuildContext context) {
-    const label = 'ISBN (optional)';
-    if (_unknown == null) return const InputDecoration(labelText: label);
-    final error = Theme.of(context).colorScheme.error;
-    final border = OutlineInputBorder(borderSide: BorderSide(color: error));
-    return InputDecoration(
-      labelText: label,
-      enabledBorder: border,
-      focusedBorder: border,
-      suffixIcon: Icon(
-        Icons.search_off,
-        color: error,
-        semanticLabel: 'No catalogue knows this ISBN',
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       if (_busy) const LinearProgressIndicator(),
-      const SectionHeader('Find a book'),
-      TextField(
+      const SizedBox(height: AppSpacing.md),
+      IconField(
+        icon: Icons.title,
+        semanticLabel: 'Title, e.g. Atomic Habits',
         controller: _query,
         focusNode: _titleFocus,
         textInputAction: TextInputAction.search,
+        onChanged: (_) {
+          if (_titleEmpty) setState(() => _titleEmpty = false);
+        },
         onSubmitted: (_) => _search(),
-        decoration: const InputDecoration(
-          labelText: 'Title, e.g. Atomic Habits',
-        ),
+        errorBorder: _titleEmpty,
       ),
       const SizedBox(height: AppSpacing.sm),
-      TextField(
+      IconField(
+        icon: Icons.person,
+        semanticLabel: 'Author (optional)',
         controller: _author,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _search(),
-        decoration: const InputDecoration(labelText: 'Author (optional)'),
       ),
       const SizedBox(height: AppSpacing.sm),
-      FilledButton.icon(
-        onPressed: _busy ? null : _search,
-        icon: const Icon(Icons.search),
-        label: const Text('Search'),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: GlyphButton(
+          icon: Icons.search,
+          semanticLabel: 'Search',
+          filled: true,
+          onPressed: _busy ? null : _search,
+        ),
       ),
-      if (_missed != null)
+      if (_missed)
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.sm),
-          child: Text("No books found for '$_missed' - enter the ISBN below."),
+          child: Center(
+            child: Icon(
+              Icons.search_off,
+              size: 64,
+              color: context.statusColors.warning,
+              semanticLabel: 'No books found: enter the ISBN below',
+            ),
+          ),
         ),
       for (final hit in _hits)
         ListTile(
           title: Text(hit.title),
-          subtitle: Text(
-            '${hit.author.isEmpty ? '?' : hit.author} - '
-            '${hit.pages ?? '?'} p - ISBN ${hit.isbn ?? 'none'}',
+          subtitle: Wrap(
+            spacing: AppSpacing.md,
+            children: [
+              if (hit.author.isNotEmpty) Text(hit.author),
+              IconNumber(
+                Icons.last_page,
+                hit.pages == null ? '?' : '${hit.pages}',
+                semanticLabel: 'Pages',
+              ),
+              if (hit.isbn case final isbn?)
+                IconNumber(Icons.qr_code, isbn, semanticLabel: 'ISBN'),
+            ],
           ),
-          trailing: Icon(_unknown == null ? Icons.add : Icons.link),
+          trailing: Icon(
+            _unknown == null ? Icons.add : Icons.link,
+            semanticLabel: _unknown == null ? 'Register' : 'Name the ISBN',
+          ),
           enabled: (_unknown != null || hit.isbn != null) && !_busy,
           onTap: () => _register(hit),
         ),
-      const SectionHeader('Or enter the ISBN'),
+      const SizedBox(height: AppSpacing.md),
       Row(
         children: [
           Expanded(
-            child: TextField(
+            child: IconField(
+              icon: Icons.qr_code,
+              semanticLabel: _unknown == null
+                  ? 'ISBN (optional)'
+                  : 'ISBN (optional), no catalogue knows it',
               controller: _isbn,
               keyboardType: TextInputType.number,
-              decoration: _isbnDecoration(context),
+              errorBorder: _unknown != null,
+              // Spoken by the field's own label below: a labelled icon
+              // appearing inside the merged field node trips semantics.
+              suffix: _unknown == null
+                  ? null
+                  : ExcludeSemantics(
+                      child: Icon(
+                        Icons.search_off,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          OutlinedButton(
+          GlyphButton(
+            icon: Icons.library_add,
+            semanticLabel: 'Register',
             onPressed: _busy ? null : _registerIsbn,
-            child: const Text('Register'),
           ),
         ],
       ),

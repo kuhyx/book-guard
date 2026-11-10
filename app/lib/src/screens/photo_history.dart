@@ -49,7 +49,7 @@ class PhotoHistory extends StatelessWidget {
           onChanged: onChanged,
         ),
         if (state != null && state.photos.isNotEmpty) ...[
-          const SectionHeader('Your photos'),
+          const SizedBox(height: AppSpacing.md),
           PhotoGallery(api: api, photos: state.photos),
         ],
       ],

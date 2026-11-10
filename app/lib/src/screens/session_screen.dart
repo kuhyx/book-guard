@@ -2,9 +2,12 @@ import 'dart:convert';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/book_cues.dart';
+import 'package:book_guard_app/src/screens/library_session_tile.dart'
+    show photoRoleIcon;
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
-import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -29,7 +32,7 @@ class SessionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(session.span)),
+    appBar: AppBar(title: Text(pageSpan(session))),
     body: FutureBuilder<Map<String, dynamic>?>(
       future: _load(),
       builder: (context, snapshot) {
@@ -38,9 +41,9 @@ class SessionScreen extends StatelessWidget {
         }
         final doc = snapshot.data;
         if (doc == null) {
-          return const Padding(
-            padding: EdgeInsets.all(AppSpacing.md),
-            child: Text("The PC has not written this session's details yet."),
+          return const EmptyGlyph(
+            Icons.hourglass_empty,
+            semanticLabel: "The PC has not written this session's details yet",
           );
         }
         return _Detail(api: api, session: session, doc: doc);
@@ -68,12 +71,25 @@ class _Detail extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Text('${doc['book'] ?? ''}'),
-        Text(
-          '${session.pages} pages in ${session.minutes} min - '
-          '${statusText(session)}',
+        Wrap(
+          spacing: AppSpacing.md,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            IconNumber(
+              Icons.menu_book,
+              '${session.pages}',
+              semanticLabel: 'Pages',
+            ),
+            IconNumber(
+              Icons.timer_outlined,
+              '${session.minutes}',
+              semanticLabel: 'Minutes',
+            ),
+            SessionStatusIcon(statusKey(session)),
+          ],
         ),
         SessionTimes(api: api, session: session, onChanged: () async {}),
-        const SectionHeader('Photos'),
+        const SizedBox(height: AppSpacing.md),
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
@@ -91,26 +107,49 @@ class _Detail extends StatelessWidget {
                         fit: BoxFit.cover,
                       ),
                     ),
-                    Text('${p['role']} - p. ${p['page'] ?? '?'}'),
+                    _PhotoMark(p),
                   ],
                 ),
               ),
           ],
         ),
-        const SectionHeader('What the PC read'),
         for (final p in photos)
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: Text('${p['role']} photo, p. ${p['page'] ?? '?'}'),
+            title: Align(alignment: Alignment.centerLeft, child: _PhotoMark(p)),
             children: [SelectableText('${p['text'] ?? ''}')],
           ),
-        const SectionHeader('Your summary'),
-        SelectableText(summary.isEmpty ? 'No summary written yet.' : summary),
+        const SizedBox(height: AppSpacing.md),
+        if (summary.isEmpty)
+          const EmptyGlyph(Icons.edit_note, semanticLabel: 'No summary yet')
+        else
+          SelectableText(summary),
         if (feedback.isNotEmpty) ...[
-          const SectionHeader('Grader'),
-          SelectableText(feedback),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.rate_review_outlined, semanticLabel: 'Grader'),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: SelectableText(feedback)),
+            ],
+          ),
         ],
       ],
     );
   }
+}
+
+/// A photo's role as a glyph and the page the PC read off it.
+class _PhotoMark extends StatelessWidget {
+  const new(this.photo);
+
+  final Map<String, dynamic> photo;
+
+  @override
+  Widget build(BuildContext context) => IconNumber(
+    photoRoleIcon('${photo['role']}'),
+    '${photo['page'] ?? '?'}',
+    semanticLabel: '${photo['role']}',
+  );
 }

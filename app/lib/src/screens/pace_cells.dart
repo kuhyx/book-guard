@@ -1,49 +1,37 @@
 import 'package:book_guard_app/src/pace/day_views.dart';
+import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-/// `Thu 15.10`.
+/// `15.10`: day and month as numerals.
 String shortDay(DateTime day) =>
-    '${_weekdays[pyWeekday(day)]} '
     '${day.day.toString().padLeft(2, '0')}.'
     '${day.month.toString().padLeft(2, '0')}';
 
-/// `October 2026`.
+/// `10 · 2026`.
 String monthTitle(DateTime first) =>
-    '${_months[first.month - 1]} ${first.year}';
+    '${first.month.toString().padLeft(2, '0')} · ${first.year}';
 
-const _months = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
+/// Whether [day] is a Saturday or a Sunday.
+bool isWeekend(DateTime day) => pyWeekday(day) >= 5;
 
-/// The weekday initials, Mon first.
-List<String> get weekdayInitials => [for (final d in _weekdays) d[0]];
+/// What a cell shows under the date: a glyph, a number, or both.
+typedef CellMark = ({IconData? icon, String number});
 
-/// What a cell shows under the date: `22/17` (credited/required), `34`
-/// (future: required), `free`, `sick`, `old 53` (before the switch), or
-/// `-`; the simulated day shows its simulated total, `27/17` (the cell is
-/// bold).
-String cellText(DayView v) {
-  if (v.beforeQuotas) return '-';
-  if (v.simulated != 0) return '${v.assumed}/${v.required}';
-  if (v.free) return 'free';
-  if (v.sick) return 'sick';
-  if (v.oldRule) return 'old ${v.credited}';
-  if (v.kind == DayKind.future) return '${v.required}';
-  return '${v.credited}/${v.required}';
+/// `22/17` (credited/required), `17` (future: required), a free-day or
+/// sick-day glyph, the history glyph with the credited pages (before the
+/// switch), or a bare `-`; the simulated day shows its simulated total,
+/// `27/17` (the cell is bold).
+CellMark cellMark(DayView v) {
+  if (v.beforeQuotas) return (icon: null, number: '-');
+  if (v.simulated != 0) {
+    return (icon: null, number: '${v.assumed}/${v.required}');
+  }
+  if (v.free) return (icon: freeGlyph, number: '');
+  if (v.sick) return (icon: sickGlyph, number: '');
+  if (v.oldRule) return (icon: Icons.history, number: '${v.credited}');
+  if (v.kind == DayKind.future) return (icon: null, number: '${v.required}');
+  return (icon: null, number: '${v.credited}/${v.required}');
 }
 
 /// Whether the day's pages reached its requirement (past/today): the
@@ -54,41 +42,55 @@ bool met(DayView v) =>
     !v.beforeQuotas &&
     (v.simulated != 0 ? v.assumed : v.credited) >= v.required;
 
-/// Everything about one day, as lines (the day card).
-List<String> dayLines(DayView v) {
-  final p = v.pace;
-  final when = switch (v.kind) {
-    DayKind.past => 'as it stood that morning',
-    DayKind.today => 'today, live',
-    DayKind.future => 'projected: every day before it meets its requirement',
-  };
-  if (v.beforeQuotas) return ['${shortDay(v.day)}: no page quota yet'];
-  if (v.oldRule) {
-    return [oldRuleText, 'Credited that day: ${v.credited} pages'];
+/// A past day that asked something and fell short.
+bool missed(DayView v) =>
+    v.kind == DayKind.past &&
+    !v.free &&
+    !v.sick &&
+    !v.oldRule &&
+    !v.beforeQuotas &&
+    !met(v);
+
+/// One dot for a weekday: a weekend day is larger and in the accent colour.
+class WeekdayDot extends StatelessWidget {
+  /// Creates the dot.
+  const new({required this.weekend, super.key});
+
+  /// Whether it marks Saturday or Sunday.
+  final bool weekend;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = weekend ? 10.0 : 5.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: weekend
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).hintColor,
+      ),
+    );
   }
-  final behind = p.behind > 0 ? ' (${p.behind} behind)' : ' (on pace)';
-  final delta = '${v.simulated > 0 ? '+' : ''}${v.simulated}';
-  final debt = p.carriedDebt > 0 ? ' (carried debt ${p.carriedDebt})' : '';
-  final credit = p.carriedCredit > 0
-      ? ' (carried credit ${p.carriedCredit})'
-      : '';
-  return [
-    '${shortDay(v.day)}, $when',
-    if (v.free)
-      'Free day: asks nothing'
-    else if (v.sick)
-      "Sick day: asks nothing, its share is off the month's target"
-    else if (v.kind == DayKind.future)
-      'Requirement: ${v.required} pages'
-    else
-      'Requirement: ${v.required} pages; credited ${v.credited}',
-    if (v.simulated != 0)
-      'Simulated: ${v.assumed} read ($delta)'
-    else if (v.kind == DayKind.future)
-      'Assumed read: ${v.assumed}',
-    'Line at the start of the day ${p.line}; read ${p.pages}$behind',
-    'Month target ${p.target}$debt$credit',
-  ];
+}
+
+/// Seven dots, Monday first, over a month grid.
+class WeekdayDots extends StatelessWidget {
+  /// Creates the row.
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Row(
+      children: [
+        for (var i = 0; i < 7; i++)
+          Expanded(
+            child: Center(child: WeekdayDot(weekend: i >= 5)),
+          ),
+      ],
+    ),
+  );
 }
 
 /// One day in the week row or the month grid; tap selects it.
@@ -96,17 +98,14 @@ class DayCell extends StatelessWidget {
   /// Creates a cell.
   const new({
     required this.view,
-    required this.label,
     required this.selected,
     required this.onTap,
+    this.showDot = false,
     super.key,
   });
 
   /// The day.
   final DayView view;
-
-  /// The top line: weekday initial or day of month.
-  final String label;
 
   /// Whether it is the day shown in the day card.
   final bool selected;
@@ -114,21 +113,19 @@ class DayCell extends StatelessWidget {
   /// Selects it.
   final VoidCallback onTap;
 
+  /// Whether the weekday dot sits over the date (the week row).
+  final bool showDot;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final status = context.statusColors;
     final v = view;
-    final missed =
-        v.kind == DayKind.past &&
-        !v.free &&
-        !v.sick &&
-        !v.oldRule &&
-        !v.beforeQuotas &&
-        !met(v);
-    final fill = met(v)
+    final reached = met(v);
+    final fell = missed(v);
+    final fill = reached
         ? status.success.withValues(alpha: 0.25)
-        : missed
+        : fell
         ? status.danger.withValues(alpha: 0.2)
         : null;
     final border = selected
@@ -137,12 +134,18 @@ class DayCell extends StatelessWidget {
         ? status.info
         : theme.dividerColor;
     final muted = v.kind == DayKind.future || v.free || v.sick;
+    final mark = cellMark(v);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: muted ? theme.hintColor : null,
+      fontWeight: v.simulated != 0 ? FontWeight.bold : null,
+    );
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xs),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
           decoration: BoxDecoration(
             color: fill,
@@ -151,16 +154,44 @@ class DayCell extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Text(label, style: theme.textTheme.labelSmall),
-              Text(
-                cellText(v),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: muted ? theme.hintColor : null,
-                  fontWeight: v.simulated != 0 ? FontWeight.bold : null,
+              if (showDot) WeekdayDot(weekend: isWeekend(v.day)),
+              FittedBox(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${v.day.day}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: v.kind == DayKind.today
+                            ? FontWeight.bold
+                            : null,
+                      ),
+                    ),
+                    if (reached)
+                      Icon(Icons.check, size: 12, color: status.success)
+                    else if (fell)
+                      Icon(Icons.close, size: 12, color: status.danger),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
+              ),
+              FittedBox(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (mark.icon case final icon?)
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: muted ? theme.hintColor : null,
+                      ),
+                    Text(
+                      mark.number,
+                      style: style,
+                      maxLines: 1,
+                      softWrap: false,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

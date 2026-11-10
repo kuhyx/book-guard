@@ -2,24 +2,15 @@ import 'dart:typed_data';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/photo_mark.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// What to tell the reader once the PC has (or has not) read a photo.
-String photoVerdict(PhotoInfo? photo) {
-  if (photo == null) {
-    return 'The PC has not read it yet - it will when it is on.';
-  }
-  if (!photo.accepted) {
-    return 'Not accepted: ${photo.caption}. Retake it with the page number '
-        'in view.';
-  }
-  return switch (photo.kind) {
-    'page' => 'Read as page ${photo.page}.',
-    'toc' => 'Contents read.',
-    _ => 'Barcode read.',
-  };
-}
+/// Superseded by `PhotoStatus.of` (a glyph, not a sentence); paints
+/// nothing. Left only until `book_tab.dart` has switched.
+@Deprecated('Use PhotoStatus.of and showPhotoStatus.')
+String photoVerdict(PhotoInfo? photo) => '';
 
 /// The full-size photo at [file] (relative to `Reading/`), zoomable.
 void openPhoto(BuildContext context, GuardApi api, String file) =>
@@ -68,22 +59,35 @@ class _PhotoGalleryState extends State<PhotoGallery> {
             dimension: 56,
             child: RemoteImage(bytes: _thumb(photo.thumb), fit: BoxFit.cover),
           ),
-          title: Text(photo.caption),
-          subtitle: Text(_when(photo.takenAt)),
-          trailing: Icon(
-            photo.accepted ? Icons.check_circle : Icons.error_outline,
+          title: Align(
+            alignment: Alignment.centerLeft,
+            child: PhotoMark(photo),
           ),
+          subtitle: _when(photo.takenAt),
+          trailing: photo.accepted
+              ? Icon(
+                  Icons.check_circle,
+                  color: context.statusColors.success,
+                  semanticLabel: 'accepted',
+                )
+              : RejectBadge(photo.reason),
           onTap: () => _open(photo),
         ),
     ],
   );
 }
 
-String _when(DateTime? taken) {
-  if (taken == null) return 'time unknown';
+/// `15.10 16:25`; an icon when the camera wrote no time.
+Widget _when(DateTime? taken) {
+  if (taken == null) {
+    return const Align(
+      alignment: Alignment.centerLeft,
+      child: Icon(Icons.history_toggle_off, semanticLabel: 'time unknown'),
+    );
+  }
   final t = taken.toLocal();
   String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(t.day)}.${two(t.month)} ${two(t.hour)}:${two(t.minute)}';
+  return Text('${two(t.day)}.${two(t.month)} ${two(t.hour)}:${two(t.minute)}');
 }
 
 /// An image fetched from the share, with a spinner and a broken-image icon.

@@ -1,11 +1,13 @@
 import 'package:book_guard_app/src/ebook_store.dart';
 import 'package:book_guard_app/src/screens/ebook_reader.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/ebook_fixture.dart';
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 import '../../support/reader_harness.dart';
 
 void main() {
@@ -33,7 +35,7 @@ void main() {
     expect(find.byType(EbookReaderScreen), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
     expect(find.text('Zbrodnia i kara'), findsNothing);
-    expect(find.textContaining('≈ p.'), findsNothing);
+    expect(find.byType(StatusCue), findsNothing);
     expect(find.byType(IconButton), findsNothing);
     expect(find.byType(FilledButton), findsNothing);
   });
@@ -111,13 +113,16 @@ void main() {
     expect(await api.appSessions(), isEmpty);
   });
 
-  testWidgets('flipping through is not saved, and says so', (tester) async {
+  testWidgets('flipping through is not saved, a fast-forward glyph says so', (
+    tester,
+  ) async {
     await reader.open(tester, latestPage: 20);
     await reader.forward(tester, 4);
     reader.now = reader.now.add(const Duration(minutes: 1));
     await reader.swipeOut(tester);
     expect(reader.closedWith, isNull);
-    expect(find.text('Too fast to count - not saved'), findsOneWidget);
+    expect(cueGlyph(Icons.fast_forward), findsOneWidget);
+    expect(cueOf(CueKind.warn), findsOneWidget);
     expect(await api.readingStart(ebookIsbn), isNull);
     expect(await api.appSessions(), isEmpty);
   });
@@ -145,7 +150,8 @@ void main() {
     tester,
   ) async {
     await reader.open(tester, latestPage: 20, paperStart: 18);
-    expect(find.textContaining('start photo of p. 18'), findsOneWidget);
+    expect(cueGlyph(Icons.photo_camera), findsOneWidget);
+    expect(glyphNumber(cueGlyph(Icons.photo_camera), '18'), findsOneWidget);
   });
 
   testWidgets('a kept session does not re-announce the paper photo', (
@@ -153,7 +159,7 @@ void main() {
   ) async {
     await api.startReading(startAgo(const Duration(hours: 1)));
     await reader.open(tester, latestPage: 20, paperStart: 18);
-    expect(find.textContaining('start photo of p. 18'), findsNothing);
+    expect(cueGlyph(Icons.photo_camera), findsNothing);
   });
 
   testWidgets('immersive while reading, edge to edge after', (tester) async {

@@ -47,7 +47,7 @@ def grade(
 
 
 def note(paths: Paths, **fields: object) -> tuple[bool, str]:
-    """Send one ``note`` request (defaults: p. 5, chapter One); (ok, message)."""
+    """Send one ``note`` request (defaults: p. 5, chapter One); (ok, code)."""
     request = {
         "note_id": "note0001",
         "isbn": ISBN13,
@@ -59,4 +59,4 @@ def note(paths: Paths, **fields: object) -> tuple[bool, str]:
         **fields,
     }
     found = HANDLERS["note"](paths, request)
-    return found.ok, found.message
+    return found.ok, found.code

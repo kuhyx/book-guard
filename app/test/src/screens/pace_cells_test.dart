@@ -1,9 +1,13 @@
 import 'package:book_guard_app/src/pace/day_views.dart';
+import 'package:book_guard_app/src/screens/day_card.dart';
+import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_a.dart';
+import '../../support/no_words.dart';
 
 DayView view({
   DayKind kind = DayKind.past,
@@ -41,31 +45,40 @@ DayView view({
 );
 
 void main() {
-  test('names of days and months', () {
-    expect(shortDay(DateTime.utc(2026, 10, 15)), 'Thu 15.10');
-    expect(shortDay(DateTime.utc(2026, 1, 4)), 'Sun 04.01');
-    expect(monthTitle(DateTime.utc(2026, 10)), 'October 2026');
-    expect(weekdayInitials, ['M', 'T', 'W', 'T', 'F', 'S', 'S']);
+  test('days and months are numerals', () {
+    expect(shortDay(DateTime.utc(2026, 10, 15)), '15.10');
+    expect(shortDay(DateTime.utc(2026, 1, 4)), '04.01');
+    expect(monthTitle(DateTime.utc(2026, 10)), '10 · 2026');
+    expect(isWeekend(DateTime.utc(2026, 10, 17)), isTrue);
+    expect(isWeekend(DateTime.utc(2026, 10, 18)), isTrue);
+    expect(isWeekend(DateTime.utc(2026, 10, 19)), isFalse);
   });
 
-  group('cellText and met', () {
+  group('cellMark and met', () {
     test('each kind of day reads differently', () {
-      expect(cellText(view(beforeQuotas: true, free: true)), '-');
-      expect(cellText(view(free: true, oldRule: true)), 'free');
-      expect(cellText(view(oldRule: true)), 'old 22');
-      expect(cellText(view(kind: DayKind.future)), '17');
-      expect(cellText(view()), '22/17');
-      expect(cellText(view(kind: DayKind.today)), '22/17');
+      expect(cellMark(view(beforeQuotas: true, free: true)).number, '-');
+      expect(cellMark(view(free: true, oldRule: true)).icon, freeGlyph);
+      expect(cellMark(view(oldRule: true)), (
+        icon: Icons.history,
+        number: '22',
+      ));
+      expect(cellMark(view(kind: DayKind.future)).number, '17');
+      expect(cellMark(view()).number, '22/17');
+      expect(cellMark(view(kind: DayKind.today)).number, '22/17');
+      expect(cellMark(view(sick: true, required: 0)).icon, sickGlyph);
     });
 
     test('the simulated day shows its simulated total', () {
       final today = view(kind: DayKind.today, assumed: 27, simulated: 5);
-      expect(cellText(today), '27/17');
+      expect(cellMark(today).number, '27/17');
       expect(
-        cellText(view(kind: DayKind.future, assumed: 7, simulated: -10)),
+        cellMark(view(kind: DayKind.future, assumed: 7, simulated: -10)).number,
         '7/17',
       );
-      expect(cellText(view(free: true, assumed: 5, simulated: 5)), '5/17');
+      expect(
+        cellMark(view(free: true, assumed: 5, simulated: 5)).number,
+        '5/17',
+      );
       expect(met(today), isTrue);
       expect(
         met(view(kind: DayKind.today, assumed: 12, simulated: -10)),
@@ -80,61 +93,109 @@ void main() {
       expect(met(view(oldRule: true)), isFalse);
       expect(met(view(beforeQuotas: true)), isFalse);
     });
+
+    test('missed is a past quota day that fell short', () {
+      expect(missed(view(credited: 3)), isTrue);
+      expect(missed(view()), isFalse);
+      expect(missed(view(credited: 3, free: true)), isFalse);
+      expect(missed(view(credited: 3, sick: true)), isFalse);
+      expect(missed(view(kind: DayKind.today, credited: 3)), isFalse);
+    });
   });
 
-  group('dayLines', () {
-    test('before the first quota day', () {
-      expect(dayLines(view(beforeQuotas: true)), [
-        'Thu 15.10: no page quota yet',
-      ]);
+  group('DayDetails', () {
+    Future<void> pumpDetails(WidgetTester tester, DayView v) async {
+      await pumpTab(tester, DayDetails(view: v));
+      expectNoWords(tester);
+    }
+
+    testWidgets('before the first quota day: the date and a block', (
+      tester,
+    ) async {
+      await pumpDetails(tester, view(beforeQuotas: true));
+      expect(find.text('15.10'), findsOneWidget);
+      expect(iconLabeled('no page quota yet'), findsOneWidget);
     });
 
-    test('before the switch names the old rule', () {
-      expect(dayLines(view(oldRule: true)), [
-        oldRuleText,
-        'Credited that day: 22 pages',
-      ]);
+    testWidgets('before the switch: the credited pages under history', (
+      tester,
+    ) async {
+      await pumpDetails(tester, view(oldRule: true));
+      expect(find.text('22'), findsOneWidget);
+      expect(find.byIcon(Icons.history), findsWidgets);
     });
 
-    test('a past day, behind, with carried debt', () {
-      expect(dayLines(view(debt: 30)), [
-        'Thu 15.10, as it stood that morning',
-        'Requirement: 17 pages; credited 22',
-        'Line at the start of the day 100; read 60 (40 behind)',
-        'Month target 1000 (carried debt 30)',
-      ]);
+    testWidgets('a past day, behind, with carried debt', (tester) async {
+      await pumpDetails(tester, view(debt: 30));
+      expect(find.text('22 / 17'), findsOneWidget);
+      expect(find.text('100'), findsOneWidget);
+      expect(find.text('60'), findsOneWidget);
+      expect(find.text('40'), findsOneWidget);
+      expect(find.text('1000'), findsOneWidget);
+      expect(find.text('30'), findsOneWidget);
+      expect(iconLabeled('carried debt'), findsOneWidget);
+      expect(find.byIcon(Icons.trending_down), findsOneWidget);
     });
 
-    test('today on pace, with carried credit', () {
-      final lines = dayLines(view(kind: DayKind.today, line: 50, credit: 20));
-      expect(lines[0], 'Thu 15.10, today, live');
-      expect(lines[2], contains('read 60 (on pace)'));
-      expect(lines[3], 'Month target 1000 (carried credit 20)');
+    testWidgets('today on pace, with carried credit', (tester) async {
+      await pumpDetails(
+        tester,
+        view(kind: DayKind.today, line: 50, credit: 20),
+      );
+      expect(find.byIcon(Icons.today), findsOneWidget);
+      expect(iconLabeled('on pace'), findsOneWidget);
+      expect(iconLabeled('carried credit'), findsOneWidget);
+      expect(find.text('20'), findsOneWidget);
     });
 
-    test('a future day shows the assumption, or the simulation', () {
-      final plain = dayLines(view(kind: DayKind.future, assumed: 17));
-      expect(plain[0], contains('projected'));
-      expect(plain[1], 'Requirement: 17 pages');
-      expect(plain[2], 'Assumed read: 17');
-      final plus = dayLines(
+    testWidgets('a future day shows the assumption, or the simulation', (
+      tester,
+    ) async {
+      await pumpDetails(tester, view(kind: DayKind.future, assumed: 17));
+      expect(iconLabeled('assumed read'), findsOneWidget);
+      expect(find.byIcon(Icons.science), findsNothing);
+      await pumpDetails(
+        tester,
         view(kind: DayKind.future, assumed: 57, simulated: 40),
       );
-      expect(plus[2], 'Simulated: 57 read (+40)');
-      final minus = dayLines(view(assumed: 0, simulated: -17));
-      expect(minus[2], 'Simulated: 0 read (-17)');
+      expect(find.text('57 (+40)'), findsOneWidget);
+      await pumpDetails(tester, view(assumed: 0, simulated: -17));
+      expect(find.text('0 (-17)'), findsOneWidget);
     });
 
-    test('a sick day asks nothing and says so', () {
-      expect(cellText(view(sick: true, required: 0)), 'sick');
+    testWidgets('a sick or free day asks nothing', (tester) async {
+      await pumpDetails(tester, view(sick: true, required: 0));
+      expect(iconLabeled('sick'), findsOneWidget);
+      expect(iconLabeled('requirement'), findsNothing);
+      await pumpDetails(tester, view(free: true));
+      expect(iconLabeled('free'), findsOneWidget);
+      expect(iconLabeled('requirement'), findsNothing);
+    });
+  });
+
+  group('WeekdayDots', () {
+    testWidgets('seven dots, the weekend larger', (tester) async {
+      await pumpTab(tester, const WeekdayDots());
+      final dots = tester.widgetList<WeekdayDot>(find.byType(WeekdayDot));
       expect(
-        dayLines(view(sick: true))[1],
-        "Sick day: asks nothing, its share is off the month's target",
+        [for (final d in dots) d.weekend],
+        [
+          false, false, false, false, false, true, true, //
+        ],
       );
-    });
-
-    test('a free day asks nothing', () {
-      expect(dayLines(view(free: true))[1], 'Free day: asks nothing');
+      final sizes = [
+        for (final e in find.byType(WeekdayDot).evaluate())
+          tester
+              .getSize(
+                find.descendant(
+                  of: find.byWidget(e.widget),
+                  matching: find.byType(Container),
+                ),
+              )
+              .width,
+      ];
+      expect(sizes.take(5).every((w) => w == 5), isTrue);
+      expect(sizes.skip(5).every((w) => w == 10), isTrue);
     });
   });
 
@@ -143,6 +204,7 @@ void main() {
       WidgetTester tester,
       DayView v, {
       bool selected = false,
+      bool showDot = false,
     }) async {
       var taps = 0;
       await pumpTab(
@@ -152,8 +214,8 @@ void main() {
             Expanded(
               child: DayCell(
                 view: v,
-                label: '15',
                 selected: selected,
+                showDot: showDot,
                 onTap: () => taps++,
               ),
             ),
@@ -168,19 +230,24 @@ void main() {
         tester.widget<Container>(find.byType(Container).first).decoration!
             as BoxDecoration;
 
-    testWidgets('a met day is green, taps select it', (tester) async {
+    testWidgets('a met day is green with a check, taps select it', (
+      tester,
+    ) async {
       expect(await pumpCell(tester, view()), 1);
       expect(find.text('22/17'), findsOneWidget);
       expect(decoration(tester).color, isNotNull);
+      expect(find.byIcon(Icons.check), findsOneWidget);
+      expectNoWords(tester);
     });
 
-    testWidgets('a missed past day is red, a selected one is outlined', (
+    testWidgets('a missed past day is red with a cross, selected is outlined', (
       tester,
     ) async {
       await pumpCell(tester, view(credited: 3), selected: true);
       final box = decoration(tester);
       expect(box.color, isNotNull);
       expect((box.border! as Border).top.width, 2);
+      expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
     testWidgets('today, free, future and simulated days are not filled', (
@@ -190,10 +257,22 @@ void main() {
       expect(decoration(tester).color, isNull);
       await pumpCell(tester, view(free: true, credited: 3));
       expect(decoration(tester).color, isNull);
+      expect(find.byIcon(freeGlyph), findsOneWidget);
       await pumpCell(tester, view(kind: DayKind.future, simulated: 5));
       expect(decoration(tester).color, isNull);
       final text = tester.widget<Text>(find.text('22/17'));
       expect(text.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('the week row puts a weekday dot over the date', (
+      tester,
+    ) async {
+      await pumpCell(tester, view(), showDot: true);
+      expect(find.byType(WeekdayDot), findsOneWidget);
+      expect(
+        tester.widget<WeekdayDot>(find.byType(WeekdayDot)).weekend,
+        isFalse,
+      );
     });
   });
 }

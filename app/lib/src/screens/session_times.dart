@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/book_cues.dart';
 import 'package:book_guard_app/src/screens/icon_pickers.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
+import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -29,11 +32,13 @@ DateTime onDayOf(DateTime day, TimeOfDay time) {
       : moment;
 }
 
-/// "Read 13:40-14:29 (49 min)" and a button to narrow those times.
+/// `13:40-14:29` and the minutes beside clock glyphs, and a button to narrow
+/// those times.
 ///
 /// Only later starts and earlier ends: the PC refuses anything outside the
 /// photos, and anything under 50 s a page (book-guard `_retime.py`). A
-/// graded session shows its times without the button.
+/// graded session shows its times without the button. The two pickers are
+/// told apart by a play (start) or stop (end) glyph above each.
 class SessionTimes extends StatelessWidget {
   /// Creates the line for [session].
   const new({
@@ -68,12 +73,21 @@ class SessionTimes extends StatelessWidget {
       'session_id': session.id,
       'start': startAt.toIso8601String(),
       'end': onDayOf(startAt, picked.end).toIso8601String(),
-    }, 'Times for ${session.span}');
+    });
     if (!context.mounted) return;
-    response.ok
-        ? showToast(context, response.message)
-        : showError(context, response.message);
+    showCue(context, replyCue(response), badge: _badge(response));
     unawaited(onChanged());
+  }
+
+  /// The numbers a refusal carries: the photos' span, or pages and minutes.
+  static Widget? _badge(GuardResponse response) {
+    final data = response.data;
+    if (data == null) return null;
+    return switch (response.code) {
+      'outside_photos' => Text('${data['first']}-${data['last']}'),
+      'too_short' => Text('${data['pages']} / ${data['minutes']}'),
+      _ => null,
+    };
   }
 
   @override
@@ -84,15 +98,23 @@ class SessionTimes extends StatelessWidget {
     final graded = session.graded;
     return Row(
       children: [
-        Expanded(
-          child: Text(
-            'Read ${hhmm(start)}-${hhmm(end)} (${session.minutes} min)',
-          ),
+        const Icon(Icons.schedule, size: 18, semanticLabel: 'Read'),
+        const SizedBox(width: AppSpacing.xs),
+        Text('${hhmm(start)}-${hhmm(end)}'),
+        const SizedBox(width: AppSpacing.md),
+        IconNumber(
+          Icons.timer_outlined,
+          '${session.minutes}',
+          semanticLabel: 'Minutes',
         ),
+        const Spacer(),
         if (!graded)
-          TextButton(
+          IconButton(
             onPressed: () => _edit(context),
-            child: const Text('Correct the times'),
+            icon: const Icon(
+              Icons.more_time,
+              semanticLabel: 'Correct the times',
+            ),
           ),
       ],
     );

@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from book_guard import _retime
+from book_guard._requests import Response
 from book_guard._session_times import apply_times, load_times, when
 from book_guard._state import snapshot
 from book_guard.tests._flow_helpers import T0, add_book, add_entry, rec, seed_photos
@@ -29,14 +30,25 @@ def _iso(minutes: int) -> str:
     return (T0 + timedelta(minutes=minutes)).isoformat()
 
 
+def _local(moment: datetime) -> str:
+    """HH:MM on the PC's clock, as the reply carries it."""
+    return moment.astimezone().strftime("%H:%M")
+
+
 def test_a_later_start_and_earlier_end_are_kept(bg_paths: Paths) -> None:
     sid = _seed(bg_paths)
     response = _retime.set_times(
         bg_paths, {"session_id": sid, "start": _iso(70), "end": _iso(110)}
     )
-    assert response.ok
-    assert response.message.startswith("p. 51-52: ")
-    assert response.message.endswith("(40 min)")
+    assert response == Response(
+        ok=True,
+        code="times_set",
+        data={
+            "start": _local(START + timedelta(minutes=70)),
+            "end": _local(START + timedelta(minutes=110)),
+            "minutes": 40,
+        },
+    )
     (view,) = snapshot(bg_paths).sessions
     assert (view.session.minutes, view.session.started_at) == (
         40,
@@ -56,9 +68,13 @@ def test_times_never_widen_or_go_too_fast(bg_paths: Paths) -> None:
         {"start": _iso(90), "end": _iso(80)},
     ):
         response = _retime.set_times(bg_paths, {"session_id": sid, **body})
-        assert response.message.startswith("Times must stay within the photos")
-    assert _retime.set_times(bg_paths, {"session_id": "nope"}).message == (
-        "No such session."
+        assert response == Response(
+            ok=False,
+            code="outside_photos",
+            data={"first": _local(START), "last": _local(END)},
+        )
+    assert _retime.set_times(bg_paths, {"session_id": "nope"}) == Response(
+        ok=False, code="no_session"
     )
 
 
@@ -69,14 +85,16 @@ def test_too_fast_is_refused(bg_paths: Paths) -> None:
     response = _retime.set_times(
         bg_paths, {"session_id": view.session.session_id, "start": _iso(100)}
     )
-    assert response.message == "53 pages need at least 44 minutes."
+    assert response == Response(
+        ok=False, code="too_short", data={"pages": 53, "minutes": 44}
+    )
 
 
 def test_a_graded_session_keeps_its_times(bg_paths: Paths) -> None:
     sid = _seed(bg_paths)
     add_entry(bg_paths, sid, "credit", T0.date().isoformat(), 1)
     response = _retime.set_times(bg_paths, {"session_id": sid, "start": _iso(30)})
-    assert response.message == "This session was already graded."
+    assert response == Response(ok=False, code="already_graded")
 
 
 def test_stored_times_are_clamped_and_bad_files_ignored(bg_paths: Paths) -> None:

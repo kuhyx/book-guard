@@ -3,10 +3,15 @@ import 'dart:typed_data';
 
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/photo_mark.dart';
+import 'package:book_guard_app/src/screens/photo_status.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_read.dart';
 
 /// A valid 1x1 PNG, so Image.memory has something to decode.
 final _png = Uint8List.fromList([
@@ -23,19 +28,35 @@ void main() {
 
   setUp(() => api = FakeApi());
 
-  test('the verdict says what the PC saw', () {
-    expect(photoVerdict(null), contains('has not read it yet'));
-    expect(photoVerdict(reading(page: 7)), 'Read as page 7.');
-    expect(photoVerdict(reading(kind: 'toc')), 'Contents read.');
-    expect(photoVerdict(reading(kind: 'isbn')), 'Barcode read.');
+  test('the status is data: what the PC saw, never a sentence', () {
+    final unread = PhotoStatus.of(null);
+    expect(unread.cue.kind, CueKind.warn);
+    expect(unread.good, isNull);
+    final seven = PhotoStatus.of(reading(page: 7));
+    expect((seven.cue.kind, seven.page, seven.good), (CueKind.ok, 7, true));
     expect(
-      photoVerdict(reading(status: 'rejected', reason: 'too late')),
-      'Not accepted: page 19 - rejected: too late. Retake it with the page '
-      'number in view.',
+      PhotoStatus.of(reading(kind: 'toc')).cue.glyph,
+      Icons.format_list_numbered,
     );
+    expect(PhotoStatus.of(reading(kind: 'isbn')).cue.glyph, Icons.qr_code_2);
+    final late = PhotoStatus.of(
+      reading(status: 'rejected', reason: 'too late'),
+    );
+    expect((late.reject, late.good), ('too late', false));
+    // Status ok but the PC took it for something else: rejected, no reason.
+    final other = PhotoStatus.of(reading(kind: 'other', page: null));
+    expect((other.reject, other.good), ('', false));
   });
 
-  testWidgets('lists photos with captions, times and thumbnails', (
+  test('a photo kind and a label each have an icon', () {
+    expect(photoKindGlyph(PhotoKind.barcode).$1, Icons.qr_code_2);
+    expect(labelGlyph('start'), (Icons.play_arrow, 'start', null));
+    expect(labelGlyph('stop'), (Icons.stop, 'stop', null));
+    expect(labelGlyph('check115'), (Icons.fact_check, 'check page', 115));
+    expect(labelGlyph('odd').$1, Icons.photo_camera);
+  });
+
+  testWidgets('lists photos as icons, numbers, times and thumbnails', (
     tester,
   ) async {
     api.files['thumbs/abc.jpg'] = _png;
@@ -60,11 +81,13 @@ void main() {
       ),
     );
     await settle(tester);
-    expect(find.text('page 19'), findsOneWidget);
-    expect(find.text('not a page'), findsOneWidget);
-    expect(find.text('time unknown'), findsOneWidget);
+    expect(find.text('19'), findsOneWidget);
+    expect(find.byIcon(Icons.description), findsOneWidget);
+    expect(find.text('02.10 20:14'), findsOneWidget);
+    expect(spoken('time unknown'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
-    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(find.byType(RejectBadge), findsOneWidget);
+    expect(rejected(RejectGlyph.notPage), findsWidgets);
     expect(find.byType(Image), findsOneWidget);
     expect(find.byIcon(Icons.broken_image_outlined), findsOneWidget);
     // Each thumbnail is fetched once, however often the list rebuilds.
@@ -84,7 +107,7 @@ void main() {
   testWidgets('tapping a photo opens it full size, zoomable', (tester) async {
     api.files['processed/abc-x.jpg'] = _png;
     await pumpTab(tester, PhotoGallery(api: api, photos: [reading()]));
-    await tester.tap(find.text('page 19'));
+    await tester.tap(find.text('19'));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
     expect(find.byType(InteractiveViewer), findsOneWidget);

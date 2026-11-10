@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 import '../../support/states.dart';
 
 final _epub = Uint8List.fromList([0x50, 0x4b]);
@@ -73,20 +75,21 @@ void main() {
   );
 
   Future<void> attach(WidgetTester tester) async {
-    await tapVisible(tester, find.text('Attach book file'));
+    await tapLabeled(tester, 'Attach book file');
     await settle(tester);
-    await tester.tap(find.text('Choose file'));
+    await tester.tap(iconLabeled('Choose file'));
     await settle(tester);
   }
 
-  testWidgets('the formats dialog comes first; Cancel stops there', (
+  testWidgets('the formats dialog comes first; the close icon stops there', (
     tester,
   ) async {
     await pump(tester, file: XFile.fromData(_epub, path: '/b/a.epub'));
-    await tapVisible(tester, find.text('Attach book file'));
+    await tapLabeled(tester, 'Attach book file');
     await settle(tester);
-    expect(find.text('The PC can read these formats:'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('.epub'), findsOneWidget);
+    await tester.tap(iconLabeled('Cancel'));
     await settle(tester);
     expect(api.books, isEmpty);
   });
@@ -96,10 +99,9 @@ void main() {
   ) async {
     await pump(tester, file: XFile.fromData(_epub, path: '/b/movie.mkv'));
     await attach(tester);
-    expect(
-      find.text('movie.mkv: the PC cannot read this format.'),
-      findsOneWidget,
-    );
+    expect(cueGlyph(Icons.insert_drive_file), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
+    expect(find.text('movie.mkv'), findsOneWidget);
     expect(api.books, isEmpty);
   });
 
@@ -108,41 +110,50 @@ void main() {
       tester,
       state: sampleState(_job('embedding', done: 2, total: 8)),
     );
-    expect(find.text('a.epub: indexing 2 / 8 passages...'), findsOneWidget);
+    expect(find.text('a.epub'), findsOneWidget);
+    expect(iconLabeled('embedding'), findsOneWidget);
+    expect(find.text('2/8'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('a failed job shows its reason and Retry queues retry_book', (
+  testWidgets('a failed job is red with a retry icon that queues retry_book', (
     tester,
   ) async {
+    api.onSend = (_) async => const GuardResponse(ok: true, code: 'requeued');
     await pump(
       tester,
       state: sampleState(_job('failed', error: 'a.epub: no text layer')),
     );
-    expect(find.text('a.epub: no text layer'), findsOneWidget);
-    await tapVisible(tester, find.text('Retry'));
+    final icon = tester.widget<Icon>(iconLabeled('failed'));
+    expect(icon.icon, Icons.error);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    // The reason goes to the error log, never the screen.
+    expect(find.textContaining('no text layer'), findsNothing);
+    expect(await api.errors.diagnostics(), contains('no text layer'));
+    await tapLabeled(tester, 'Retry');
     await settle(tester);
     expect(api.sent.single.type, 'retry_book');
     expect(api.sent.single.body, {'file': 'a.epub'});
-    expect(find.text('done retry_book'), findsOneWidget);
+    expect(cueGlyph(Icons.restore), findsOneWidget);
+    expect(cueOf(CueKind.ok), findsOneWidget);
   });
 
   testWidgets('Retry queues offline too, and says so', (tester) async {
     api.offline = true;
     await pump(tester, state: sampleState(_job('failed')));
-    await tapVisible(tester, find.text('Retry'));
+    await tapLabeled(tester, 'Retry');
     await settle(tester);
     expect(api.sent.single.type, 'retry_book');
-    expect(find.text('Saved on the phone'), findsOneWidget);
+    expect(cueGlyph(Icons.outbox), findsOneWidget);
   });
 
   testWidgets('a retry the PC refuses is shown as an error', (tester) async {
-    api.onSend = (_) async =>
-        const GuardResponse(ok: false, message: 'No such file');
+    api.onSend = (_) async => const GuardResponse(ok: false, code: 'bad_file');
     await pump(tester, state: sampleState(_job('failed')));
-    await tapVisible(tester, find.text('Retry'));
+    await tapLabeled(tester, 'Retry');
     await settle(tester);
-    expect(find.text('No such file'), findsOneWidget);
+    expect(cueGlyph(Icons.insert_drive_file), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
   });
 
   testWidgets('a stalled job offers Retry', (tester) async {
@@ -150,18 +161,17 @@ void main() {
       tester,
       state: sampleState(_job('embedding', updatedAt: '2026-01-01T00:00:00Z')),
     );
-    expect(
-      find.textContaining('no progress for over 30 minutes'),
-      findsOneWidget,
-    );
-    expect(find.text('Retry'), findsOneWidget);
+    // A stalled job has its own glyph, red, and a retry icon.
+    expect(tester.widget<Icon>(iconLabeled('embedding')).icon, Icons.timer_off);
+    expect(iconLabeled('Retry'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
   testWidgets('a retry whose tab closed is dropped quietly', (tester) async {
     final gate = Completer<void>();
     final slow = _SlowSendApi(gate.future);
     await pump(tester, state: sampleState(_job('failed')), using: slow);
-    await tapVisible(tester, find.text('Retry'));
+    await tapLabeled(tester, 'Retry');
     await tester.pumpWidget(const SizedBox());
     gate.complete();
     await settle(tester);
@@ -183,11 +193,11 @@ void main() {
         using: follow,
       );
       await attach(tester);
-      expect(find.text('a.epub: indexing 3 / 10 passages...'), findsOneWidget);
+      expect(find.text('3/10'), findsOneWidget);
       gate.complete();
       await settle(tester);
-      expect(find.text('Book file attached.'), findsOneWidget);
-      expect(find.text('a.epub: indexing 3 / 10 passages...'), findsNothing);
+      expect(cueLabeled('Book file attached'), findsOneWidget);
+      expect(find.text('3/10'), findsNothing);
     });
 
     testWidgets('the job of an earlier upload does not count', (tester) async {
@@ -199,32 +209,23 @@ void main() {
         file: XFile.fromData(_epub, path: '/b/a.epub'),
       );
       await attach(tester);
-      expect(
-        find.text('Still indexing - progress keeps showing here.'),
-        findsOneWidget,
-      );
+      expect(cueLabeled('Still indexing'), findsOneWidget);
     });
 
     testWidgets('a job for another file does not count', (tester) async {
       api.awaited = sampleState(_job('done', file: 'other.epub'));
       await pump(tester, file: XFile.fromData(_epub, path: '/b/a.epub'));
       await attach(tester);
-      expect(
-        find.text('Still indexing - progress keeps showing here.'),
-        findsOneWidget,
-      );
+      expect(cueLabeled('Still indexing'), findsOneWidget);
     });
 
     testWidgets('a failed job ends the wait without a toast', (tester) async {
       api.awaited = sampleState(_job('failed', error: 'a.epub: no text'));
       await pump(tester, file: XFile.fromData(_epub, path: '/b/a.epub'));
       await attach(tester);
-      expect(find.text('Book file attached.'), findsNothing);
-      expect(
-        find.text('Still indexing - progress keeps showing here.'),
-        findsNothing,
-      );
-      expect(find.text('a.epub: no text'), findsNothing);
+      expect(cueLabeled('Book file attached'), findsNothing);
+      expect(cueLabeled('Still indexing'), findsNothing);
+      expect(find.textContaining('no text'), findsNothing);
     });
   });
 }
@@ -239,9 +240,8 @@ class _SlowSendApi extends FakeApi {
   Future<GuardResponse> sendQueued(
     String type,
     Map<String, Object?> body,
-    String what,
   ) async {
     await _gate;
-    return await super.sendQueued(type, body, what);
+    return await super.sendQueued(type, body);
   }
 }

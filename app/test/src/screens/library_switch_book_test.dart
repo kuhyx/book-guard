@@ -7,9 +7,13 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/iso_offset.dart';
 import 'package:book_guard_app/src/library_store.dart';
 import 'package:book_guard_app/src/screens/library_book_screen.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
+import 'package:book_guard_app/src/ui/hold_button.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 import '../../support/library_api.dart';
 import '../../support/library_json.dart';
 import '../../support/states.dart';
@@ -43,9 +47,8 @@ void main() {
     await settle(tester);
   }
 
-  final readNow = find.text('Read this now');
-  const warning =
-      'A session is open: take its stop photo first. Switch anyway?';
+  final readNow = iconLabeled('Read this now');
+  final warning = iconLabeled('A session is open: take its stop photo first');
 
   testWidgets('the current book has no button', (tester) async {
     await pump(tester, books.first);
@@ -76,15 +79,19 @@ void main() {
     await pump(tester, books[1], state: readingState(openStart: 12));
     await tester.tap(readNow);
     await settle(tester);
-    expect(find.text(warning), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(warning, findsOneWidget);
+    await tester.tap(iconLabeled('Cancel'));
     await settle(tester);
     expect(api.sent, isEmpty);
     expect(switched, isNull);
     expect(readNow, findsOneWidget);
     await tester.tap(readNow);
     await settle(tester);
-    await tester.tap(find.text('Switch anyway'));
+    // A plain tap on the ring does nothing: it must be held until it fills.
+    await tester.tap(find.byType(HoldButton));
+    await settle(tester);
+    expect(api.sent, isEmpty);
+    await holdFor(tester, find.byType(HoldButton));
     await settle(tester);
     expect(api.sent.single.type, 'switch_book');
     expect(switched, books[1].isbn);
@@ -107,10 +114,25 @@ void main() {
     await pump(tester, books[1], state: readingState());
     await tester.tap(readNow);
     await settle(tester);
-    expect(find.text(warning), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(warning, findsOneWidget);
+    await tester.tap(iconLabeled('Cancel'));
     await settle(tester);
     expect(api.sent, isEmpty);
+  });
+
+  testWidgets('letting go of the ring early switches nothing', (tester) async {
+    await pump(tester, books[1], state: readingState(openStart: 12));
+    await tester.tap(readNow);
+    await settle(tester);
+    await holdFor(
+      tester,
+      find.byType(HoldButton),
+      const Duration(milliseconds: 300),
+    );
+    await settle(tester);
+    expect(api.sent, isEmpty);
+    expect(switched, isNull);
+    expect(warning, findsOneWidget);
   });
 
   testWidgets('a refusal is shown and the book stays switchable', (
@@ -119,11 +141,12 @@ void main() {
     api
       ..offline = false
       ..onSend = (r) async =>
-          const GuardResponse(ok: false, message: 'Unknown book.');
+          const GuardResponse(ok: false, code: 'unknown_book');
     await pump(tester, books[1]);
     await tester.tap(readNow);
     await settle(tester);
-    expect(find.text('Unknown book.'), findsOneWidget);
+    expect(cueGlyph(Icons.search_off), findsOneWidget);
+    expect(cueOf(CueKind.error), findsOneWidget);
     expect(switched, isNull);
     expect(readNow, findsOneWidget);
   });

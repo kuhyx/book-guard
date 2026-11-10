@@ -1,3 +1,4 @@
+import 'package:book_guard_app/src/screens/day_card.dart';
 import 'package:book_guard_app/src/screens/icon_date_dialog.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:book_guard_app/src/screens/pace_panel.dart';
@@ -5,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_a.dart';
+import '../../support/no_letters.dart';
 import '../../support/no_words.dart';
 import '../../support/pace_inputs.dart';
 
@@ -39,68 +42,77 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// The month grid's cell for [day] of October 2026 (the week row, which
+  /// comes first, holds the 12th to the 18th).
+  Finder cell(int day, {int month = 10}) => find.byWidgetPredicate(
+    (w) => w is DayCell && w.view.day == DateTime.utc(2026, month, day),
+  );
+
+  /// The "any day" button, then the simulation's day button.
+  Finder dayButton(String text) => find.widgetWithText(OutlinedButton, text);
+
   testWidgets("shows this week, the month grid and today's card", (
     tester,
   ) async {
     await pump(tester);
-    expect(find.text('This week'), findsOneWidget);
-    expect(find.text('October 2026'), findsOneWidget);
+    expect(find.text('10 · 2026'), findsOneWidget);
     expect(find.byType(DayCell), findsNWidgets(7 + 31));
-    expect(find.text('Any day: Thu 15.10'), findsOneWidget);
-    expect(find.textContaining('Thu 15.10, today, live'), findsOneWidget);
-    expect(find.textContaining('Simulation:'), findsNothing);
-    expect(find.text('Reset'), findsNothing);
+    expect(find.byType(WeekdayDot), findsNWidgets(7 + 7));
+    expect(dayButton('15.10'), findsNWidgets(2));
+    expect(find.byType(DayDetails), findsOneWidget);
+    expect(find.byIcon(Icons.today), findsOneWidget);
+    expect(find.byIcon(Icons.science), findsOneWidget);
+    expect(iconLabeled('reset'), findsNothing);
+    expectNoWords(tester);
   });
 
   testWidgets('tapping a cell selects that day', (tester) async {
     await pump(tester);
-    final cell = find.byWidgetPredicate((w) => w is DayCell && w.label == '20');
-    await tapVisible(tester, cell);
+    await tapVisible(tester, cell(20));
     await tester.pump();
-    expect(find.text('Any day: Tue 20.10'), findsOneWidget);
-    final weekCell = find.byWidgetPredicate(
-      (w) => w is DayCell && w.label == 'W',
+    expect(
+      tester.widget<DayDetails>(find.byType(DayDetails)).view.day,
+      DateTime.utc(2026, 10, 20),
     );
-    await tapVisible(tester, weekCell.first);
+    expect(dayButton('20.10'), findsOneWidget);
+    await tapVisible(tester, cell(14).first);
     await tester.pump();
-    expect(find.text('Any day: Wed 14.10'), findsOneWidget);
+    expect(dayButton('14.10'), findsOneWidget);
   });
 
   testWidgets('the month arrows stop at the plan start and the year end', (
     tester,
   ) async {
     await pump(tester);
-    VoidCallback? onPressed(String tooltip) => tester
+    VoidCallback? onPressed(String label) => tester
         .widget<IconButton>(
-          find.widgetWithIcon(
-            IconButton,
-            tooltip == 'Previous month'
-                ? Icons.chevron_left
-                : Icons.chevron_right,
+          find.ancestor(
+            of: iconLabeled(label),
+            matching: find.byType(IconButton),
           ),
         )
         .onPressed;
-    expect(onPressed('Previous month'), isNull);
-    await tester.tap(find.byTooltip('Next month'));
+    expect(onPressed('previous month'), isNull);
+    await tester.tap(iconLabeled('next month'));
     await tester.pump();
-    expect(find.text('November 2026'), findsOneWidget);
-    expect(onPressed('Previous month'), isNotNull);
-    await tester.tap(find.byTooltip('Previous month'));
+    expect(find.text('11 · 2026'), findsOneWidget);
+    expect(onPressed('previous month'), isNotNull);
+    await tester.tap(iconLabeled('previous month'));
     await tester.pump();
-    expect(find.text('October 2026'), findsOneWidget);
+    expect(find.text('10 · 2026'), findsOneWidget);
     for (var i = 0; i < 14; i++) {
-      await tester.tap(find.byTooltip('Next month'));
+      await tester.tap(iconLabeled('next month'));
       await tester.pump();
     }
-    expect(find.text('December 2027'), findsOneWidget);
-    expect(onPressed('Next month'), isNull);
+    expect(find.text('12 · 2027'), findsOneWidget);
+    expect(onPressed('next month'), isNull);
   });
 
   testWidgets('the any-day picker jumps to the picked day and its month', (
     tester,
   ) async {
     await pump(tester);
-    await tapVisible(tester, find.text('Any day: Thu 15.10'));
+    await tapVisible(tester, dayButton('15.10').first);
     await tester.pumpAndSettle();
     await tester.tap(inDialog(find.text('20')));
     await tester.pumpAndSettle();
@@ -108,16 +120,20 @@ void main() {
     expect(find.byType(IconDateDialog), findsOneWidget, reason: 'tap selects');
     await confirm(tester);
     expect(find.byType(IconDateDialog), findsNothing);
-    expect(find.text('Any day: Tue 20.10'), findsOneWidget);
-    expect(find.textContaining('Tue 20.10, projected'), findsOneWidget);
+    expect(dayButton('20.10'), findsOneWidget);
+    expect(
+      tester.widget<DayDetails>(find.byType(DayDetails)).view.day,
+      DateTime.utc(2026, 10, 20),
+    );
   });
 
   testWidgets('both day pickers paint no words', (tester) async {
     await pump(tester);
-    for (final opener in ['Any day: Thu 15.10', 'on Thu 15.10']) {
-      await tapVisible(tester, find.text(opener));
+    for (final last in [false, true]) {
+      final opener = last ? dayButton('15.10').last : dayButton('15.10').first;
+      await tapVisible(tester, opener);
       await tester.pumpAndSettle();
-      expectNoWords(
+      expectNoLetters(
         tester,
         find.byType(IconDateDialog),
         spoken: [Icons.check, Icons.close],
@@ -127,76 +143,77 @@ void main() {
       await tester.tapAt(Offset.zero);
       await tester.pumpAndSettle();
       expect(find.byType(IconDateDialog), findsNothing);
-      expect(find.text(opener), findsOneWidget);
+      expect(dayButton('15.10'), findsNWidgets(2));
     }
   });
 
   testWidgets('cancelling the any-day picker changes nothing', (tester) async {
     await pump(tester);
-    await tapVisible(tester, find.text('Any day: Thu 15.10'));
+    await tapVisible(tester, dayButton('15.10').first);
     await tester.pumpAndSettle();
     await tester.tap(inDialog(find.text('20')));
     await cancel(tester);
-    expect(find.text('Any day: Thu 15.10'), findsOneWidget);
+    expect(dayButton('15.10'), findsNWidgets(2));
   });
 
-  testWidgets('the stepper simulates plus and minus 5, Reset clears it', (
+  testWidgets('the stepper simulates plus and minus 5, reset clears it', (
     tester,
   ) async {
     await pump(tester);
-    expect(find.text('0 pages'), findsOneWidget);
-    await tapVisible(tester, find.byTooltip('5 pages more'));
-    await tester.pump();
-    expect(find.text('+5 pages'), findsOneWidget);
-    expect(
-      find.text('Simulation: +5 pages on Thu 15.10 (display only)'),
-      findsOneWidget,
+    final stepper = find.descendant(
+      of: find.byType(Card).last,
+      matching: find.text('0'),
     );
-    await tester.tap(find.byTooltip('5 pages fewer'));
-    await tester.tap(find.byTooltip('5 pages fewer'));
+    expect(stepper, findsOneWidget);
+    await tapVisible(tester, iconLabeled('5 pages more'));
     await tester.pump();
-    expect(find.text('-5 pages'), findsOneWidget);
-    expect(find.textContaining('Simulation: -5 pages'), findsOneWidget);
-    await tester.tap(find.text('Reset'));
+    expect(find.text('+5'), findsNWidgets(2)); // the stepper and the banner
+    // The banner, the stepper and the selected day's simulated total.
+    expect(find.byIcon(Icons.science), findsNWidgets(3));
+    expect(iconLabeled('reset'), findsOneWidget);
+    await tester.tap(iconLabeled('5 pages fewer'));
+    await tester.tap(iconLabeled('5 pages fewer'));
     await tester.pump();
-    expect(find.text('0 pages'), findsOneWidget);
-    expect(find.textContaining('Simulation:'), findsNothing);
+    expect(find.text('-5'), findsNWidgets(2));
+    expectNoWords(tester);
+    await tester.tap(iconLabeled('reset'));
+    await tester.pump();
+    expect(stepper, findsOneWidget);
+    expect(find.byIcon(Icons.science), findsOneWidget);
   });
 
   testWidgets('the simulated day can be moved to another day', (tester) async {
     await pump(tester);
-    await tapVisible(tester, find.text('on Thu 15.10'));
+    await tapVisible(tester, dayButton('15.10').last);
     await tester.pumpAndSettle();
     await tester.tap(inDialog(find.text('24')));
     await confirm(tester);
-    expect(find.text('on Sat 24.10'), findsOneWidget);
-    await tapVisible(tester, find.byTooltip('5 pages more'));
+    expect(dayButton('24.10'), findsOneWidget);
+    await tapVisible(tester, iconLabeled('5 pages more'));
     await tester.pump();
-    expect(
-      find.text('Simulation: +5 pages on Sat 24.10 (display only)'),
-      findsOneWidget,
-    );
+    // The banner carries the day the simulation sits on.
+    expect(find.text('24.10'), findsNWidgets(2));
   });
 
   testWidgets('the simulation day picker starts at today', (tester) async {
     await pump(tester);
-    await tapVisible(tester, find.text('on Thu 15.10'));
+    await tapVisible(tester, dayButton('15.10').last);
     await tester.pumpAndSettle();
     expect(pickerDay(tester, 14).enabled, isFalse);
     expect(pickerDay(tester, 15).enabled, isTrue);
     await tester.tap(inDialog(find.text('14')));
     await confirm(tester);
-    expect(find.text('on Thu 15.10'), findsOneWidget);
+    expect(dayButton('15.10'), findsNWidgets(2));
   });
 
   testWidgets('cancelling the simulation day picker keeps the day', (
     tester,
   ) async {
     await pump(tester);
-    await tapVisible(tester, find.text('on Thu 15.10'));
+    await tapVisible(tester, dayButton('15.10').last);
     await tester.pumpAndSettle();
     await cancel(tester);
-    expect(find.text('on Thu 15.10'), findsOneWidget);
+    expect(dayButton('15.10'), findsNWidgets(2));
   });
 
   testWidgets('a month that starts on a Monday has no blank cells', (
@@ -204,10 +221,10 @@ void main() {
   ) async {
     await pump(tester);
     for (var i = 0; i < 4; i++) {
-      await tester.tap(find.byTooltip('Next month'));
+      await tester.tap(iconLabeled('next month'));
       await tester.pump();
     }
-    expect(find.text('February 2027'), findsOneWidget);
+    expect(find.text('02 · 2027'), findsOneWidget);
     expect(find.byType(DayCell), findsNWidgets(7 + 28));
   });
 }

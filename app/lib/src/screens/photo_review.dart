@@ -5,7 +5,10 @@ import 'dart:typed_data';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/box_painter.dart';
-import 'package:book_guard_app/src/screens/review_result.dart';
+import 'package:book_guard_app/src/screens/pulse_glyph.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/screens/review_buttons.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -51,7 +54,7 @@ class _PhotoReviewState extends State<PhotoReview> {
   Offset? _dragFrom;
   Offset? _dragTo;
   bool _reading = false;
-  String? _note;
+  int _misses = 0;
 
   @override
   void initState() {
@@ -68,13 +71,13 @@ class _PhotoReviewState extends State<PhotoReview> {
   void _pick(NumberHit hit, Box previewBox) => setState(() {
     _choice = PageChoice(hit);
     _shown = previewBox;
-    _note = null;
+    _misses = 0;
   });
 
   Future<void> _readDrawn(Box previewBox) async {
     setState(() {
       _reading = true;
-      _note = null;
+      _misses = 0;
     });
     final page = await widget.reader.readBox(
       widget.bytes,
@@ -85,7 +88,7 @@ class _PhotoReviewState extends State<PhotoReview> {
     setState(() {
       _reading = false;
       if (page == null) {
-        _note = 'No number legible in that box - draw it tighter.';
+        _misses++;
       } else {
         _choice = PageChoice(
           NumberHit(page, widget.scan.toStoredBox(previewBox)),
@@ -108,49 +111,34 @@ class _PhotoReviewState extends State<PhotoReview> {
   @override
   Widget build(BuildContext context) {
     final hit = _choice.hit;
-    final title = hit != null ? 'Page ${hit.value}?' : 'Box the page number';
-    final explain = hit != null
-        ? 'Wrong? Tap the right number, or drag a box around it.'
-        : '${_choice.reason[0].toUpperCase()}${_choice.reason.substring(1)}. '
-              'Drag a box around the printed page number.';
+    // Why the reader needs a box (or that the drawn one held no number): a
+    // glyph that buzzes once, never a sentence.
+    final reason = _misses > 0 ? noNumberReason : _choice.reason;
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        // A plain button: the stock BackButton carries a tooltip.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, semanticLabel: 'Back'),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(_note ?? explain),
-            ),
+            if (hit == null || _misses > 0)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: RejectBadge(
+                  reason,
+                  buzz: true,
+                  size: 32,
+                  key: ValueKey((reason, _misses)),
+                ),
+              ),
             if (_reading) const LinearProgressIndicator(),
             Expanded(child: LayoutBuilder(builder: _photo)),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.of(context)
-                            .pop(const ReviewResult(retake: true)),
-                    child: const Text('Retake'),
-                  ),
-                  const Spacer(),
-                  if (hit == null)
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.of(context).pop(const ReviewResult()),
-                      child: const Text('Send anyway'),
-                    ),
-                  FilledButton(
-                    onPressed: hit == null || _reading
-                        ? null
-                        : () => Navigator.of(context)
-                              .pop(ReviewResult(page: hit.value, box: hit.box)),
-                    child: Text(hit == null ? 'Send' : 'Send p. ${hit.value}'),
-                  ),
-                ],
-              ),
-            ),
+            ReviewButtons(hit: hit, reading: _reading),
           ],
         ),
       ),
@@ -207,6 +195,24 @@ class _PhotoReviewState extends State<PhotoReview> {
                   otherColor: scheme.outline,
                 ),
               ),
+              if (_choice.hit case final hit?)
+                Positioned(
+                  top: AppSpacing.sm,
+                  left: AppSpacing.sm,
+                  // The tick and the number the reader settled on; nothing
+                  // to tap.
+                  child: IgnorePointer(
+                    child: StatusCue(
+                      const Cue(CueKind.ok, semanticLabel: 'page number read'),
+                      key: ValueKey(hit.value),
+                      badge: Text('${hit.value}'),
+                    ),
+                  ),
+                )
+              else
+                Center(
+                  child: PulseGlyph(Icons.crop_free, color: scheme.primary),
+                ),
             ],
           ),
         ),

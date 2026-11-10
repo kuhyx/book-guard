@@ -4,11 +4,14 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/fake_reader.dart';
+import '../../support/finders_read.dart';
 
 JournalEntry _entry(String name, String label, int? page) => JournalEntry(
   name: name,
@@ -83,14 +86,16 @@ void main() {
       journal,
     );
     expect(failed.map((f) => f.entry.name), ['stop_b.jpg', 'start_a.jpg']);
-    expect(failed.first.reason, 'the phone found no page number');
+    expect(failed.first.reason, phoneFoundNone);
+    // A PC rejection carries the PC's own reason, not a caption.
+    expect(failed.last.reason, 'no page number found');
     expect(failed.last.pc, pcRejected);
     expect(failedPhotos(null, const []), isEmpty);
   });
 
   testWidgets('nothing failed: nothing shown', (tester) async {
     await pump(tester, state: null, journal: const []);
-    expect(find.text('Failed photos'), findsNothing);
+    expect(spoken('failed photos'), findsNothing);
   });
 
   testWidgets('box the number: the PC is asked to read that box', (
@@ -105,7 +110,7 @@ void main() {
       reason: 'page 19 not found on the photo',
     );
     api.onSend = (r) async =>
-        const GuardResponse(ok: true, message: 'Read as p. 19.');
+        const GuardResponse(ok: true, code: 'read', data: {'page': 19});
     final reader = FakeReader(fakeScan([]), boxed: 19);
     await pump(
       tester,
@@ -113,8 +118,8 @@ void main() {
       journal: [_entry('check19_a.jpg', 'check19', null)],
       reader: reader,
     );
-    expect(find.textContaining('rejected: page 19 not found'), findsOneWidget);
-    await tester.tap(find.text('Box the number'));
+    expect(rejected(RejectGlyph.noNumber), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.crop_free));
     await settle(tester, 10);
     final photo = tester.getTopLeft(find.byType(Image).last);
     final k = tester.getSize(find.byType(Image).last).width / 40;
@@ -123,7 +128,7 @@ void main() {
       const Offset(10, 6) * k,
     );
     await settle(tester, 10);
-    await tester.tap(find.text('Send p. 19'));
+    await tester.tap(spoken('Send the page number'));
     await settle(tester, 10);
     final sent = api.sent.single;
     expect(sent.type, 'box');
@@ -131,13 +136,21 @@ void main() {
     expect(sent.body['box'], isA<List<int>>());
     // The number the phone read in the box is sent: the PC takes it as is.
     expect(sent.body['page'], 19);
-    expect(find.text('Read as p. 19.'), findsOneWidget);
+    // The reply is a green tick with the page it was read as.
+    await tester.pump(const Duration(seconds: 1)); // the review leaves
+    expect(inSnack(cueOf(CueKind.ok)), findsOneWidget);
+    expect(
+      find.descendant(
+        of: inSnack(cueOf(CueKind.ok)),
+        matching: find.text('19'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a refused box shows why', (tester) async {
     await api.store.write('photos/start_a.jpg', Uint8List.fromList([1]));
-    api.onSend = (r) async =>
-        const GuardResponse(ok: false, message: 'Still no page number');
+    api.onSend = (r) async => const GuardResponse(ok: false, code: 'no_page');
     final reader = FakeReader(
       fakeScan([(7, (left: 1, top: 50, right: 5, bottom: 55))]),
     );
@@ -149,11 +162,13 @@ void main() {
       journal: [_entry('start_a.jpg', 'start', 7)],
       reader: reader,
     );
-    await tester.tap(find.text('Box the number'));
+    await tester.tap(find.byIcon(Icons.crop_free));
     await settle(tester, 10);
-    await tester.tap(find.text('Send p. 7'));
+    await tester.pump(const Duration(seconds: 1)); // the review arrives
+    await tester.tap(spoken('Send the page number'));
     await settle(tester, 10);
-    expect(find.text('Still no page number'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1)); // the review leaves
+    expect(inSnack(cueOf(CueKind.error)), findsOneWidget);
   });
 
   testWidgets('cancelling the review sends nothing', (tester) async {
@@ -166,9 +181,9 @@ void main() {
       journal: [_entry('start_a.jpg', 'start', null)],
       reader: FakeReader(fakeScan([])),
     );
-    await tester.tap(find.text('Box the number'));
+    await tester.tap(find.byIcon(Icons.crop_free));
     await settle(tester, 10);
-    await tester.tap(find.text('Retake'));
+    await tester.tap(spoken('Retake'));
     await settle(tester, 10);
     expect(api.sent, isEmpty);
   });
@@ -180,23 +195,24 @@ void main() {
       state: _state(const []),
       journal: [_entry('stop_b.jpg', 'stop', null)],
     );
-    expect(find.text('Box the number'), findsNothing); // no PC reading yet
-    await tester.tap(find.text('This should not fail'));
+    expect(spoken('Box the number'), findsNothing); // no PC reading yet
+    await tester.tap(spoken('This should not fail'));
     await settle(tester);
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(spoken('Cancel'));
     await settle(tester);
     expect(await api.reported('stop_b.jpg'), isFalse);
-    await tester.tap(find.text('This should not fail'));
+    await tester.tap(spoken('This should not fail'));
     await settle(tester);
     await tester.enterText(find.byType(TextField).first, '103');
     await tester.enterText(
       find.byType(TextField).last,
       'clear 103 at the bottom',
     );
-    await tester.tap(find.text('Send report'));
+    await tester.tap(spoken('Send report'));
     await settle(tester, 10);
     expect(await api.reported('stop_b.jpg'), isTrue);
-    expect(find.text('Reported'), findsOneWidget);
+    expect(spoken('Reported'), findsOneWidget);
+    expect(spoken('This should not fail'), findsNothing);
     final notes = await api.store.list('outbox/');
     expect(notes.where((n) => n.endsWith('.path')), hasLength(2));
   });
@@ -209,8 +225,8 @@ void main() {
       state: _state(const []),
       journal: [_entry('stop_gone.jpg', 'stop', null)],
     );
-    final button = tester.widget<TextButton>(
-      find.widgetWithText(TextButton, 'This should not fail'),
+    final button = tester.widget<OutlinedButton>(
+      buttonSpoken('This should not fail'),
     );
     expect(button.onPressed, isNull);
     expect(find.byIcon(Icons.image_not_supported), findsOneWidget);

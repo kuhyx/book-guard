@@ -2,10 +2,12 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_read.dart';
 
 JournalEntry _entry(String name, String label) => JournalEntry(
   name: name,
@@ -47,13 +49,13 @@ void main() {
       _entry('stop_b.jpg', 'stop'),
     ];
     await pump(tester, journal);
-    expect(find.text('Dismiss'), findsNWidgets(2));
+    expect(spoken('Dismiss'), findsNWidgets(2));
     final before = (await api.store.list('')).toSet();
     // Newest first: the first card is stop_b.
-    await tester.tap(find.text('Dismiss').first);
+    await tester.tap(spoken('Dismiss').first);
     await settle(tester, 10);
-    expect(find.text('Dismiss'), findsOneWidget);
-    expect(find.text('Failed photos'), findsOneWidget);
+    expect(spoken('Dismiss'), findsOneWidget);
+    expect(spoken('failed photos'), findsOneWidget);
     expect(await api.dismissedPhotos(), {'stop_b.jpg'});
     // Hide-only: one marker is added, nothing else on the device changes
     // and nothing is queued for the PC.
@@ -64,7 +66,7 @@ void main() {
     expect(await api.store.list('outbox/'), isEmpty);
 
     await pump(tester, journal);
-    expect(find.text('Dismiss'), findsOneWidget);
+    expect(spoken('Dismiss'), findsOneWidget);
   });
 
   testWidgets('clear all hides the section; a new failure still shows', (
@@ -75,20 +77,22 @@ void main() {
       _entry('stop_b.jpg', 'stop'),
     ];
     await pump(tester, journal);
-    await tester.tap(find.text('Clear all'));
+    // One tap does nothing: hiding every card needs a hold.
+    await tester.tap(find.byIcon(Icons.clear_all));
     await settle(tester, 10);
-    expect(find.text('Failed photos'), findsNothing);
+    expect(await api.dismissedPhotos(), isEmpty);
+    await hold(tester, find.byIcon(Icons.clear_all));
+    await settle(tester, 10);
+    expect(spoken('failed photos'), findsNothing);
     expect(await api.dismissedPhotos(), {'stop_a.jpg', 'stop_b.jpg'});
 
     await pump(tester, journal);
-    expect(find.text('Failed photos'), findsNothing);
+    expect(spoken('failed photos'), findsNothing);
 
     await pump(tester, [...journal, _entry('stop_c.jpg', 'stop')]);
-    expect(find.text('Failed photos'), findsOneWidget);
-    expect(find.text('Dismiss'), findsOneWidget);
-    expect(
-      find.textContaining('stop: the phone found no page number'),
-      findsOneWidget,
-    );
+    expect(spoken('failed photos'), findsOneWidget);
+    expect(spoken('Dismiss'), findsOneWidget);
+    expect(rejected(RejectGlyph.noNumber), findsOneWidget);
+    expect(find.byIcon(Icons.stop), findsOneWidget);
   });
 }

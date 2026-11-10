@@ -68,15 +68,11 @@ void main() {
     expect(await _library(const <String, dynamic>{}).search('x'), isEmpty);
   });
 
-  test('a failed search throws with the status', () async {
+  test('a failed search throws the status as a number', () async {
     await expectLater(
       _library(const {}, status: 503).search('x'),
       throwsA(
-        isA<Exception>().having(
-          (e) => '$e',
-          'message',
-          contains('Open Library answered 503'),
-        ),
+        isA<OpenLibraryException>().having((e) => e.status, 'status', 503),
       ),
     );
   });

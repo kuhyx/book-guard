@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 
 LibraryBook _book({bool chapters = true}) => LibraryBook(
   isbn: '978',
@@ -58,17 +59,12 @@ void main() {
     tester,
   ) async {
     await open(tester);
-    expect(find.text('New note'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Note'), '  hello  ');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Page (optional)'),
-      ' 12 ',
-    );
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await typeInto(tester, 'Note', '  hello  ');
+    await typeInto(tester, 'Page (optional)', ' 12 ');
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Two'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Two').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save'));
+    await tester.tap(iconLabeled('Save'));
     await tester.pumpAndSettle();
     expect(result!.id, 'new1');
     expect(result!.isbn, '978');
@@ -80,19 +76,23 @@ void main() {
 
   testWidgets('an empty note is never saved', (tester) async {
     await open(tester);
-    await tester.enterText(find.widgetWithText(TextField, 'Note'), '   ');
-    await tester.tap(find.text('Save'));
+    await typeInto(tester, 'Note', '   ');
+    await tester.tap(iconLabeled('Save'));
     await tester.pumpAndSettle();
-    expect(find.text('New note'), findsOneWidget);
+    // Still open, and the note field is red until something is typed.
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(fieldIsRed(tester, 'Note'), isTrue);
     expect(result, isNull);
     expect(ids, 0);
+    await typeInto(tester, 'Note', 'x');
+    expect(fieldIsRed(tester, 'Note'), isFalse);
   });
 
   testWidgets('cancel returns nothing', (tester) async {
     await open(tester);
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(iconLabeled('Cancel'));
     await tester.pumpAndSettle();
-    expect(find.text('New note'), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
     expect(result, isNull);
   });
 
@@ -100,13 +100,18 @@ void main() {
     tester,
   ) async {
     await open(tester, existing: _old);
-    expect(find.text('Edit note'), findsOneWidget);
     expect(find.text('old text'), findsOneWidget);
     expect(find.text('4'), findsOneWidget);
-    expect(find.text('Gone'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'old text'), 'new');
-    await tester.enterText(find.widgetWithText(TextField, '4'), 'x');
-    await tester.tap(find.text('Save'));
+    // The chapter the book no longer lists stays, chosen.
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Gone'))
+          .selected,
+      isTrue,
+    );
+    await typeInto(tester, 'Note', 'new');
+    await typeInto(tester, 'Page (optional)', 'x');
+    await tester.tap(iconLabeled('Save'));
     await tester.pumpAndSettle();
     expect(result!.id, 'keep');
     expect(result!.createdAt, _old.createdAt);
@@ -117,18 +122,21 @@ void main() {
     expect(ids, 0);
   });
 
-  testWidgets('a book without contents has no chapter picker', (tester) async {
+  testWidgets('a book without contents has no chapter chips', (tester) async {
     await open(tester, book: _book(chapters: false));
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(iconLabeled('Chapter'), findsNothing);
   });
 
-  testWidgets('"None" clears the chapter', (tester) async {
+  testWidgets('tapping the chosen chapter again clears it', (tester) async {
     await open(tester, existing: _old);
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Gone'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('None').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save'));
+    expect(
+      find.byWidgetPredicate((w) => w is ChoiceChip && w.selected),
+      findsNothing,
+    );
+    await tester.tap(iconLabeled('Save'));
     await tester.pumpAndSettle();
     expect(result!.chapter, '');
   });

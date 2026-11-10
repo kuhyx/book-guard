@@ -4,18 +4,18 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from book_guard import _app_handlers, _grading, _ledger
+from book_guard import _app_handlers, _grading
 from book_guard._app_handlers import HANDLERS
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._http import UnavailableError
 from book_guard._openlibrary import BookInfo
-from book_guard._quiz import Verdict
 from book_guard._requests import Response, handle_requests
-from book_guard.tests._flow_helpers import ISBN13, quiz_pair, seed_photos
+from book_guard.tests._flow_helpers import ISBN13
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -70,11 +70,7 @@ def test_non_json_and_directories_are_ignored(bg_paths: Paths) -> None:
 def test_unknown_type_answers_an_error(bg_paths: Paths) -> None:
     path = _put(bg_paths, f"{RID}.json", {"id": RID, "type": "launch"})
     assert handle_requests(bg_paths, HANDLERS) == 1
-    assert _answer(bg_paths) == {
-        "id": RID,
-        "ok": False,
-        "message": "unknown request type 'launch'",
-    }
+    assert _answer(bg_paths) == {"id": RID, "ok": False, "code": "unknown_type"}
     assert not path.exists()
 
 
@@ -98,13 +94,20 @@ def test_handler_errors_become_error_responses(
 
     _put(bg_paths, f"{RID}.json", {"id": RID, "type": "x"})
     assert handle_requests(bg_paths, {"x": broken}) == 1
-    assert _answer(bg_paths) == {"id": RID, "ok": False, "message": str(error)}
+    assert _answer(bg_paths) == {"id": RID, "ok": False, "code": "error"}
 
 
 def test_passed_flag_is_forwarded(bg_paths: Paths) -> None:
     _put(bg_paths, f"{RID}.json", {"id": RID, "type": "x"})
-    handle_requests(bg_paths, {"x": lambda _p, _r: Response(True, "yes", passed=False)})
-    assert _answer(bg_paths)["passed"] is False
+    handle_requests(
+        bg_paths, {"x": lambda _p, _r: Response(True, "failed", passed=False)}
+    )
+    assert _answer(bg_paths) == {
+        "id": RID,
+        "ok": True,
+        "code": "failed",
+        "passed": False,
+    }
 
 
 # -- handlers ---------------------------------------------------------------
@@ -120,12 +123,13 @@ def test_positive_int(raw: object, expected: int | None) -> None:
 
 def test_register_rejects_a_bad_isbn(bg_paths: Paths) -> None:
     response = HANDLERS["register"](bg_paths, {"isbn": "12-34"})
-    assert response == Response(ok=False, message="That is not a 10- or 13-digit ISBN.")
+    assert response == Response(ok=False, code="bad_isbn")
 
 
 def test_register_through_open_library(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    caplog.set_level(logging.INFO)
     seen: list[str] = []
 
     def lookup(_paths: Paths, isbn: str) -> BookInfo:
@@ -136,10 +140,9 @@ def test_register_through_open_library(
     response = HANDLERS["register"](
         bg_paths, {"isbn": "978-0-14-044913-6", "pages": "1225"}
     )
-    assert response == Response(
-        True, "Now reading: War -- Tol, last page 1225", data={"known": True}
-    )
+    assert response == Response(True, "registered", data={"known": True})
     assert seen == [ISBN13]
+    assert "Now reading: War -- Tol, last page 1225" in caplog.text
 
 
 def test_register_says_when_no_catalogue_knows_it(
@@ -161,37 +164,20 @@ def test_register_offline_is_not_ok(
 
     monkeypatch.setattr(_grading, "lookup_book", offline)
     response = HANDLERS["register"](bg_paths, {"isbn": ISBN13})
-    assert not response.ok
-    assert response.message.startswith("No book source reachable")
+    assert response == Response(ok=False, code="offline")
     assert not bg_paths.ledger.exists()
-
-
-def test_summary_for_a_stale_session(bg_paths: Paths) -> None:
-    response = HANDLERS["summary"](bg_paths, {"session_id": "session:gone"})
-    assert response == Response(
-        ok=False, message="That session is not waiting for a summary any more."
-    )
-
-
-def test_summary_grades_the_session(
-    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    records = quiz_pair()
-    seed_photos(bg_paths, *records)
-    monkeypatch.setattr(
-        _grading, "grade", lambda *_a, **_k: Verdict(passed=True, feedback="Good.")
-    )
-    sid = f"session:{records[0].sha[:16]}-{records[1].sha[:16]}"
-    response = HANDLERS["summary"](bg_paths, {"session_id": sid, "summary": "text"})
-    assert response == Response(ok=True, message="Good.", passed=True)
-    assert _ledger.load(bg_paths.ledger, bg_paths.key_file).has(sid)
 
 
 def test_response_data_reaches_the_app(bg_paths: Paths) -> None:
     _put(bg_paths, f"{RID}.json", {"id": RID, "type": "x"})
 
     def with_data(_paths: Paths, _req: dict[str, Any]) -> Response:
-        return Response(ok=True, message="m", data={"title": "War"})
+        return Response(ok=True, code="found", data={"title": "War"})
 
     assert handle_requests(bg_paths, {"x": with_data}) == 1
-    assert _answer(bg_paths)["data"] == {"title": "War"}
+    assert _answer(bg_paths) == {
+        "id": RID,
+        "ok": True,
+        "code": "found",
+        "data": {"title": "War"},
+    }

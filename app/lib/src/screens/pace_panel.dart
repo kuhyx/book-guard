@@ -1,4 +1,6 @@
 import 'package:book_guard_app/src/pace/day_views.dart';
+import 'package:book_guard_app/src/screens/day_card.dart';
+import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/icon_pickers.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:design_system/design_system.dart';
@@ -79,21 +81,31 @@ class _PacePanelState extends State<PacePanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (sim != null)
-          Text(
-            'Simulation: ${_signed(sim.delta)} pages on ${shortDay(sim.day)} '
-            '(display only)',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: context.statusColors.warning,
-            ),
+          Wrap(
+            spacing: AppSpacing.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              IconNum(
+                Icons.science,
+                _signed(sim.delta),
+                tint: context.statusColors.warning,
+                semanticLabel: 'simulation, display only',
+              ),
+              IconNum(
+                Icons.calendar_today,
+                shortDay(sim.day),
+                tint: context.statusColors.warning,
+              ),
+            ],
           ),
-        const SectionHeader('This week'),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             for (final v in week)
               Expanded(
                 child: DayCell(
                   view: v,
-                  label: weekdayInitials[pyWeekday(v.day)],
+                  showDot: true,
                   selected: v.day == _selected,
                   onTap: () => _select(v.day),
                 ),
@@ -103,8 +115,10 @@ class _PacePanelState extends State<PacePanel> {
         Row(
           children: [
             IconButton(
-              tooltip: 'Previous month',
-              icon: const Icon(Icons.chevron_left),
+              icon: const Icon(
+                Icons.chevron_left,
+                semanticLabel: 'previous month',
+              ),
               onPressed: _month.isAfter(_first) ? () => _shiftMonth(-1) : null,
             ),
             Expanded(
@@ -115,26 +129,17 @@ class _PacePanelState extends State<PacePanel> {
               ),
             ),
             IconButton(
-              tooltip: 'Next month',
-              icon: const Icon(Icons.chevron_right),
+              icon: const Icon(
+                Icons.chevron_right,
+                semanticLabel: 'next month',
+              ),
               onPressed: monthStart(_last).isAfter(_month)
                   ? () => _shiftMonth(1)
                   : null,
             ),
           ],
         ),
-        Row(
-          children: [
-            for (final d in weekdayInitials)
-              Expanded(
-                child: Text(
-                  d,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.labelSmall,
-                ),
-              ),
-          ],
-        ),
+        const WeekdayDots(),
         ..._grid(month),
         const SizedBox(height: AppSpacing.sm),
         Card(
@@ -145,11 +150,14 @@ class _PacePanelState extends State<PacePanel> {
               children: [
                 OutlinedButton.icon(
                   onPressed: _pickDay,
-                  icon: const Icon(Icons.calendar_today),
-                  label: Text('Any day: ${shortDay(_selected)}'),
+                  icon: const Icon(
+                    Icons.calendar_today,
+                    semanticLabel: 'any day',
+                  ),
+                  label: Text(shortDay(_selected)),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                for (final line in dayLines(day)) Text(line),
+                DayDetails(view: day),
               ],
             ),
           ),
@@ -157,40 +165,43 @@ class _PacePanelState extends State<PacePanel> {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.sm,
               children: [
-                Text('Simulate', style: theme.textTheme.titleSmall),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: AppSpacing.sm,
-                  children: [
-                    IconButton(
-                      tooltip: '$_step pages fewer',
-                      icon: const Icon(Icons.remove),
-                      onPressed: () => setState(() => _delta -= _step),
-                    ),
-                    Text('${_signed(_delta)} pages'),
-                    IconButton(
-                      tooltip: '$_step pages more',
-                      icon: const Icon(Icons.add),
-                      onPressed: () => setState(() => _delta += _step),
-                    ),
-                    OutlinedButton(
-                      onPressed: _pickSimDay,
-                      child: Text('on ${shortDay(_simDay)}'),
-                    ),
-                    if (_delta != 0)
-                      TextButton(
-                        onPressed: () => setState(() => _delta = 0),
-                        child: const Text('Reset'),
-                      ),
-                  ],
+                Icon(
+                  Icons.science,
+                  color: theme.hintColor,
+                  semanticLabel: 'simulate',
                 ),
-                Text(
-                  'Later days follow the surplus and debt rules. Never saved.',
-                  style: theme.textTheme.bodySmall,
+                IconButton(
+                  icon: const Icon(
+                    Icons.remove,
+                    semanticLabel: '$_step pages fewer',
+                  ),
+                  onPressed: () => setState(() => _delta -= _step),
                 ),
+                Text(_signed(_delta)),
+                IconButton(
+                  icon: const Icon(
+                    Icons.add,
+                    semanticLabel: '$_step pages more',
+                  ),
+                  onPressed: () => setState(() => _delta += _step),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _pickSimDay,
+                  icon: const Icon(
+                    Icons.calendar_today,
+                    semanticLabel: 'on day',
+                  ),
+                  label: Text(shortDay(_simDay)),
+                ),
+                if (_delta != 0)
+                  IconButton(
+                    icon: const Icon(Icons.restart_alt, semanticLabel: 'reset'),
+                    onPressed: () => setState(() => _delta = 0),
+                  ),
               ],
             ),
           ),
@@ -206,7 +217,6 @@ class _PacePanelState extends State<PacePanel> {
       for (final v in month)
         DayCell(
           view: v,
-          label: '${v.day.day}',
           selected: v.day == _selected,
           onTap: () => _select(v.day),
         ),

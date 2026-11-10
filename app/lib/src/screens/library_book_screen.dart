@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/library_store.dart';
+import 'package:book_guard_app/src/screens/book_cues.dart';
+import 'package:book_guard_app/src/screens/library_session_tile.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
 import 'package:book_guard_app/src/screens/note_editor.dart';
-import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/switch_book_button.dart';
+import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -33,7 +35,7 @@ class LibraryBookScreen extends StatefulWidget {
   /// The live snapshot: tells whether a session is open.
   final GuardState? state;
 
-  /// Called with the ISBN once "Read this now" is queued.
+  /// Called with the ISBN once the switch is queued.
   final ValueChanged<String>? onSwitched;
 
   @override
@@ -74,29 +76,47 @@ class _LibraryBookScreenState extends State<LibraryBookScreen> {
     if (note == null) return;
     await widget.api.saveNote(note);
     await _loadNotes();
-    if (mounted) showToast(context, 'Note saved on the device.');
+    if (mounted) {
+      // Saved on the device; it reaches the PC when that is reachable.
+      showReply(context, const GuardResponse(ok: true, code: 'note_saved'));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final book = widget.book;
     final notes = mergeNotes(_pc, _device);
-    final queuedColor = context.statusColors.warning;
     return Scaffold(
       appBar: AppBar(title: Text(book.title)),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Add a note',
         onPressed: _edit,
-        child: const Icon(Icons.note_add_outlined),
+        child: const Icon(Icons.note_add_outlined, semanticLabel: 'Add a note'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (book.author.isNotEmpty) Text(book.author),
-          Text(
-            'p. ${book.lastPageRead ?? 0}/${book.pages ?? '?'} - '
-            '${book.pagesRead} pages credited - '
-            '${_status(book)}',
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
+            children: [
+              IconNumber(
+                Icons.last_page,
+                '${book.lastPageRead ?? 0}/${book.pages ?? '?'}',
+                semanticLabel: 'Pages',
+              ),
+              IconNumber(
+                Icons.done_all,
+                '${book.pagesRead}',
+                semanticLabel: 'Pages credited',
+              ),
+              Icon(
+                bookStatusIcon(book.status),
+                color: bookStatusTint(context, book.status),
+                semanticLabel: book.status,
+              ),
+              if (book.status == 'finished') Text(dmy(book.finishedAt)),
+            ],
           ),
           SwitchBookButton(
             api: widget.api,
@@ -104,127 +124,81 @@ class _LibraryBookScreenState extends State<LibraryBookScreen> {
             state: widget.state,
             onSwitched: widget.onSwitched,
           ),
-          const SectionHeader('Notes'),
-          if (notes.isEmpty) const Text('No notes yet.'),
-          for (final note in notes)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(note.text),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_place(note)),
-                  if (queuedOnPhone(_pc, note))
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Icon(
-                              Icons.cloud_upload_outlined,
-                              size: 16,
-                              color: queuedColor,
-                            ),
-                          ),
-                          const TextSpan(text: ' Queued: not on the PC yet'),
-                        ],
+          _Section(Icons.sticky_note_2_outlined, 'Notes', [
+            for (final note in notes)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(note.text),
+                subtitle: Wrap(
+                  spacing: AppSpacing.md,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(dmy(note.updatedAt)),
+                    if (note.page != null)
+                      IconNumber(
+                        Icons.bookmark_border,
+                        '${note.page}',
+                        semanticLabel: 'Page',
                       ),
-                      style: TextStyle(color: queuedColor),
-                    ),
+                    if (note.chapter.isNotEmpty) Text(note.chapter),
+                    if (queuedOnPhone(_pc, note))
+                      Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 18,
+                        color: context.statusColors.warning,
+                        semanticLabel: 'Queued: not on the PC yet',
+                      ),
+                  ],
+                ),
+                trailing: const Icon(
+                  Icons.edit_outlined,
+                  semanticLabel: 'Edit note',
+                ),
+                onTap: () => _edit(note),
+              ),
+          ]),
+          _Section(Icons.list, 'Chapters', [
+            for (final c in book.chapters)
+              Row(
+                children: [
+                  SizedBox(width: 48, child: Text('${c.start}')),
+                  Expanded(child: Text(c.title)),
                 ],
               ),
-              trailing: const Icon(Icons.edit_outlined),
-              onTap: () => _edit(note),
-            ),
-          const SectionHeader('Chapters'),
-          if (book.chapters.isEmpty) const Text('No contents list.'),
-          for (final c in book.chapters) Text('p. ${c.start}: ${c.title}'),
-          const SectionHeader('Sessions'),
-          if (book.sessions.isEmpty) const Text('No sessions yet.'),
-          for (final s in book.sessions.reversed)
-            _SessionTile(api: widget.api, session: s),
+          ]),
+          _Section(Icons.history, 'Sessions', [
+            for (final s in book.sessions.reversed)
+              LibrarySessionTile(api: widget.api, session: s),
+          ]),
         ],
       ),
     );
   }
-
-  static String _status(LibraryBook book) => switch (book.status) {
-    'finished' => 'finished ${dmy(book.finishedAt)}',
-    'reading' => 'in progress',
-    _ => 'not started',
-  };
-
-  static String _place(Note note) => [
-    dmy(note.updatedAt),
-    if (note.page != null) 'p. ${note.page}',
-    if (note.chapter.isNotEmpty) note.chapter,
-  ].join(' - ');
 }
 
-class _SessionTile extends StatelessWidget {
-  const new({required this.api, required this.session});
+/// A list under a small glyph in place of a heading; an empty one is a
+/// 64 px outline of that glyph.
+class _Section extends StatelessWidget {
+  const new(this.icon, this.semanticLabel, this.items);
 
-  final GuardApi api;
-  final LibrarySession session;
+  final IconData icon;
+  final String semanticLabel;
+  final List<Widget> items;
 
   @override
   Widget build(BuildContext context) {
-    final s = session;
-    final last = s.attempts.isEmpty ? null : s.attempts.last;
-    final earlier = s.attempts.length > 1
-        ? s.attempts.sublist(0, s.attempts.length - 1)
-        : const <
-            ({bool passed, String summary, String feedback, String grader})
-          >[];
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      title: Text(
-        '${dmy(s.endedAt)} - ${s.estimated ? '≈ ' : ''}'
-        'p. ${s.startPage}-${s.endPage}',
-      ),
-      subtitle: Text(
-        '${s.pages ?? '?'} pages, ${s.minutes ?? '?'} min - ${s.status}',
-      ),
-      expandedCrossAxisAlignment: CrossAxisAlignment.start,
+    if (items.isEmpty) return EmptyGlyph(icon, semanticLabel: semanticLabel);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (s.photos.isNotEmpty)
-          Wrap(
-            spacing: AppSpacing.sm,
-            children: [
-              for (final p in s.photos)
-                InkWell(
-                  onTap: () => openPhoto(context, api, p.file),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: 72,
-                        height: 96,
-                        child: RemoteImage(
-                          bytes: api.fetchBytes(p.thumb),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Text('${p.role} p. ${p.page ?? '?'}'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        const SectionHeader('Summary'),
-        SelectableText(last?.summary ?? 'No summary written yet.'),
-        if (last != null && last.feedback.isNotEmpty) ...[
-          SectionHeader(
-            'Grader${last.grader.isEmpty ? '' : ' (${last.grader})'}',
-          ),
-          SelectableText(last.feedback),
-        ],
-        for (final (i, a) in earlier.indexed)
-          ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: Text('Attempt ${i + 1} - ${a.passed ? 'passed' : 'failed'}'),
-            expandedCrossAxisAlignment: CrossAxisAlignment.start,
-            children: [SelectableText(a.summary), SelectableText(a.feedback)],
-          ),
+        const SizedBox(height: AppSpacing.md),
+        Icon(
+          icon,
+          semanticLabel: semanticLabel,
+          color: Theme.of(context).colorScheme.outline,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ...items,
       ],
     );
   }

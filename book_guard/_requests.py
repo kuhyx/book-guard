@@ -53,14 +53,36 @@ FIRST: Final = frozenset({"ebook_session"})
 """Request types that create what later requests refer to."""
 
 
+CODES: Final = frozenset({
+    # done
+    "registered", "switched", "found", "saved", "requeued", "read",
+    "times_set", "note_saved", "note_updated", "note_kept", "recorded",
+    "already_recorded", "passed", "failed", "ungraded", "already_credited",
+    # refused
+    "bad_isbn", "bad_time", "bad_pages", "bad_note", "bad_file", "offline",
+    "unknown_isbn", "unknown_book", "no_book", "not_waiting", "no_box",
+    "no_photo", "already_read", "photo_gone", "no_page", "no_session",
+    "already_graded", "outside_photos", "too_short", "overlap",
+    "paper_overlap", "refused", "unknown_type", "error",
+})  # fmt: skip
+"""What a reply can say. The app maps each to an icon, a tint and a haptic;
+the sentences that used to travel with them go to the PC's log only."""
+
+
 @dataclass(frozen=True)
 class Response:
-    """What the app reads back."""
+    """What the app reads back: a code from :data:`CODES`, and numbers."""
 
     ok: bool
-    message: str
+    code: str
     passed: bool | None = None
     data: dict[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        """Refuse anything that is not a known code (a sentence, say)."""
+        if self.code not in CODES:
+            msg = f"unknown reply code {self.code!r}"
+            raise ValueError(msg)
 
 
 def _pending(requests_dir: Path) -> list[Path]:
@@ -102,9 +124,7 @@ def handle_requests(
             response = (
                 handler(paths, request)
                 if handler
-                else Response(
-                    ok=False, message=f"unknown request type {request.get('type')!r}"
-                )
+                else Response(ok=False, code="unknown_type")
             )
         except ClaudeUnavailableError as exc:
             _logger.warning("request %s deferred: %s", rid, exc)
@@ -112,8 +132,9 @@ def handle_requests(
         except (OSError, ValueError) as exc:
             _logger.warning("request %s failed: %s", rid, exc)
             log_error(paths, "request", str(exc), request=rid, type=request.get("type"))
-            response = Response(ok=False, message=str(exc))
-        payload = {"id": rid, "ok": response.ok, "message": response.message}
+            response = Response(ok=False, code="error")
+        _logger.info("request %s (%s): %s", rid, request.get("type"), response.code)
+        payload = {"id": rid, "ok": response.ok, "code": response.code}
         if response.passed is not None:
             payload["passed"] = response.passed
         if response.data is not None:

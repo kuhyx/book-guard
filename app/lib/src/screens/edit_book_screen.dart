@@ -1,12 +1,16 @@
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/book_cues.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
+import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Edit the current book: title, author, ISBN, last page and chapters.
 ///
-/// "Fill from ISBN" asks the PC to look the ISBN up everywhere and puts what
-/// it found into the form for review; nothing is saved until Save.
+/// The lookup button asks the PC to look the ISBN up everywhere and puts what
+/// it found into the form for review; nothing is saved until the check
+/// button.
 class EditBookScreen extends StatefulWidget {
   /// Creates the screen for [book].
   const new({required this.api, required this.book, super.key});
@@ -47,6 +51,9 @@ class _EditBookScreenState extends State<EditBookScreen> {
   late final List<_Row> _rows = [for (final c in widget.book.chapters) _Row(c)];
   bool _busy = false;
 
+  /// The PC refused the last page: its field is red until edited.
+  bool _pagesBad = false;
+
   @override
   void dispose() {
     for (final c in [_title, _author, _isbn, _pages]) {
@@ -63,7 +70,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
     try {
       await action();
     } on Exception catch (error) {
-      if (mounted) showError(context, '$error');
+      if (mounted) reportFailure(context, widget.api, 'edit_book', error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -76,7 +83,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
     if (!mounted) return;
     final data = response.data;
     if (!response.ok || data == null) {
-      showError(context, response.message);
+      showReply(context, response);
       return;
     }
     setState(() {
@@ -86,7 +93,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
       }
       if (data['pages'] is int) _pages.text = '${data['pages']}';
     });
-    showToast(context, '${response.message} - review, then Save.');
+    showReply(context, response);
   });
 
   Future<void> _save() => _run(() async {
@@ -104,77 +111,111 @@ class _EditBookScreenState extends State<EditBookScreen> {
     });
     if (!mounted) return;
     if (!response.ok) {
-      showError(context, response.message);
+      setState(() => _pagesBad = response.code == 'bad_pages');
+      showReply(context, response);
       return;
     }
-    showToast(context, response.message);
+    showReply(context, response);
     Navigator.of(context).pop(true);
   });
 
-  Widget _field(TextEditingController c, String label, {bool number = false}) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: TextField(
-          controller: c,
-          keyboardType: number ? TextInputType.number : null,
-          decoration: InputDecoration(labelText: label),
-        ),
-      );
+  Widget _field(
+    TextEditingController c,
+    IconData icon,
+    String spoken, {
+    bool number = false,
+    bool bad = false,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: IconField(
+      icon: icon,
+      semanticLabel: spoken,
+      controller: c,
+      keyboardType: number ? TextInputType.number : null,
+      errorBorder: bad,
+      onChanged: (_) {
+        if (bad) setState(() => _pagesBad = false);
+      },
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Edit book')),
+    appBar: AppBar(),
     body: ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         if (_busy) const LinearProgressIndicator(),
-        _field(_title, 'Title'),
-        _field(_author, 'Author'),
-        _field(_isbn, 'ISBN', number: true),
-        OutlinedButton.icon(
-          onPressed: _busy ? null : _fill,
-          icon: const Icon(Icons.travel_explore),
-          label: const Text('Fill from ISBN'),
+        _field(_title, Icons.title, 'Title'),
+        _field(_author, Icons.person, 'Author'),
+        _field(_isbn, Icons.qr_code, 'ISBN', number: true),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GlyphButton(
+            icon: Icons.travel_explore,
+            semanticLabel: 'Fill from ISBN',
+            onPressed: _busy ? null : _fill,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
-        _field(_pages, 'Last page of your copy', number: true),
-        const SectionHeader('Chapters'),
+        _field(
+          _pages,
+          Icons.last_page,
+          'Last page of your copy',
+          number: true,
+          bad: _pagesBad,
+        ),
+        const SizedBox(height: AppSpacing.sm),
         for (final (i, row) in _rows.indexed)
           Row(
             children: [
               SizedBox(
-                width: 72,
-                child: TextField(
+                width: 128,
+                child: IconField(
+                  icon: Icons.bookmark_border,
+                  semanticLabel: 'Page',
                   controller: row.start,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Page'),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: TextField(
+                child: IconField(
+                  icon: Icons.list,
+                  semanticLabel: 'Chapter ${i + 1}',
                   controller: row.title,
-                  decoration: InputDecoration(labelText: 'Chapter ${i + 1}'),
                 ),
               ),
               IconButton(
-                tooltip: 'Remove chapter',
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  semanticLabel: 'Remove chapter',
+                ),
                 onPressed: _busy
                     ? null
                     : () => setState(() => _rows.removeAt(i).dispose()),
               ),
             ],
           ),
-        TextButton.icon(
-          onPressed: _busy ? null : () => setState(() => _rows.add(_Row(null))),
-          icon: const Icon(Icons.add),
-          label: const Text('Add chapter'),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GlyphButton(
+            icon: Icons.playlist_add,
+            semanticLabel: 'Add chapter',
+            onPressed: _busy
+                ? null
+                : () => setState(() => _rows.add(_Row(null))),
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
-        FilledButton(
-          onPressed: _busy ? null : _save,
-          child: const Text('Save'),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GlyphButton(
+            icon: Icons.check,
+            semanticLabel: 'Save',
+            filled: true,
+            onPressed: _busy ? null : _save,
+          ),
         ),
       ],
     ),

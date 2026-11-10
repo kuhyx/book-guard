@@ -1,12 +1,16 @@
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 /// Asks what the photo really shows; pops `(page, comment)` or null.
+/// Wordless: the failure is its glyph, the two fields are led by a number
+/// and a pencil icon, the buttons are close and send.
 class ReportDialog extends StatefulWidget {
   /// Creates the dialog for a photo that failed with [reason].
   const new({required this.reason, super.key});
 
-  /// What went wrong.
+  /// What went wrong (a reject glyph; never painted as text).
   final String reason;
 
   @override
@@ -26,35 +30,41 @@ class _ReportDialogState extends State<ReportDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('This should not have failed'),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('It failed with: ${widget.reason}'),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: RejectBadge(widget.reason, size: 32),
+        ),
         const SizedBox(height: AppSpacing.sm),
-        TextField(
+        IconField(
+          icon: Icons.pin,
+          semanticLabel: 'The page number it shows',
           controller: _page,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'The page number it shows',
-          ),
         ),
-        TextField(
+        const SizedBox(height: AppSpacing.sm),
+        IconField(
+          icon: Icons.edit_note,
+          semanticLabel: 'Anything else',
           controller: _comment,
-          decoration: const InputDecoration(labelText: 'Anything else'),
         ),
       ],
     ),
     actions: [
-      TextButton(
+      GlyphButton(
+        icon: Icons.close,
+        semanticLabel: 'Cancel',
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
       ),
-      FilledButton(
+      GlyphButton(
+        icon: Icons.send,
+        semanticLabel: 'Send report',
+        filled: true,
         onPressed: () =>
             Navigator.of(context)
                 .pop((int.tryParse(_page.text.trim()), _comment.text.trim())),
-        child: const Text('Send report'),
       ),
     ],
   );

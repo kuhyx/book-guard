@@ -29,8 +29,9 @@ void main() {
 
   testWidgets('shows the size the reader will use', (tester) async {
     await pump(tester);
-    expect(find.text('Text size: 18'), findsOneWidget);
+    expect(find.text('18'), findsOneWidget);
     expect(previewSize(tester), 18);
+    expect(find.byIcon(Icons.text_fields), findsOneWidget);
     final slider = tester.widget<Slider>(find.byType(Slider));
     expect(slider.min, ReadingStyle.minFont);
     expect(slider.max, ReadingStyle.maxFont);
@@ -40,7 +41,7 @@ void main() {
   testWidgets('a kept size outside the range is shown clamped', (tester) async {
     await api.saveFontSize(40);
     await pump(tester);
-    expect(find.text('Text size: 32'), findsOneWidget);
+    expect(find.text('32'), findsOneWidget);
   });
 
   testWidgets('dragging the slider previews and keeps the size', (

@@ -3,21 +3,13 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/grader_note.dart';
-import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
+import 'package:book_guard_app/src/screens/summary_section.dart';
+import 'package:book_guard_app/src/screens/summary_verdict.dart';
 import 'package:book_guard_app/src/summary_store.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-
-/// What [session] earns once its summary passes -- worked out here from the
-/// last [pace], so it shows offline too: the +1h comes when today's credited
-/// pages reach today's requirement. The PC signs the credit when it sees the
-/// summary.
-String expectedCredit(SessionInfo session, {Pace? pace}) =>
-    'Passing credits ${session.pages} pages'
-    '${pace?.earnsBonus(session.pages) ?? false ? ' and +1h gaming' : ''}. '
-    'If no grader answers for 5 minutes, it is credited without '
-    'grading.';
 
 /// The summary for [session]: typed text kept as a draft, locked while the
 /// grader has it, and still "with the grader" after leaving the tab -- the
@@ -59,8 +51,9 @@ class SummaryPanel extends StatefulWidget {
 class _SummaryPanelState extends State<SummaryPanel> {
   final _text = TextEditingController();
   DateTime? _sentAt;
-  String? _verdict;
-  bool? _passed;
+  GuardResponse? _reply;
+  bool _busy = false;
+  bool _failedSend = false;
   Timer? _expiry;
   DateTime? _lapsed;
 
@@ -90,6 +83,21 @@ class _SummaryPanelState extends State<SummaryPanel> {
   void didUpdateWidget(SummaryPanel old) {
     super.didUpdateWidget(old);
     _arm();
+    // A verdict that came in later (a queued summary, graded once the PC
+    // was back) arrives as a new retry: re-read the marker the home screen
+    // just settled, so the box unlocks for the rewrite.
+    if (widget.session.retry?.gradedAt != old.session.retry?.gradedAt) {
+      unawaited(_resettle());
+    }
+  }
+
+  Future<void> _resettle() async {
+    final sent = await widget.api.gradingSince(widget.session.id);
+    if (!mounted) return;
+    setState(() {
+      _sentAt = sent;
+      if (sent == null) _reply = null;
+    });
   }
 
   /// Rebuilds the instant the outage's reset time comes, so the note goes
@@ -115,15 +123,16 @@ class _SummaryPanelState extends State<SummaryPanel> {
     await widget.api.markGrading(session.id);
     setState(() {
       _sentAt = DateTime.now();
-      _verdict = 'Grading - this takes up to a minute...';
-      _passed = null;
+      _busy = true;
+      _failedSend = false;
+      _reply = null;
     });
     final GuardResponse response;
     try {
       response = await widget.api.sendQueued('summary', {
         'session_id': session.id,
         'summary': _text.text.trim(),
-      }, 'Summary for ${session.span}');
+      });
     } on Exception catch (error) {
       unawaited(widget.api.errors.log('summary', '$error'));
       await widget.api.cancelGrading(session.id); // the draft stays
@@ -131,7 +140,8 @@ class _SummaryPanelState extends State<SummaryPanel> {
       if (!mounted) return;
       setState(() {
         _sentAt = null;
-        _verdict = '$error';
+        _busy = false;
+        _failedSend = true;
       });
       return;
     }
@@ -146,8 +156,8 @@ class _SummaryPanelState extends State<SummaryPanel> {
     unawaited(widget.onChanged());
     if (!mounted) return;
     setState(() {
-      _verdict = response.message;
-      _passed = passed;
+      _reply = response;
+      _busy = false;
       if (failed) _sentAt = null;
     });
     if (response.passed ?? false) _text.clear();
@@ -156,39 +166,36 @@ class _SummaryPanelState extends State<SummaryPanel> {
   @override
   Widget build(BuildContext context) {
     final sentAt = _sentAt;
-    final verdict = _verdict;
+    final reply = _reply;
     final retry = widget.session.retry;
+    final submitted = _busy || reply != null || _failedSend;
+    final waiting = sentAt != null && reply?.passed == null;
     final (now, lapsed) = (DateTime.now(), _lapsed);
     final grader = graderNote(
       widget.state,
-      waiting: sentAt != null && _passed == null,
+      waiting: waiting,
       now: lapsed != null && lapsed.isAfter(now) ? lapsed : now,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (retry != null && verdict == null) ...[
-          VerdictText(retry.feedback, passed: false),
-          if (retry.missing.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.sm),
-              child: Text(
-                'To be accepted, add:\n'
-                '${retry.missing.map((m) => '- $m').join('\n')}',
-              ),
+        // A restored failure: the topics to add, never the grader's prose.
+        if (retry != null && !submitted)
+          SummaryVerdict(
+            const Cue(
+              CueKind.error,
+              icon: Icons.cancel,
+              semanticLabel: 'not accepted',
             ),
-          const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.sm),
-            child: Text(
-              'Add that and send it again - there is no limit on rewrites.',
-            ),
+            missing: retry.missing,
+            retry: true,
           ),
-        ],
         SummarySection(
           session: widget.session,
           controller: _text,
           enabled: sentAt == null,
           grader: grader,
+          bonus: widget.pace?.earnsBonus(widget.session.pages) ?? false,
           times: SessionTimes(
             api: widget.api,
             session: widget.session,
@@ -196,25 +203,31 @@ class _SummaryPanelState extends State<SummaryPanel> {
           ),
           onSubmit: sentAt == null ? _submit : null,
         ),
-        if (sentAt != null && _passed == null && verdict != null)
+        if (waiting && submitted)
           const Padding(
             padding: EdgeInsets.only(top: AppSpacing.sm),
             child: LinearProgressIndicator(),
           ),
-        if (sentAt != null && verdict == null)
+        if (sentAt != null && waiting && !submitted)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Text(
-              'Sent to the grader at ${hhmm(sentAt)} - the verdict appears '
-              'here and as a message.',
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: StatusCue(
+                const Cue(
+                  CueKind.info,
+                  icon: Icons.hourglass_top,
+                  semanticLabel: 'with the grader',
+                ),
+                badge: Text(hhmm(sentAt)),
+              ),
             ),
           ),
-        if (verdict != null) VerdictText(verdict, passed: _passed),
-        // Still owed after a fail too: the rewrite earns the same.
-        if (_passed != true)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Text(expectedCredit(widget.session, pace: widget.pace)),
+        if (reply != null)
+          SummaryVerdict.reply(reply, pages: widget.session.pages),
+        if (_failedSend)
+          const SummaryVerdict(
+            Cue(CueKind.error, semanticLabel: 'sending failed'),
           ),
       ],
     );

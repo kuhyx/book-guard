@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_book.dart';
 import '../../support/states.dart';
 
 final _epub = Uint8List.fromList([0x50, 0x4b]);
@@ -44,11 +46,11 @@ void main() {
     ),
   );
 
-  /// Taps "Attach book file", then "Choose file" in the formats dialog.
+  /// Taps the attach button, then the folder button in the formats dialog.
   Future<void> attach(WidgetTester tester) async {
-    await tapVisible(tester, find.text('Attach book file'));
+    await tapLabeled(tester, 'Attach book file');
     await settle(tester);
-    await tester.tap(find.text('Choose file'));
+    await tester.tap(iconLabeled('Choose file'));
     await settle(tester);
   }
 
@@ -66,16 +68,15 @@ void main() {
     await pump(tester, file: XFile.fromData(_epub, path: '/b/Atomic.epub'));
     await attach(tester);
     expect(api.books, {'Atomic.epub': _epub});
-    expect(find.text('Book file attached.'), findsOneWidget);
+    expect(cueLabeled('Book file attached'), findsOneWidget);
+    expect(cueOf(CueKind.ok), findsOneWidget);
   });
 
   testWidgets('a PC that has not indexed the file yet says so', (tester) async {
     await pump(tester, file: XFile.fromData(_epub, path: '/b/a.epub'));
     await attach(tester);
-    expect(
-      find.text('Still indexing - progress keeps showing here.'),
-      findsOneWidget,
-    );
+    expect(cueLabeled('Still indexing'), findsOneWidget);
+    expect(cueOf(CueKind.warn), findsOneWidget);
   });
 
   testWidgets('a contents photo reports the chapters it gave', (tester) async {
@@ -91,14 +92,12 @@ void main() {
         },
       });
     await pump(tester, photo: XFile.fromData(_epub, path: '/DCIM/c.jpg'));
-    await tapVisible(tester, find.text('Photograph contents'));
+    await tapLabeled(tester, 'Photograph contents');
     await settle(tester);
     expect(cameras, [true]);
     expect(api.photos.keys, ['toc-c.jpg']);
-    expect(
-      find.text('Contents read - the book has 2 chapters.'),
-      findsNWidgets(2),
-    );
+    expect(cueLabeled('Contents read'), findsOneWidget);
+    expect(glyphNumber(cueLabeled('Contents read'), '2'), findsOneWidget);
   });
 
   testWidgets('an unread or rejected contents photo says so', (tester) async {
@@ -108,34 +107,28 @@ void main() {
       photo: XFile.fromData(_epub, path: '/DCIM/c.jpg'),
     );
     expect(find.byIcon(Icons.upload_file), findsOneWidget);
-    await tapVisible(tester, find.text('Photograph contents'));
+    await tapLabeled(tester, 'Photograph contents');
     await settle(tester);
     expect(cameras, [false]);
-    expect(
-      find.text('The PC has not read it yet - it will when it is on.'),
-      findsNWidgets(2),
-    );
+    expect(cueGlyph(Icons.hourglass_empty), findsOneWidget);
+    expect(cueOf(CueKind.warn), findsOneWidget);
   });
 
   testWidgets('offline, a contents photo waits on the phone', (tester) async {
     api.offline = true;
     await pump(tester, photo: XFile.fromData(_epub, path: '/DCIM/c.jpg'));
-    await tapVisible(tester, find.text('Photograph contents'));
+    await tapLabeled(tester, 'Photograph contents');
     await settle(tester);
-    expect(
-      find.text(
-        'Saved on the phone - the PC reads the contents once it is '
-        'reachable.',
-      ),
-      findsOneWidget,
-    );
+    expect(cueGlyph(Icons.outbox), findsOneWidget);
+    expect(cueOf(CueKind.info), findsOneWidget);
   });
 
   testWidgets('a cancelled contents pick uploads nothing', (tester) async {
     await pump(tester);
-    await tapVisible(tester, find.text('Photograph contents'));
+    await tapLabeled(tester, 'Photograph contents');
     await settle(tester);
     expect(api.photos, isEmpty);
+    expect(find.byType(StatusCue), findsNothing);
   });
 
   testWidgets('results arriving after the tab closed are dropped', (
@@ -157,31 +150,33 @@ void main() {
               XFile.fromData(_epub, path: '/DCIM/c.jpg'),
         ),
       );
-      await tapVisible(tester, find.text(label));
+      await tapLabeled(tester, label);
       await settle(tester);
       if (label == 'Attach book file') {
-        await tester.tap(find.text('Choose file'));
+        await tester.tap(iconLabeled('Choose file'));
         await settle(tester);
       }
       await tester.pumpWidget(const SizedBox());
     }
     gate.complete();
     await settle(tester);
-    expect(find.textContaining('read'), findsNothing);
+    expect(find.byType(StatusCue), findsNothing);
   });
 
   testWidgets('a cancelled pick uploads nothing', (tester) async {
     await pump(tester);
     await attach(tester);
     expect(api.books, isEmpty);
-    expect(find.textContaining('Uploaded'), findsNothing);
+    expect(find.byType(StatusCue), findsNothing);
   });
 
   testWidgets('an upload failure is shown', (tester) async {
     api.uploadError = shareDown();
     await pump(tester, file: XFile.fromData(_epub, path: '/b/a.pdf'));
     await attach(tester);
-    expect(find.text('dufs Reading/x failed (500)'), findsOneWidget);
+    // The reason goes to the error log; the screen shows the error glyph.
+    expect(cueOf(CueKind.error), findsOneWidget);
+    expect(find.textContaining('failed'), findsNothing);
   });
 }
 

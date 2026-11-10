@@ -14,6 +14,7 @@ from book_guard._books import Chapter
 from book_guard._cli import main
 from book_guard._grading import switch_book
 from book_guard._openlibrary import BookInfo
+from book_guard._requests import Response
 
 if TYPE_CHECKING:
     from book_guard._paths import Paths
@@ -112,28 +113,27 @@ def test_switch_request(bg_paths: Paths) -> None:
     answer = HANDLERS["switch_book"](
         bg_paths, {"isbn": ZBRODNIA, "at": tap.isoformat()}
     )
-    assert answer.ok
-    assert answer.message.startswith("Now reading: Zbrodnia i kara")
+    assert answer == Response(ok=True, code="switched")
     now_reading = _books.current(_ledger_of(bg_paths))
     assert now_reading is not None
     assert now_reading.isbn == ZBRODNIA
 
 
 @pytest.mark.parametrize(
-    ("body", "why"),
+    ("body", "code"),
     [
-        ({"isbn": "x"}, "ISBN"),
-        ({"isbn": ZBRODNIA, "at": "yesterday"}, "time"),
-        ({"isbn": ZBRODNIA, "at": "2026-11-08T08:00:00"}, "time"),
+        ({"isbn": "x"}, "bad_isbn"),
+        ({"isbn": ZBRODNIA, "at": "yesterday"}, "bad_time"),
+        ({"isbn": ZBRODNIA, "at": "2026-11-08T08:00:00"}, "bad_time"),
+        ({"isbn": "9780000000000"}, "unknown_book"),
     ],
 )
 def test_switch_request_rejects(
-    bg_paths: Paths, body: dict[str, str], why: str
+    bg_paths: Paths, body: dict[str, str], code: str
 ) -> None:
     _two_books(bg_paths)
     answer = HANDLERS["switch_book"](bg_paths, body)
-    assert not answer.ok
-    assert why in answer.message
+    assert answer == Response(ok=False, code=code)
 
 
 def test_switch_request_without_a_time_is_now(bg_paths: Paths) -> None:

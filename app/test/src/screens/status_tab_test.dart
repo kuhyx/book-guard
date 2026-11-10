@@ -1,10 +1,13 @@
+import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_a.dart';
+import '../../support/no_words.dart';
 import '../../support/states.dart';
 
 Future<void> _pump(
@@ -12,22 +15,51 @@ Future<void> _pump(
   GuardState? state,
   Object? error,
   Future<void> Function()? onRefresh,
+  int waiting = 0,
 }) => pumpTab(
   tester,
-  StatusTab(state: state, error: error, onRefresh: onRefresh ?? () async {}),
+  StatusTab(
+    state: state,
+    error: error,
+    onRefresh: onRefresh ?? () async {},
+    waiting: waiting,
+  ),
 );
 
 void main() {
-  testWidgets('waits for the PC before the first snapshot', (tester) async {
+  testWidgets('waits for the PC before the first snapshot: an hourglass', (
+    tester,
+  ) async {
     await _pump(tester);
-    expect(find.byType(EmptyState), findsOneWidget);
-    expect(find.text('Waiting for the PC'), findsOneWidget);
+    expect(iconLabeled('waiting for the PC'), findsOneWidget);
+    expect(find.byIcon(Icons.lock), findsNothing);
+    expectNoWords(tester);
   });
 
-  testWidgets('shows a fetch error instead of the empty state', (tester) async {
+  testWidgets('a fetch error is the error glyph and its status number', (
+    tester,
+  ) async {
     await _pump(tester, error: shareDown());
-    expect(find.text('dufs Reading/x failed (500)'), findsOneWidget);
-    expect(find.byType(EmptyState), findsNothing);
+    expect(find.byIcon(Icons.error), findsOneWidget);
+    expect(find.text('500'), findsOneWidget);
+    expect(iconLabeled('waiting for the PC'), findsNothing);
+    expectNoWords(tester);
+  });
+
+  testWidgets('an unreachable PC is the cloud, the snapshot time, the queue', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      state: sampleState(),
+      error: const DavException('Reading/state.json', 0),
+      waiting: 3,
+    );
+    expect(find.byIcon(Icons.cloud_off), findsOneWidget);
+    expect(find.textContaining('26.09'), findsOneWidget);
+    expect(find.byIcon(Icons.outbox), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expectNoWords(tester);
   });
 
   testWidgets('a locked, behind month with todo and sessions', (tester) async {
@@ -40,32 +72,38 @@ void main() {
         ],
       }),
     );
-    expect(find.text('PC locked: Read 20 pages to unlock'), findsOneWidget);
-    expect(find.text('2026-09'), findsOneWidget);
-    expect(find.text('120 / 320 pages'), findsOneWidget);
+    expect(find.byIcon(Icons.lock), findsOneWidget);
+    expect(find.byIcon(Icons.lock_open), findsNothing);
+    expect(tester.widget<Icon>(find.byIcon(Icons.lock)).color, isNotNull);
+    expect(find.text('09 · 2026'), findsOneWidget);
+    expect(find.text('120 / 320'), findsOneWidget);
     final bar = tester.widget<LinearProgressIndicator>(
       find.byType(LinearProgressIndicator),
     );
     expect(bar.value, closeTo(120 / 320, 1e-9));
-    expect(find.text("130 pages behind today's line (250)"), findsOneWidget);
-    expect(
-      find.text('Includes 20 pages carried from last month'),
-      findsOneWidget,
-    );
-    expect(find.text('Next'), findsOneWidget);
-    expect(find.text('Photograph page 42'), findsOneWidget);
+    expect(find.byIcon(Icons.trending_down), findsOneWidget);
+    expect(find.text('130'), findsOneWidget);
+    expect(find.text('250'), findsOneWidget);
+    expect(iconLabeled('carried from last month'), findsOneWidget);
+    expect(find.text('20'), findsWidgets);
+
+    // The todo line is its glyph and the number in it.
+    expect(find.byIcon(Icons.photo_camera), findsWidgets);
+    expect(find.text('42'), findsOneWidget);
 
     // The list builds lazily, so scroll each row into existence.
-    Future<void> reveal(String text) =>
-        tester.scrollUntilVisible(find.text(text), 100);
-    await reveal('Sessions');
-    // Newest first: the unknown status shows as-is, known ones in words.
-    await reveal('mystery');
-    expect(find.text('p. 5-9 (0 p, 0 min)'), findsOneWidget);
-    await reveal('photograph the check page');
-    expect(find.text('p. 1-20 (20 p, 30 min)'), findsOneWidget);
-    expect(find.text('write the summary'), findsOneWidget);
-    expect(find.text('credited'), findsOneWidget);
+    Future<void> reveal(Finder finder) =>
+        tester.scrollUntilVisible(finder, 100);
+    // Newest first: the unknown status is a question mark.
+    await reveal(find.byIcon(Icons.help_outline));
+    expect(find.text('5-9'), findsOneWidget);
+    await reveal(find.byIcon(Icons.edit));
+    expect(find.text('21-0'), findsOneWidget);
+    await reveal(iconLabeled('photograph the check page'));
+    expect(find.text('1-20'), findsOneWidget);
+    expect(find.text('30'), findsWidgets);
+    expect(iconLabeled('credited'), findsOneWidget);
+    expect(iconLabeled('write the summary'), findsOneWidget);
   });
 
   testWidgets('an unlocked month on pace, nothing to do', (tester) async {
@@ -76,18 +114,20 @@ void main() {
         'pace': {'month': '2026-10', 'required': 12},
       }),
     );
-    expect(find.text('All good'), findsOneWidget);
-    expect(find.text('0 / 0 pages'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_open), findsOneWidget);
+    expect(find.byIcon(Icons.lock), findsNothing);
+    expect(find.text('0 / 0'), findsOneWidget);
     expect(
       tester
           .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
           .value,
       0,
     );
-    expect(find.text('On pace (line today: 12)'), findsOneWidget);
-    expect(find.textContaining('carried'), findsNothing);
-    expect(find.text('Next'), findsNothing);
-    expect(find.text('Sessions'), findsNothing);
+    expect(iconLabeled('on pace'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
+    expect(find.byIcon(Icons.history), findsNothing);
+    expect(find.byIcon(Icons.arrow_right), findsNothing);
+    expectNoWords(tester);
   });
 
   testWidgets('pace past the target is clamped to a full bar', (tester) async {
@@ -115,7 +155,25 @@ void main() {
     await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
     await settle(tester, 20);
     expect(refreshed, 1);
-    expect(sessionStatusText['too-fast'], contains('50 s'));
+  });
+
+  test('every session status has its own glyph, tint and spoken label', () {
+    const known = [
+      'needs-check-photo',
+      'needs-quiz',
+      'credited',
+      'retry',
+      'failed-quiz',
+      'too-fast',
+    ];
+    expect({for (final s in known) iconFor(s)}, hasLength(known.length));
+    expect(iconFor('odd'), Icons.help_outline);
+    expect(spokenLabel('too-fast'), contains('50 s'));
+    expect(spokenLabel('odd'), 'odd');
+    expect(
+      statusText(sampleState().sessions.first),
+      spokenLabel('needs-check-photo'),
+    );
   });
 
   testWidgets('a session with details opens its history', (tester) async {
@@ -143,12 +201,11 @@ void main() {
       ),
     );
     expect(find.byIcon(Icons.chevron_right), findsOneWidget);
-    await tapVisible(tester, find.text('p. 1-3 (0 p, 0 min)'));
+    await tapVisible(tester, find.text('1-3'));
     await tester.pumpAndSettle();
-    expect(find.text('p. 1-3'), findsNothing);
-    await tapVisible(tester, find.text('p. 7-51 (44 p, 43 min)'));
+    expect(api.fetched, isEmpty);
+    await tapVisible(tester, find.text('7-51'));
     await tester.pumpAndSettle();
-    expect(find.text('p. 7-51'), findsOneWidget);
     expect(api.fetched, ['sessions/s1.json']);
   });
 
@@ -162,5 +219,49 @@ void main() {
       }),
     );
     expect(find.byIcon(Icons.chevron_right), findsNothing);
+  });
+
+  testWidgets('a retry wins over the ledger status', (tester) async {
+    await _pump(
+      tester,
+      state: sampleState({
+        'sessions': [
+          {
+            'id': 's1',
+            'start_page': 1,
+            'end_page': 9,
+            'status': 'needs-quiz',
+            'retry': {'feedback': 'f', 'summary': 's', 'missing': <String>[]},
+          },
+        ],
+      }),
+    );
+    expect(find.byIcon(Icons.replay), findsOneWidget);
+    expect(iconLabeled('summary failed: rewrite it'), findsOneWidget);
+  });
+
+  testWidgets('the PC lines become glyphs and page numbers, never words', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      state: sampleState({
+        'todo': [
+          'TAKE A PHOTO of page 42 (check for p. 1-20)',
+          'REWRITE THE SUMMARY at the PC for p. 112-130',
+          'WRITE A SUMMARY at the PC for p. 5-9',
+          'Reading since p. 77 (Thu 10:00) -- photograph the page',
+          "No book registered: search it in the app's Book tab",
+        ],
+        'sessions': const <Object>[],
+      }),
+    );
+    for (final n in ['42', '1-20', '112-130', '5-9', '77', '10:00']) {
+      expect(find.text(n), findsOneWidget, reason: n);
+    }
+    expect(find.byIcon(Icons.replay), findsOneWidget);
+    expect(find.byIcon(Icons.auto_stories), findsOneWidget);
+    expect(find.byIcon(Icons.search), findsOneWidget);
+    expectNoWords(tester);
   });
 }

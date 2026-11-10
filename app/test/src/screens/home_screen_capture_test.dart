@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_api.dart';
+import '../../support/finders_a.dart';
 import '../../support/states.dart';
 
 /// The home screen's part in keeping photos: a camera cut off by a
@@ -44,13 +45,12 @@ void main() {
       tester,
       lostPhoto: () async => ('IMG.jpg', Uint8List.fromList([1])),
     );
-    await tester.tap(find.text('Read'));
+    await tester.tap(navTab(Icons.menu_book));
     await settle(tester);
     expect(
       tester.widget<ReadTab>(find.byType(ReadTab)).captures.single.id,
       'a1',
     );
-    expect(find.textContaining('Finish the start photo'), findsOneWidget);
   });
 
   testWidgets('a failing recovery never stops the app', (tester) async {

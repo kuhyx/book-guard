@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import json
+import logging
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,6 +15,7 @@ from book_guard import (
 )
 from book_guard._constants import MAX_SESSION
 from book_guard._render import session_line, todo_lines
+from book_guard._requests import Response
 from book_guard._session_files import detail
 from book_guard._sessions import NEEDS_QUIZ, TOO_FAST
 from book_guard._state import snapshot
@@ -38,8 +40,16 @@ def mapped(bg_paths: Paths) -> Paths:
 
 def test_a_session_read_in_the_app_waits_for_its_summary(mapped: Paths) -> None:
     response = send_session(mapped)
-    assert response.ok, response.message
-    assert "≈ p. 40-52 (12 pages)" in response.message
+    assert response == Response(
+        ok=True,
+        code="recorded",
+        data={
+            "session_id": "session:ebook-abcdef0123456789",
+            "start_page": 40,
+            "end_page": 52,
+            "pages": 12,
+        },
+    )
     (view,) = snapshot(mapped).sessions
     s = view.session
     assert s.session_id == "session:ebook-abcdef0123456789"
@@ -63,8 +73,7 @@ def test_a_session_read_in_the_app_waits_for_its_summary(mapped: Paths) -> None:
 def test_the_session_is_stored_append_only(mapped: Paths) -> None:
     assert send_session(mapped).ok
     again = send_session(mapped)  # the outbox may send it twice
-    assert again.ok
-    assert "already" in again.message
+    assert again == Response(ok=True, code="already_recorded")
     assert len(_ebook_sessions.load(mapped)) == 1
     stored = json.loads(mapped.ebook_sessions.read_text("utf-8"))
     assert stored["sessions"][0]["start_page"] == 40
@@ -95,11 +104,15 @@ def test_the_session_is_stored_append_only(mapped: Paths) -> None:
     ],
 )
 def test_a_session_that_cannot_count_is_refused(
-    mapped: Paths, over: dict[str, object], said: str
+    mapped: Paths,
+    caplog: pytest.LogCaptureFixture,
+    over: dict[str, object],
+    said: str,
 ) -> None:
+    caplog.set_level(logging.INFO)
     response = send_session(mapped, **over)
-    assert not response.ok
-    assert said in response.message
+    assert response == Response(ok=False, code="refused")
+    assert said in caplog.text
     assert _ebook_sessions.load(mapped) == []
 
 
@@ -110,7 +123,7 @@ def test_the_apps_own_timestamp_format_is_accepted(mapped: Paths) -> None:
         started_at=start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
         ended_at=end.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
     )
-    assert response.ok, response.message
+    assert response.code == "recorded"
     (view,) = snapshot(mapped).sessions
     assert view.session.started_at == start
 

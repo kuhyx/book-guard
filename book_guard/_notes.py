@@ -106,16 +106,16 @@ def upsert(paths: Paths, request: dict[str, Any]) -> Response:
     """Store (or update) one note; the ``note`` request handler."""
     problem = _validate(paths, request)
     if problem:
-        return Response(ok=False, message=problem)
+        _logger.info("note refused: %s", problem)
+        return Response(ok=False, code="bad_note")
     note_id = str(request["note_id"])
     updated = _when(request.get("updated_at"))
     with exclusive(paths):
         notes = load(paths)
         old = notes.get(note_id)
         if old is not None and old.get("updated_at", "") > updated:
-            return Response(
-                ok=True, message="A newer edit of this note is already saved."
-            )
+            # A newer edit of this note is already saved: it stays.
+            return Response(ok=True, code="note_kept")
         previous = list(old.get("previous", [])) if old else []
         if old is not None and old.get("text") != request["text"].strip():
             previous.append(
@@ -134,4 +134,4 @@ def upsert(paths: Paths, request: dict[str, Any]) -> Response:
             "previous": previous,
         }
         write_json(paths.notes, notes, indent=1)
-    return Response(ok=True, message="Note saved." if old is None else "Note updated.")
+    return Response(ok=True, code="note_saved" if old is None else "note_updated")

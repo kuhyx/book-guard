@@ -159,7 +159,7 @@ void main() {
     expect(CurrentChapter.fromJson(const {}).label, empty.label);
   });
 
-  test('photo captions say what the PC made of each photo', () {
+  test('photo kinds say what the PC made of each photo', () {
     PhotoInfo photo(String kind, {int? page, String status = 'ok'}) =>
         PhotoInfo.fromJson({
           'kind': kind,
@@ -167,15 +167,12 @@ void main() {
           'status': status,
           'reason': 'too late',
         });
-    expect(photo('page', page: 7).caption, 'page 7');
-    expect(photo('page').caption, 'page ?');
-    expect(photo('isbn').caption, 'barcode');
-    expect(photo('toc').caption, 'contents');
-    expect(photo('other').caption, 'not a page');
-    expect(
-      photo('page', page: 1, status: 'rejected').caption,
-      'page 1 - rejected: too late',
-    );
+    expect(photo('page', page: 7).what, PhotoKind.page);
+    expect(photo('isbn').what, PhotoKind.barcode);
+    expect(photo('toc').what, PhotoKind.contents);
+    expect(photo('other').what, PhotoKind.other);
+    expect(photo('page', page: 1, status: 'rejected').rejected, isTrue);
+    expect(photo('page', page: 1).rejected, isFalse);
     expect(photo('page', page: 7).accepted, isTrue);
     expect(photo('other').accepted, isFalse);
     expect(photo('page', page: 7, status: 'rejected').accepted, isFalse);

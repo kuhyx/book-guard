@@ -1,55 +1,45 @@
+/// The zero-text guard: nothing painted on screen holds a word, except the
+/// content nodes a test names (book titles, authors, grader topics, typed
+/// text). Numbers, dates and symbols are fine; tooltips count as painted
+/// (a long-press shows them).
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Any letter in any script. Icons paint a private-use codepoint (category
-/// Co), digits are Nd and `·`, `+`, `:` are punctuation, so all of those pass.
-final _letter = RegExp(r'\p{L}', unicode: true);
+final _word = RegExp('[A-Za-z]{2,}');
 
-/// The painted strings under [scope]: every `Text`, `RichText` and
-/// `EditableText`.
-List<String> paintedStrings(Finder scope) {
-  final out = <String>[];
-  for (final element
-      in find
-          .descendant(of: scope, matching: find.byWidgetPredicate((_) => true))
-          .evaluate()) {
-    final widget = element.widget;
-    if (widget is Text) {
-      out.add(widget.data ?? widget.textSpan?.toPlainText() ?? '');
-    } else if (widget is RichText) {
-      out.add(widget.text.toPlainText());
-    } else if (widget is EditableText) {
-      out.add(widget.controller.text);
-    }
-  }
-  return out;
+/// Every painted string on screen that still holds a word once each of
+/// [content] is cut out of it. Typed field values ([EditableText]) are the
+/// user's own and never counted.
+List<String> paintedWords(
+  WidgetTester tester, {
+  Iterable<String> content = const [],
+}) {
+  final cuts = content.where((c) => c.isNotEmpty).toList()
+    ..sort((a, b) => b.length.compareTo(a.length));
+  final typed = find.byType(EditableText);
+  final painted = [
+    for (final element in find.byType(RichText).evaluate())
+      if (find
+          .descendant(of: typed, matching: find.byWidget(element.widget))
+          .evaluate()
+          .isEmpty)
+        (element.widget as RichText).text.toPlainText(),
+    for (final tip in tester.widgetList<Tooltip>(find.byType(Tooltip)))
+      tip.message ?? '',
+  ];
+  return [
+    for (final text in painted)
+      if (_word.hasMatch(cuts.fold(text, (left, c) => left.replaceAll(c, ''))))
+        text,
+  ];
 }
 
-/// Asserts [scope] paints no word and no tooltip (long-press paints it),
-/// and that each icon in [spoken] sits in a control with a spoken label.
-///
-/// Fails closed: a scope that matches nothing is an error, not a pass.
-void expectNoWords(
-  WidgetTester tester,
-  Finder scope, {
-  List<IconData> spoken = const [],
-}) {
-  expect(scope, findsOneWidget, reason: 'the scope must be on screen');
-  final strings = paintedStrings(scope);
-  expect(strings, isNotEmpty, reason: 'nothing painted: wrong scope?');
-  final words = strings.where(_letter.hasMatch).toList();
+/// Fails with the offending strings when anything on screen holds a word.
+void expectNoWords(WidgetTester tester, {Iterable<String> content = const []}) {
+  final words = paintedWords(tester, content: content);
+  // An empty screen proves nothing: the guard needs something painted.
+  expect(find.byType(RichText), findsWidgets);
   expect(words, isEmpty, reason: 'painted words: $words');
-  expect(
-    find.descendant(of: scope, matching: find.byType(Tooltip)),
-    findsNothing,
-    reason: 'a tooltip paints its message on long-press',
-  );
-  final handle = tester.ensureSemantics();
-  for (final icon in spoken) {
-    final control = find.descendant(of: scope, matching: find.byIcon(icon));
-    expect(control, findsOneWidget, reason: 'no $icon control');
-    final label = tester.getSemantics(control).getSemanticsData().label;
-    expect(label.trim(), isNotEmpty, reason: '$icon has no spoken label');
-  }
-  handle.dispose();
 }

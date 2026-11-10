@@ -7,6 +7,7 @@ import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
+import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -120,130 +121,28 @@ Future<ReviewResult?> reviewPhoto(
   );
 }
 
-/// The summary box for [session].
-class SummarySection extends StatelessWidget {
-  /// Creates the section.
-  const new({
-    required this.session,
-    required this.controller,
-    required this.onSubmit,
-    super.key,
-    this.grader,
-    this.times,
-    this.enabled = true,
-  });
-
-  /// False while the grader has it: the text is locked.
-  final bool enabled;
-
-  /// When it was read, with "Correct the times".
-  final Widget? times;
-
-  /// The session to summarise.
-  final SessionInfo session;
-
-  /// The summary text.
-  final TextEditingController controller;
-
-  /// Sends it; null while busy.
-  final VoidCallback? onSubmit;
-
-  /// Why grading may wait, if it may.
-  final String? grader;
-
-  @override
-  Widget build(BuildContext context) {
-    final grader = this.grader;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader('Summary for ${session.span}'),
-        ?times,
-        const Text(
-          '3-5 sentences in your own words (Polish or English) about what '
-          'happened in these pages.',
-        ),
-        if (grader != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            grader,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.sm),
-        TextField(
-          controller: controller,
-          enabled: enabled,
-          minLines: 5,
-          maxLines: 10,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        FilledButton(onPressed: onSubmit, child: const Text('Submit summary')),
-      ],
-    );
-  }
-}
-
-/// The grader's answer: green when credited, red when not.
-class VerdictText extends StatelessWidget {
-  /// Creates the line.
-  const new(this.verdict, {required this.passed, super.key});
-
-  /// What the PC said.
-  final String verdict;
-
-  /// Credited, failed, or null for "not decided yet".
-  final bool? passed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.md),
-      child: Text(
-        verdict,
-        style: TextStyle(
-          color: switch (passed) {
-            true => theme.extension<AppStatusColors>()?.success,
-            false => theme.colorScheme.error,
-            null => null,
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// What to photograph next, and how many photos still wait for the PC.
+/// How many photos taken here the PC has not read yet: an outbox glyph and
+/// the count, nothing when none waits.
 class SessionPrompt extends StatelessWidget {
   /// Creates the prompt.
-  const new({required this.reading, required this.waiting, super.key});
-
-  /// The page reading started at, or null when not reading.
-  final int? reading;
+  const new({required this.waiting, super.key});
 
   /// Photos taken here that the PC has not read yet.
   final int waiting;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const SectionHeader('Session photos'),
-      Text(
-        reading == null
-            ? 'Photograph the open page (number visible) when you start.'
-            : 'Reading since p. $reading - photograph the page where you '
-                  'stop.',
+  Widget build(BuildContext context) {
+    if (waiting <= 0) return const SizedBox.shrink();
+    return SpokenLabel(
+      semanticLabel: 'photos waiting for the PC',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ExcludeSemantics(child: Icon(Icons.outbox)),
+          const SizedBox(width: AppSpacing.xs),
+          Text('$waiting'),
+        ],
       ),
-      if (waiting > 0) ...[
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          '$waiting photo(s) taken here are not read by the PC yet.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    ],
-  );
+    );
+  }
 }

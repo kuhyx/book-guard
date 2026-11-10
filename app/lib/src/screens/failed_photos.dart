@@ -8,7 +8,11 @@ import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photo_card.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
+import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/screens/report_dialog.dart';
+import 'package:book_guard_app/src/ui/cues.dart';
+import 'package:book_guard_app/src/ui/hold_button.dart';
+import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +24,8 @@ class FailedPhoto {
   /// The phone's record of it.
   final JournalEntry entry;
 
-  /// What went wrong, in words.
+  /// What went wrong, as the reader wrote it: data for a glyph and the
+  /// report, never painted.
   final String reason;
 
   /// The PC's reading, once it has one.
@@ -37,9 +42,9 @@ List<FailedPhoto> failedPhotos(GuardState? state, List<JournalEntry> journal) {
   return [
     for (final e in journal.reversed)
       if (byName[e.name] case final pc? when !pc.accepted)
-        FailedPhoto(entry: e, reason: pc.caption, pc: pc)
+        FailedPhoto(entry: e, reason: pc.reason, pc: pc)
       else if (!known.contains(e.name) && e.page == null)
-        FailedPhoto(entry: e, reason: 'the phone found no page number'),
+        FailedPhoto(entry: e, reason: phoneFoundNone),
   ];
 }
 
@@ -131,11 +136,9 @@ class _FailedPhotosState extends State<FailedPhotos> {
       'photo': failed.entry.name,
       'box': [box.left, box.top, box.right, box.bottom],
       'page': ?result?.page,
-    }, 'Re-read of ${failed.entry.name}');
+    });
     if (!mounted) return;
-    response.ok
-        ? showToast(context, response.message)
-        : showError(context, response.message);
+    showReply(context, response);
     unawaited(widget.onChanged());
   }
 
@@ -166,9 +169,13 @@ class _FailedPhotosState extends State<FailedPhotos> {
     await widget.api.flush();
     if (!mounted) return;
     setState(() => _reported.add(entry.name));
-    showToast(
+    showCue(
       context,
-      'Report saved - it reaches the PC with the next upload.',
+      const Cue(
+        CueKind.ok,
+        icon: Icons.flag,
+        semanticLabel: 'report saved, it reaches the PC with the next upload',
+      ),
     );
   }
 
@@ -192,12 +199,20 @@ class _FailedPhotosState extends State<FailedPhotos> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
-          'Failed photos',
-          action: TextButton(
-            onPressed: () => _dismiss(failed),
-            child: const Text('Clear all'),
-          ),
+        Row(
+          children: [
+            const Icon(Icons.error_outline, semanticLabel: 'failed photos'),
+            const SizedBox(width: AppSpacing.sm),
+            Text('${failed.length}'),
+            const Spacer(),
+            // Hides every card at once: held, not tapped.
+            if (failed.length > 1)
+              HoldButton(
+                icon: Icons.clear_all,
+                semanticLabel: 'Clear all',
+                onConfirmed: () => unawaited(_dismiss(failed)),
+              ),
+          ],
         ),
         for (final f in failed)
           FutureBuilder<(Uint8List?, bool)>(

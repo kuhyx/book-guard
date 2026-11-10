@@ -182,7 +182,7 @@ def record(paths: Paths, request: dict[str, Any]) -> Response:
     checked = _checked(paths, request, datetime.now(tz=UTC))
     if isinstance(checked, str):
         _logger.info("in-app session refused: %s", checked)
-        return Response(ok=False, message=checked)
+        return Response(ok=False, code="refused")
     span = (
         datetime.fromisoformat(checked.started_at),
         datetime.fromisoformat(checked.ended_at),
@@ -190,32 +190,26 @@ def record(paths: Paths, request: dict[str, Any]) -> Response:
     with exclusive(paths):
         stored = load(paths)
         if any(r.session == checked.session for r in stored):
-            return Response(
-                ok=True, message="This in-app session was already recorded."
-            )
+            return Response(ok=True, code="already_recorded")
         for other in stored:
             theirs = (
                 datetime.fromisoformat(other.started_at),
                 datetime.fromisoformat(other.ended_at),
             )
             if overlaps(span, theirs):
-                return Response(
-                    ok=False,
-                    message="It overlaps another in-app session: one at a time.",
-                )
+                # One in-app session at a time.
+                return Response(ok=False, code="overlap")
         starts = [datetime.fromisoformat(r.started_at) for r in stored]
         conflict = paper_conflict(paths, span, starts)
         if conflict is not None:
-            return Response(ok=False, message=conflict)
+            _logger.info("in-app session refused: %s", conflict)
+            return Response(ok=False, code="paper_overlap")
         rows = [asdict(r) for r in [*stored, checked]]
         write_json(paths.ebook_sessions, {"sessions": rows}, indent=1)
     pages = checked.end_page - checked.start_page
     return Response(
         ok=True,
-        message=(
-            f"Read in the app: ≈ p. {checked.start_page}-{checked.end_page}"
-            f" ({pages} pages). Write its summary to have it credited."
-        ),
+        code="recorded",
         data={
             "session_id": checked.to_session().session_id,
             "start_page": checked.start_page,

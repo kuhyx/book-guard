@@ -103,14 +103,29 @@ class PhotoInfo {
   /// Whether the PC took it as what it was meant to be.
   bool get accepted => status == 'ok' && kind != 'other';
 
-  /// One line for the gallery: what the PC made of it.
-  String get caption {
-    final what = switch (kind) {
-      'page' => 'page ${page ?? '?'}',
-      'isbn' => 'barcode',
-      'toc' => 'contents',
-      _ => 'not a page',
-    };
-    return status == 'rejected' ? '$what - rejected: $reason' : what;
-  }
+  /// What the PC took the photo for (drawn as a glyph, never as a word).
+  PhotoKind get what => switch (kind) {
+    'page' => PhotoKind.page,
+    'isbn' => PhotoKind.barcode,
+    'toc' => PhotoKind.contents,
+    _ => PhotoKind.other,
+  };
+
+  /// Whether the PC rejected it (the [reason] says why).
+  bool get rejected => status == 'rejected';
+}
+
+/// What a photo was taken for, as the PC read it.
+enum PhotoKind {
+  /// A page with its printed number.
+  page,
+
+  /// A barcode.
+  barcode,
+
+  /// A table of contents.
+  contents,
+
+  /// Anything else.
+  other,
 }
