@@ -18,6 +18,7 @@ class FailedPhotoCard extends StatelessWidget {
     required this.onDismiss,
     super.key,
     this.onBox,
+    this.onType,
     this.onReport,
   });
 
@@ -32,6 +33,10 @@ class FailedPhotoCard extends StatelessWidget {
 
   /// Box the number; null hides the button.
   final VoidCallback? onBox;
+
+  /// Type the page number (a page that has none printed); null hides the
+  /// button.
+  final VoidCallback? onType;
 
   /// File a report; null disables the button.
   final VoidCallback? onReport;
@@ -83,6 +88,12 @@ class FailedPhotoCard extends StatelessWidget {
                           icon: Icons.crop_free,
                           semanticLabel: 'Box the number',
                           onPressed: onBox,
+                        ),
+                      if (onType case final onType?)
+                        GlyphButton(
+                          icon: Icons.pin,
+                          semanticLabel: 'Type the page number',
+                          onPressed: onType,
                         ),
                       GlyphButton(
                         icon: reported ? Icons.flag : Icons.outlined_flag,

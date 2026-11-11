@@ -47,6 +47,7 @@ const Map<String, (CueKind, IconData)> replyGlyphs = {
   'no_session': (_warn, Icons.block),
   'already_graded': (_warn, Icons.lock_clock),
   'no_box': (_error, Icons.crop_free),
+  'bad_page': (_error, Icons.pin),
   'no_page': (_error, Icons.crop_free),
   'no_photo': (_error, Icons.image_not_supported),
   'photo_gone': (_error, Icons.image_not_supported),

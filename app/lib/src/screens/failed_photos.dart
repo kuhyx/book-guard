@@ -10,6 +10,7 @@ import 'package:book_guard_app/src/screens/failed_photo_card.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/screens/report_dialog.dart';
+import 'package:book_guard_app/src/screens/type_page_dialog.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/hold_button.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
@@ -142,6 +143,11 @@ class _FailedPhotosState extends State<FailedPhotos> {
     unawaited(widget.onChanged());
   }
 
+  Future<void> _type(FailedPhoto failed) async {
+    await typePage(context, widget.api, failed.entry.name);
+    unawaited(widget.onChanged());
+  }
+
   Future<void> _report(FailedPhoto failed) async {
     final bytes = await _photo(failed.entry.name);
     if (bytes == null || !mounted) return;
@@ -227,6 +233,9 @@ class _FailedPhotosState extends State<FailedPhotos> {
                     _reported.contains(f.entry.name),
                 onBox: f.pc != null && widget.reader != null
                     ? () => _box(f)
+                    : null,
+                onType: f.pc != null && f.pc?.page == null
+                    ? () => unawaited(_type(f))
                     : null,
                 onReport: bytes == null ? null : () => _report(f),
                 onDismiss: () => _dismiss([f]),

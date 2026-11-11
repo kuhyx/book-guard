@@ -26,7 +26,7 @@ from book_guard._lookup import lookup_book
 from book_guard._notes import upsert as upsert_note
 from book_guard._openlibrary import BookInfo
 from book_guard._requests import Response
-from book_guard._reread import box_photo
+from book_guard._reread import box_photo, type_page
 from book_guard._retime import set_times
 from book_guard._state import awaiting_quiz, snapshot
 from book_guard._vision import normalise_isbn
@@ -211,6 +211,7 @@ HANDLERS: dict[str, Callable[[Paths, dict[str, Any]], Response]] = {
     "lookup": _lookup,
     "summary": _summary,
     "box": box_photo,
+    "type_page": type_page,
     "session_times": set_times,
     "retry_book": _retry_book,
     "note": upsert_note,

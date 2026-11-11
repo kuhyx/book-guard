@@ -19,6 +19,7 @@ from book_guard import _errlog, _ledger, _local, _paths
 from book_guard._bonus import earns, qualifies
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
 from book_guard._ledger import CREDIT, REJECT, Entry
+from book_guard._photos import TYPED
 from book_guard._prompt import (
     LOCAL_REMINDER,
     SYSTEM,
@@ -174,6 +175,25 @@ def record_verdict(
             "grader": verdict.grader,
         },
     )
+    typed = [
+        role
+        for role, photo in (
+            ("start", session.start),
+            ("end", session.end),
+            ("check", session.check),
+        )
+        if photo is not None and photo.page_source == TYPED
+    ]
+    if typed:
+        # A page the reader typed (no number printed on it): auditable here.
+        entry = replace(
+            entry,
+            detail={
+                **entry.detail,
+                "page_source": TYPED,
+                "typed_photos": ",".join(typed),
+            },
+        )
     if session.ebook is not None:
         # Read in the app: the pages are the page map's estimate.
         entry = replace(

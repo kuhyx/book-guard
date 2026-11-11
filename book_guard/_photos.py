@@ -22,13 +22,15 @@ if TYPE_CHECKING:
 
 OK = "ok"
 REJECTED = "rejected"
+TYPED = "typed"
+"""``PhotoRecord.page_source`` of a page number the reader typed in the app."""
 
 
 _logger: Final = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class PhotoRecord:
+class PhotoRecord:  # pylint: disable=too-many-instance-attributes  # a flat cache row
     """One photo, as read.
 
     Attributes:
@@ -42,6 +44,8 @@ class PhotoRecord:
         text: Transcribed body text -- the quiz's evidence.
         status: ``ok`` or ``rejected``.
         reason: Why it was rejected.
+        page_source: ``typed`` when the reader typed ``page`` in the app (a
+            page with no printed number); empty when it was read off the photo.
     """
 
     sha: str
@@ -54,6 +58,7 @@ class PhotoRecord:
     text: str = ""
     status: str = OK
     reason: str = ""
+    page_source: str = ""
 
     @property
     def taken(self) -> datetime:

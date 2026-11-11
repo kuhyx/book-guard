@@ -61,7 +61,7 @@ CODES: Final = frozenset({
     # refused
     "bad_isbn", "bad_time", "bad_pages", "bad_note", "bad_file", "offline",
     "unknown_isbn", "unknown_book", "no_book", "not_waiting", "no_box",
-    "no_photo", "already_read", "photo_gone", "no_page", "no_session",
+    "no_photo", "bad_page", "already_read", "photo_gone", "no_page", "no_session",
     "already_graded", "outside_photos", "too_short", "overlap",
     "paper_overlap", "refused", "unknown_type", "error",
 })  # fmt: skip
