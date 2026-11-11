@@ -44,6 +44,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # The pencil-digit network, shared with the PC (book_guard/_pencil_net.py).
+  assets:
+    - assets/pencil_digits.bin
   # The in-app reader's book face (SIL OFL, assets/fonts/OFL.txt): variable
   # weight + optical size; reading_style.dart sets both axes explicitly.
   fonts:

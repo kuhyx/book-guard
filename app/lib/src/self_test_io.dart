@@ -17,7 +17,8 @@ import 'package:path_provider/path_provider.dart';
 ///     adb pull .../files/page_truth/results.json
 ///
 /// The rows are `scripts/page_truth.py`'s manifest; rows with a hand-drawn
-/// `box` are skipped (that path is the review screen's).
+/// `box` (that path is the review screen's) or a `pencil` key (the pencil
+/// reader's, which needs the page's text box) are skipped.
 Future<void> runSelfTestIfAsked(PageReader? reader) async {
   if (reader == null) return;
   // Android only: the folder adb can write into (host tests have none).
@@ -33,7 +34,7 @@ Future<void> runSelfTestIfAsked(PageReader? reader) async {
   ) as List<dynamic>;
   final results = <Map<String, Object?>>[];
   for (final row in rows.cast<Map<String, dynamic>>()) {
-    if (row['box'] != null) continue;
+    if (row['box'] != null || row.containsKey('pencil')) continue;
     final given = row['context'] as Map<String, dynamic>? ?? const {};
     final context = PageContext(
       expected: given['expected'] as int?,

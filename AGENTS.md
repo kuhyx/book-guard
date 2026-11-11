@@ -33,13 +33,22 @@ Read README.md first. These are the invariants that are easy to break.
 
 ## Invariants
 
-- **No model reads page numbers, and the phone's number is trusted.** The
+- **No LLM reads page numbers, and the phone's number is trusted.** The
   phone (Tesseract4Android) reads it upright by content and the reader confirms or
   boxes it there; the PC takes that number as is -- no Tesseract re-read,
   no plausibility check, no "unclear". Tesseract is only the fallback for a
   photo that arrives with no number (desktop web upload, "Send anyway"):
   chosen by plausibility, ambiguous is a rejection that asks for a box,
   never a guess. A page photo must never wait on Claude.
+  The one model allowed is the small local digit network for a *pencilled*
+  number (`_pencil*.py`, weights `app/assets/pencil_digits.bin`, Dart port
+  `app/lib/src/pencil_*.dart`, goldens `pencil_goldens.json`): no LLM, no
+  network, never auto-accepted -- its answer only pre-fills the keypad the
+  user confirms with one tap, and it runs only when the printed-number reader
+  found nothing. Doubt is `None`, not a guess. After touching it re-run
+  `scripts/page_truth.py` (rows with a `pencil` key; run a slice at a time:
+  `... page_truth.py DIR 18:24`) and `python3 -m scripts.pencil_goldens`;
+  retraining is `scripts/train_pencil.py` (chunks under 60 s).
 - **The app is offline-first.** Every upload goes through its outbox; it
   must keep working (photos, page numbers, check page, summary queued) with
   the PC and the network both gone. App data lives in its support folder

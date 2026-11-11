@@ -143,7 +143,8 @@ def _lone_patches(margin: Image.Image, line: float, paper: int) -> list[Patch]:
     return lone if len(lone) <= _MAX_PATCHES else []
 
 
-def _sure(found: tuple[Word, ...]) -> list[Word]:
+def sure_words(found: tuple[Word, ...]) -> list[Word]:
+    """The words read with confidence: 3+ letters, conf 80+."""
     return [
         w
         for w in found
@@ -151,10 +152,10 @@ def _sure(found: tuple[Word, ...]) -> list[Word]:
     ]
 
 
-def _body(page: Scan) -> tuple[Box, float]:
+def body_of(page: Scan) -> tuple[Box, float]:
     """The confidently read text's box (full image pixels) and its line height."""
     scale = page.image.width / page.size[0]
-    sure = _sure(page.words)
+    sure = sure_words(page.words)
     box = (
         round(min(w.box[0] for w in sure) * scale),
         round(min(w.box[1] for w in sure) * scale),
@@ -168,7 +169,7 @@ def margin_candidates(page: Scan) -> list[int]:
     """Numbers alone in the margin above or below the text, each read unanimously."""
     if not reads_upright(page):
         return []
-    body, line = _body(page)
+    body, line = body_of(page)
     paper = _median(page.image.crop(body).reduce(_PAPER_REDUCE))
     width, height = page.image.size
     found: list[int] = []

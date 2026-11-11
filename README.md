@@ -32,7 +32,10 @@ desktop web app, or "Send anyway") falls back to the PC: Tesseract reads
 the boxed number or the whole page, zbar reads ISBN barcodes, and which
 number is the page is decided by what the photo was for (check page asked
 for, past the open start, nearest the last end) -- two candidates left is
-"unclear", never a guess. Claude (**Haiku**, unless
+"unclear", never a guess. A page with no printed number but one pencilled in
+the margin gets a pre-fill from a small local digit network (no LLM; weights
+`app/assets/pencil_digits.bin`, `_pencil*.py` and its Dart port): never
+accepted by itself, it only fills the keypad the user confirms. Claude (**Haiku**, unless
 `--model` is given for one run) only grades summaries and reads contents
 pages; while it is down they wait, and the app says since when.
 The EXIF capture times are

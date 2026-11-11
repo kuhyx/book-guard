@@ -62,6 +62,12 @@ ignore = ["D203", "D213", "COM812", "ISC001", "S603"]
     "SLF001",
 ]
 
+# The pencil-digit trainer and its data are offline numeric dev tools (magic
+# hyper-parameters, long progress lines, a shebang without the exec bit).
+"scripts/train_pencil.py" = ["E501", "EXE001", "PLR2004", "RUF007", "C416"]
+"scripts/pencil_data.py" = ["PLR2004", "RUF007", "TC003", "S310"]
+"scripts/pencil_goldens.py" = ["TRY003", "EM101", "EM102", "PERF401"]
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
