@@ -166,3 +166,10 @@ def test_the_glyph_mask_is_cut_tight_to_what_is_darker_than_its_own_peak() -> No
 def test_a_pencil_smudge_that_is_no_digit_gives_nothing() -> None:
     zigzag = [(150, 800), (170, 806), (150, 812), (172, 818), (150, 824), (170, 830)]
     assert _number(_page(zigzag)) is None
+
+
+def test_a_text_box_outside_the_page_is_clipped_or_gives_nothing() -> None:
+    gray = _page(*_one(150, 800))
+    assert find.find_number(load(), gray, (100, 300, 700, 5000), _LINE) is None
+    assert find.find_number(load(), gray, (2000, 300, 2500, 600), _LINE) is None
+    assert find.find_number(load(), gray, (100, 3000, 700, 4000), _LINE) is None

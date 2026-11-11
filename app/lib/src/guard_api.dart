@@ -171,7 +171,8 @@ class GuardApi {
 
   /// Stores a photo on the device and queues it (sidecar note first) for the
   /// PC's inbox; [page], [box] are what the phone read, [isbn] the book it
-  /// is for. Returns its upload name; call [outbox] `flush` to send.
+  /// is for, [pencilPage] a pencilled number kept only as a keypad pre-fill.
+  /// Returns its upload name; call [outbox] `flush` to send.
   Future<String> queuePhoto(
     String label,
     String fileName,
@@ -180,6 +181,7 @@ class GuardApi {
     Box? box,
     DateTime? takenAt,
     String? isbn,
+    int? pencilPage,
   }) async {
     final name = safeName('${label}_$fileName');
     if (page != null || box != null) {
@@ -202,6 +204,7 @@ class GuardApi {
         takenAt: takenAt ?? DateTime.now(),
         page: page,
         isbn: isbn,
+        pencilPage: pencilPage,
       ),
     );
     await prunePhotos();

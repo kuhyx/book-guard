@@ -14,6 +14,9 @@ import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
 
+// A pencilled number the reader suggests is kept with the photo, never sent
+// as its page.
+
 void main() {
   late FakeApi api;
 
@@ -181,6 +184,33 @@ void main() {
     await open(tester, spoken('Start reading'));
     expect(api.notes['start_IMG.jpg'], (page: null, box: null));
     expect(await api.errors.diagnostics(), contains('unreadable image'));
+  });
+
+  testWidgets('a pencilled number is kept with the photo, not sent as page', (
+    tester,
+  ) async {
+    final reader = FakeReader(fakeScan([]).withPencil(29));
+    await pump(tester, reader, state: readingState());
+    await open(tester, spoken('Start reading'));
+    await tester.tap(spoken('Send anyway'));
+    await settle(tester, 10);
+    expect(api.notes['start_IMG.jpg']?.page, isNull);
+    expect(api.pencils['start_IMG.jpg'], 29);
+  });
+
+  testWidgets('a number the reader chose carries no pencil suggestion', (
+    tester,
+  ) async {
+    final reader = FakeReader(
+      fakeScan([(51, (left: 17, top: 54, right: 23, bottom: 58))])
+          .withPencil(29),
+    );
+    await pump(tester, reader, state: readingState(openStart: 31));
+    await open(tester, spoken('Stop reading'));
+    await tester.tap(spoken('Send the page number'));
+    await settle(tester, 10);
+    expect(api.notes['stop_IMG.jpg']?.page, 51);
+    expect(api.pencils['stop_IMG.jpg'], isNull);
   });
 }
 

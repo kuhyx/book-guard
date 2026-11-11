@@ -30,7 +30,7 @@ const _maxPatches = 4;
 const _mateReach = 4.0;
 const _paperShare = 0.8;
 const _fracs = [0.11, 0.14, 0.18];
-const _sure = 0.75;
+const _sure = 0.7;
 const _notADigit = 10;
 const _maxDigits = 4;
 
@@ -161,10 +161,11 @@ int? findPencilNumber(
     diff[i] = paper[i] - small[i];
     ink[i] = diff[i] > _inkStep ? 1 : 0;
   }
-  final left = body.left ~/ factor;
-  final top = body.top ~/ factor;
-  final right = body.right ~/ factor;
-  final bottom = body.bottom ~/ factor;
+  final left = math.min(body.left ~/ factor, cols);
+  final top = math.min(body.top ~/ factor, rows);
+  final right = math.min(body.right ~/ factor, cols);
+  final bottom = math.min(body.bottom ~/ factor, rows);
+  if (bottom <= top || right <= left) return null;
   final bodyPixels = <int>[
     for (var y = top; y < bottom; y++)
       for (var x = left; x < right; x++) small[y * cols + x],

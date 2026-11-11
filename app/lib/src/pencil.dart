@@ -18,13 +18,15 @@ export 'package:book_guard_app/src/pencil_net.dart' show PencilNet;
 /// [readPencilPage].
 typedef PencilBody = ({int left, int top, int right, int bottom, double line});
 
-/// The shipped network (`assets/pencil_digits.bin`, the PC's own file).
-Future<PencilNet> loadPencilNet() async {
+/// The shipped network's file (`assets/pencil_digits.bin`, the PC's own).
+Future<Uint8List> loadPencilNetBytes() async {
   final data = await rootBundle.load('assets/pencil_digits.bin');
-  return PencilNet.parse(
-    data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-  );
+  return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 }
+
+/// The shipped network.
+Future<PencilNet> loadPencilNet() async =>
+    PencilNet.parse(await loadPencilNetBytes());
 
 /// The pencilled page number in the margin of the upright page, or null.
 ///

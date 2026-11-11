@@ -109,7 +109,7 @@ Future<ReviewResult?> reviewPhoto(
     return const ReviewResult();
   }
   if (!context.mounted) return null;
-  return await Navigator.of(context).push<ReviewResult>(
+  final result = await Navigator.of(context).push<ReviewResult>(
     MaterialPageRoute(
       builder: (_) => PhotoReview(
         bytes: bytes,
@@ -119,6 +119,10 @@ Future<ReviewResult?> reviewPhoto(
       ),
     ),
   );
+  // A photo sent with no number keeps the pencilled one the reader saw, as a
+  // suggestion for the keypad only.
+  if (result == null || result.retake || result.page != null) return result;
+  return ReviewResult(box: result.box, pencilPage: scan.pencilPage);
 }
 
 /// How many photos taken here the PC has not read yet: an outbox glyph and

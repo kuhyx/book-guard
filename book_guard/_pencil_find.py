@@ -53,7 +53,7 @@ _MATE_REACH: Final = 4.0
 _PAPER_SHARE: Final = 0.8
 FRACS: Final = (0.11, 0.14, 0.18)
 """Stroke widths (share of the glyph's size) each glyph is read at."""
-_SURE: Final = 0.75
+_SURE: Final = 0.7
 _MIN_PEAK: Final = 30
 """Pencil shows at least this much darker than the paper; fainter is a shadow."""
 _NOT_A_DIGIT: Final = 10
@@ -175,7 +175,11 @@ def find_number(  # pylint: disable=too-many-locals  # one pass, like its port
     unit = line / factor
     small = shrink(gray, factor)
     diff = paper_map(small, _nearest(_BLUR * unit)) - small
-    left, top, right, bottom = (v // factor for v in body)
+    height, width = small.shape
+    left, right = (min(v // factor, width) for v in (body[0], body[2]))
+    top, bottom = (min(v // factor, height) for v in (body[1], body[3]))
+    if bottom <= top or right <= left:
+        return None  # the text box lies outside the page: nothing to go by
     paper = _median(small[top:bottom, left:right])
     pad = _nearest(unit)
     columns = (max(0, left - pad), min(small.shape[1], right + pad))

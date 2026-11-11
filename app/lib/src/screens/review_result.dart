@@ -3,7 +3,7 @@ import 'package:book_guard_app/src/page_number.dart';
 /// What the review screen settled on for one photo.
 class ReviewResult {
   /// Creates a result.
-  const new({this.page, this.box, this.retake = false});
+  const new({this.page, this.box, this.retake = false, this.pencilPage});
 
   /// "Retake": the photo is deliberately thrown away. (Leaving the screen
   /// any other way returns null and keeps it.)
@@ -14,4 +14,8 @@ class ReviewResult {
 
   /// Where it is, in the stored file's pixels.
   final Box? box;
+
+  /// A pencilled number the reader suggests where no printed one was read:
+  /// kept with the photo only as a keypad pre-fill, never sent as its page.
+  final int? pencilPage;
 }

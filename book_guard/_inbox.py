@@ -159,6 +159,7 @@ def _record(
         text=reading.text,
         status=REJECTED if reading.reason else OK,
         reason=reading.reason,
+        pencil_page=reading.pencil_page,
     )
     return record, reading.rotation
 

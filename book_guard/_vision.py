@@ -32,6 +32,9 @@ class Reading:
     """Why a photo meant as a page has no page number; "" otherwise."""
     rotation: int = 0
     """Degrees counter-clockwise, after EXIF, that make the page upright."""
+    pencil_page: int | None = None
+    """A number pencilled in the margin of a page with no readable number: only
+    a pre-fill for the keypad, never ``page_number``."""
 
 
 def normalise_isbn(raw: object) -> str | None:

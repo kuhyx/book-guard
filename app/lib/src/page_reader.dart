@@ -4,6 +4,7 @@ import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader_none.dart'
     if (dart.library.io) 'package:book_guard_app/src/page_reader_tesseract.dart'
     as platform;
+import 'package:book_guard_app/src/pencil.dart' show PencilBody;
 
 /// What the phone read off one photo, before anything is uploaded.
 class PageScan {
@@ -18,6 +19,8 @@ class PageScan {
     required this.toStoredBox,
     required this.toDecodedBox,
     required this.millis,
+    this.pencilBody,
+    this.pencilPage,
   });
 
   /// Degrees clockwise the decoded photo was turned to read upright.
@@ -46,6 +49,29 @@ class PageScan {
 
   /// How long reading took, for the log.
   final int millis;
+
+  /// Where the page's text sits in [preview]'s pixels (the pencil reader's
+  /// frame of reference); null where the turn is unsure.
+  final PencilBody? pencilBody;
+
+  /// A number pencilled in the margin, read where the page offered no
+  /// printed one: only a pre-fill for the keypad, never a hit.
+  final int? pencilPage;
+
+  /// This scan with [page] as its pencilled number.
+  PageScan withPencil(int? page) => PageScan(
+    turn: turn,
+    hits: hits,
+    previewHits: previewHits,
+    preview: preview,
+    previewWidth: previewWidth,
+    previewHeight: previewHeight,
+    toStoredBox: toStoredBox,
+    toDecodedBox: toDecodedBox,
+    millis: millis,
+    pencilBody: pencilBody,
+    pencilPage: page,
+  );
 }
 
 /// Reads page numbers on the device. Null where there is no on-device OCR

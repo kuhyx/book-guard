@@ -34,6 +34,7 @@ from book_guard._pagenum import (
     read_box,
     upright_box,
 )
+from book_guard._pencil import read_pencil_page
 from book_guard._sparse import sparse_candidates
 from book_guard._vision import ISBN, OTHER, PAGE, Reading, normalise_isbn
 
@@ -115,9 +116,18 @@ def _pc_reading(path: Path, context: Context, box: Box | None) -> Reading:
     printed = _printed_isbn(page.text)
     if printed is not None:
         return Reading(ISBN, None, printed, "", rotation=page.rotation)
+    # No printed number: a pencilled one is a pre-fill for the keypad, never
+    # the page (the reading stays "other" and rejected).
+    pencil = read_pencil_page(page)
     if not found and len(page.text) < MIN_LOCAL_TEXT:
         return Reading(
-            OTHER, None, None, "", reason="no page on the photo", rotation=page.rotation
+            OTHER,
+            None,
+            None,
+            "",
+            reason="no page on the photo",
+            rotation=page.rotation,
+            pencil_page=pencil,
         )
     return Reading(
         OTHER,
@@ -126,4 +136,5 @@ def _pc_reading(path: Path, context: Context, box: Box | None) -> Reading:
         page.text,
         reason=choice.reason + _ASK_FOR_BOX,
         rotation=page.rotation,
+        pencil_page=pencil,
     )

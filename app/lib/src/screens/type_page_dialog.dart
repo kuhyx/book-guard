@@ -9,16 +9,23 @@ import 'package:flutter/services.dart';
 /// Asks for a page number on a numeric keypad; pops the number, or null
 /// when cancelled or nothing was typed. Wordless: a number glyph leads the
 /// field, the buttons are close and send.
+///
+/// [initial] is a suggestion (a pencilled number the reader saw): it only
+/// fills the field, and the number sent is whatever the field holds when the
+/// reader taps send.
 class TypePageDialog extends StatefulWidget {
   /// Creates the dialog.
-  const new({super.key});
+  const new({super.key, this.initial});
+
+  /// The pre-fill, or null.
+  final int? initial;
 
   @override
   State<TypePageDialog> createState() => _TypePageDialogState();
 }
 
 class _TypePageDialogState extends State<TypePageDialog> {
-  final _page = TextEditingController();
+  late final _page = TextEditingController(text: widget.initial?.toString());
 
   @override
   void dispose() {
@@ -61,10 +68,15 @@ class _TypePageDialogState extends State<TypePageDialog> {
 /// Asks for the page number of the photo [name] and queues it for the PC,
 /// which takes it as it takes the phone's own reading (`type_page`, so it
 /// also works offline and from the desktop build); shows the reply.
-Future<void> typePage(BuildContext context, GuardApi api, String name) async {
+Future<void> typePage(
+  BuildContext context,
+  GuardApi api,
+  String name, {
+  int? initial,
+}) async {
   final page = await showDialog<int>(
     context: context,
-    builder: (_) => const TypePageDialog(),
+    builder: (_) => TypePageDialog(initial: initial),
   );
   if (page == null || !context.mounted) return;
   final response = await api.sendQueued('type_page', {

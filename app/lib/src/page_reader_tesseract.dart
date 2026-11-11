@@ -4,6 +4,8 @@ import 'dart:isolate';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_prep.dart';
 import 'package:book_guard_app/src/page_reader.dart';
+import 'package:book_guard_app/src/pencil.dart' show loadPencilNetBytes;
+import 'package:book_guard_app/src/pencil_scan.dart';
 import 'package:book_guard_app/src/tesseract_lines.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -101,7 +103,9 @@ class TesseractPageReader implements PageReader {
   }) async {
     _model = 'fast';
     final first = await _scan(bytes);
-    if (first == null || _usable(first, context)) return first;
+    if (first == null || _usable(first, context)) {
+      return await _withPencil(first);
+    }
     // p. 611 of 2026-11-09: the fast model reads the bold corner number as
     // a word of letters. The full model is slower and reads other photos
     // worse (p. 502 as "2"), so it only gets a say where the fast one has
@@ -109,11 +113,29 @@ class TesseractPageReader implements PageReader {
     _model = 'full';
     try {
       final second = await _scan(bytes);
-      return second != null && _usable(second, context) ? second : first;
+      return await _withPencil(
+        second != null && _usable(second, context) ? second : first,
+      );
     } finally {
       _model = 'fast';
     }
   }
+
+  /// [scan] with a pencilled number kept, where the printed reader found no
+  /// number at all: only a suggestion for the keypad, never a hit. Any
+  /// failure here leaves the scan as it was.
+  Future<PageScan?> _withPencil(PageScan? scan) async {
+    final body = scan?.pencilBody;
+    if (scan == null || scan.hits.isNotEmpty || body == null) return scan;
+    try {
+      final net = _net ??= await loadPencilNetBytes();
+      return scan.withPencil(await pencilFromPreview(net, scan.preview, body));
+    } on Exception {
+      return scan;
+    }
+  }
+
+  Uint8List? _net;
 
   // `boxed` skips the "far from the last end" rule: that is the reader's
   // call, not a reason to read the photo again.
@@ -185,6 +207,7 @@ class TesseractPageReader implements PageReader {
       toStoredBox: toStoredBox,
       toDecodedBox: toDecodedBox,
       millis: watch.elapsedMilliseconds,
+      pencilBody: pencilBody(bestLines),
     );
   }
 

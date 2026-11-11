@@ -82,6 +82,20 @@ void main() {
     expect(loaded.probabilities(List.filled(784, 0)).length, 11);
   });
 
+  test('a text box outside the page is clipped, or gives nothing', () {
+    final gray = Uint8List(200 * 300)..fillRange(0, 200 * 300, 200);
+    int? read(int l, int t, int r, int b) => readPencilPage(
+      net,
+      gray,
+      200,
+      300,
+      body: (left: l, top: t, right: r, bottom: b, line: 16),
+    );
+    expect(read(20, 40, 180, 9000), isNull);
+    expect(read(5000, 40, 6000, 100), isNull);
+    expect(read(20, 5000, 180, 6000), isNull);
+  });
+
   test('a file that is not weights is refused', () {
     expect(
       () => PencilNet.parse(Uint8List.fromList(List.filled(40, 7))),

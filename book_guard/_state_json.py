@@ -137,6 +137,7 @@ def _photos(paths: Paths) -> list[dict[str, Any]]:
             "page": r.page,
             "status": r.status,
             "reason": r.reason,
+            "pencil_page": r.pencil_page,
             "taken_at": r.taken_at or r.uploaded_at,
         }
         for r in records[:_GALLERY]

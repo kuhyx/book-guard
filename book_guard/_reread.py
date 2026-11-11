@@ -64,6 +64,7 @@ def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
             text=reading.text or record.text,
             status=REJECTED if reading.reason else OK,
             reason=reading.reason,
+            pencil_page=reading.pencil_page,
         )
         _photos.save(paths.photos, records)
     if reading.page_number is None:

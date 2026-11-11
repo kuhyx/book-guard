@@ -62,6 +62,7 @@ class PhotoInfo {
     required this.status,
     required this.reason,
     required this.takenAt,
+    this.pencilPage,
   });
 
   /// Parses one `photos` entry.
@@ -74,6 +75,7 @@ class PhotoInfo {
     status: '${json['status'] ?? ''}',
     reason: '${json['reason'] ?? ''}',
     takenAt: DateTime.tryParse('${json['taken_at']}'),
+    pencilPage: _int(json['pencil_page']),
   );
 
   /// The name it was uploaded under.
@@ -99,6 +101,10 @@ class PhotoInfo {
 
   /// When it was taken.
   final DateTime? takenAt;
+
+  /// A number pencilled in the margin that the PC found where it read no
+  /// printed one: only a pre-fill for the keypad, never [page].
+  final int? pencilPage;
 
   /// Whether the PC took it as what it was meant to be.
   bool get accepted => status == 'ok' && kind != 'other';

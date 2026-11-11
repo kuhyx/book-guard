@@ -46,6 +46,8 @@ class PhotoRecord:  # pylint: disable=too-many-instance-attributes  # a flat cac
         reason: Why it was rejected.
         page_source: ``typed`` when the reader typed ``page`` in the app (a
             page with no printed number); empty when it was read off the photo.
+        pencil_page: A number pencilled in the margin of a photo with no
+            readable one -- only a pre-fill for the keypad, never ``page``.
     """
 
     sha: str
@@ -59,6 +61,7 @@ class PhotoRecord:  # pylint: disable=too-many-instance-attributes  # a flat cac
     status: str = OK
     reason: str = ""
     page_source: str = ""
+    pencil_page: int | None = None
 
     @property
     def taken(self) -> datetime:

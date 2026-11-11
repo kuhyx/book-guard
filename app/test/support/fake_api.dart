@@ -18,6 +18,9 @@ class FakeApi extends GuardApi {
   /// Creates the fake; its own share is never touched.
   new({this.state}) : super(FakeShare().dav());
 
+  /// The pencil suggestion kept with each queued photo.
+  final Map<String, int?> pencils = {};
+
   /// What [fetchState] returns.
   GuardState? state;
 
@@ -107,12 +110,14 @@ class FakeApi extends GuardApi {
     Box? box,
     DateTime? takenAt,
     String? isbn,
+    int? pencilPage,
   }) async {
     final error = uploadError;
     if (error != null) throw error;
     final name = safeName('${label}_$fileName');
     photos[name] = bytes;
     notes[name] = (page: page, box: box);
+    pencils[name] = pencilPage;
     return name;
   }
 
@@ -186,6 +191,7 @@ PhotoInfo reading({
   int? page = 19,
   String status = 'ok',
   String reason = '',
+  int? pencilPage,
 }) => PhotoInfo(
   name: name,
   file: 'processed/abc-$name',
@@ -195,4 +201,5 @@ PhotoInfo reading({
   status: status,
   reason: reason,
   takenAt: DateTime.utc(2026, 10, 2, 18, 14),
+  pencilPage: pencilPage,
 );

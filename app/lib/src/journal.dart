@@ -15,6 +15,7 @@ class JournalEntry {
     this.page,
     this.isbn,
     this.seen = false,
+    this.pencilPage,
   });
 
   /// Parses one stored entry.
@@ -26,6 +27,7 @@ class JournalEntry {
     page: json['page'] as int?,
     isbn: json['isbn'] as String?,
     seen: json['seen'] == true,
+    pencilPage: json['pencil_page'] as int?,
   );
 
   /// The name it is uploaded under.
@@ -52,6 +54,10 @@ class JournalEntry {
   /// lists only its newest photos and the journal holds far more.
   final bool seen;
 
+  /// A number pencilled in the margin of a photo the phone read no number
+  /// on: only a pre-fill for the keypad, never [page].
+  final int? pencilPage;
+
   /// This entry, marked as read by the PC.
   JournalEntry asSeen() => JournalEntry(
     name: name,
@@ -61,6 +67,7 @@ class JournalEntry {
     page: page,
     isbn: isbn,
     seen: true,
+    pencilPage: pencilPage,
   );
 
   /// The stored form.
@@ -72,6 +79,7 @@ class JournalEntry {
     'page': page,
     'isbn': ?isbn,
     if (seen) 'seen': true,
+    'pencil_page': ?pencilPage,
   };
 }
 
