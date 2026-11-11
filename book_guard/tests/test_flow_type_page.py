@@ -191,8 +191,8 @@ def test_old_caches_load_with_no_source(bg_paths: Paths) -> None:
 
 
 def test_a_credit_using_a_typed_page_says_so(bg_paths: Paths) -> None:
-    start, end = quiz_pair()
-    session = only_session([replace(start, page_source="typed"), end])
+    start, end, check = quiz_pair()
+    session = only_session([replace(start, page_source="typed"), end, check])
     entry = _quiz.record_verdict(
         bg_paths, make_book(), session, Verdict(True, "f"), "s"
     )
