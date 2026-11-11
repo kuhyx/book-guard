@@ -7,7 +7,8 @@ Read README.md first. These are the invariants that are easy to break.
 - Run the program before the tests: `BOOK_GUARD_ROOT=.demo python3 -m book_guard ...`
   is a full sandbox (its own ledger, photo cache and Reading folder); the
   real tree is `~/.local/share/book_guard` + `~/data/cloud/Reading`.
-  `scripts/demo_photos.py` renders page photos with EXIF times from an epub;
+  `scripts/demo_photos.py` renders page photos with EXIF times from an epub
+  (`--check` renders the check photo a start/stop pair asks for);
   `process --now` (sandbox only) fakes the upload-check clock.
 - Tests: `scripts/setup_dev.sh` once, then `.venv/bin/python -m pytest`
   (100% branch coverage is enforced). `book_guard/tests/conftest.py` makes

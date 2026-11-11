@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from book_guard._sessions import Session
 
 _DEMO_START_PAGE = 40
+_EVIDENCE_PHOTOS = 3
 
 GENUINE = (
     "Captain Smollett, worried about mutiny, lets the crew go ashore for the "
@@ -209,6 +210,12 @@ def main() -> int:
         for s in build_sessions(_photos.usable_pages(records))
         if s.start.page == _DEMO_START_PAGE
     )
+    if len(session.evidence) < _EVIDENCE_PHOTOS:
+        _out(
+            "the demo session has no check-page photo: render it with "
+            "`scripts/demo_photos.py --check` (see its docstring) and process it"
+        )
+        return 2
     book = book_at(ledger, session.end.taken)
     use_span = book is not None and "--no-span" not in sys.argv
     span = find_span(active, book.isbn, session) if book and use_span else None
