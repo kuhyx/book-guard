@@ -49,6 +49,11 @@ _logger: Final = logging.getLogger(__name__)
 _ID: Final = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 """Request ids become file names: nothing that could climb out of the dir."""
 
+
+class DeferredError(Exception):
+    """A handler cannot answer yet; the request stays for the next pass."""
+
+
 FIRST: Final = frozenset({"ebook_session"})
 """Request types that create what later requests refer to."""
 
@@ -107,8 +112,9 @@ def handle_requests(
 ) -> int:
     """Answer every pending request; returns how many were answered.
 
-    A request whose handler hits a Claude outage is left in place and retried
-    next pass, exactly like an unreadable photo -- the app keeps polling.
+    A request whose handler hits a Claude outage, or raises
+    :class:`DeferredError` (it refers to a photo still in the inbox), is left
+    in place and retried next pass -- the app keeps polling.
     """
     answered = 0
     loaded = [(path, _load(path)) for path in _pending(paths.requests)]
@@ -126,7 +132,7 @@ def handle_requests(
                 if handler
                 else Response(ok=False, code="unknown_type")
             )
-        except ClaudeUnavailableError as exc:
+        except (ClaudeUnavailableError, DeferredError) as exc:
             _logger.warning("request %s deferred: %s", rid, exc)
             continue
         except (OSError, ValueError) as exc:

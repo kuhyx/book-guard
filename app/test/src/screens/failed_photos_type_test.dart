@@ -10,11 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fake_api.dart';
 import '../../support/finders_read.dart';
 
-JournalEntry _entry(String name, String label) => JournalEntry(
+JournalEntry _entry(String name, String label, {int? page}) => JournalEntry(
   name: name,
   label: label,
   sha: 'f' * 64,
   takenAt: DateTime.utc(2026, 10, 3, 12, 27),
+  page: page,
 );
 
 GuardState _state(List<PhotoInfo> photos) {
@@ -49,6 +50,7 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     required List<PhotoInfo> photos,
+    int? phonePage,
   }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -59,7 +61,7 @@ void main() {
         child: FailedPhotos(
           api: api,
           state: _state(photos),
-          journal: [_entry('start_a.jpg', 'start')],
+          journal: [_entry('start_a.jpg', 'start', page: phonePage)],
           onChanged: () async {},
         ),
       ),
@@ -107,9 +109,18 @@ void main() {
     expect(find.text('12'), findsOneWidget);
   });
 
-  testWidgets('not offered before the PC has read the photo', (tester) async {
+  testWidgets('offered while the PC has not answered yet', (tester) async {
+    // The photo still waits in the outbox (PC off): no verdict, no page.
     await pump(tester, photos: const []);
-    expect(spoken('Type the page number'), findsNothing);
+    expect(spoken('Type the page number'), findsOneWidget);
+    expect(spoken('Box the number'), findsNothing);
+    await tester.tap(spoken('Type the page number'));
+    await settle(tester, 10);
+    await tester.enterText(find.byType(TextField), '29');
+    await tester.tap(spoken('Send the typed page number'));
+    await settle(tester, 10);
+    expect(api.sent.single.type, 'type_page');
+    expect(api.sent.single.body, {'photo': 'start_a.jpg', 'page': 29});
   });
 
   testWidgets('not offered where a number was read', (tester) async {
@@ -120,6 +131,17 @@ void main() {
       reason: 'uploaded more than 7 days after it was taken',
     );
     await pump(tester, photos: [read]);
+    expect(spoken('Type the page number'), findsNothing);
+  });
+
+  testWidgets('not offered where the phone read a number', (tester) async {
+    final rejected = reading(
+      name: 'start_a.jpg',
+      page: null,
+      status: 'rejected',
+      reason: 'uploaded more than 7 days after it was taken',
+    );
+    await pump(tester, photos: [rejected], phonePage: 12);
     expect(spoken('Type the page number'), findsNothing);
   });
 }

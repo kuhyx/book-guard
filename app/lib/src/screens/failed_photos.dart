@@ -234,7 +234,9 @@ class _FailedPhotosState extends State<FailedPhotos> {
                 onBox: f.pc != null && widget.reader != null
                     ? () => _box(f)
                     : null,
-                onType: f.pc != null && f.pc?.page == null
+                // No number read by the phone, nor by the PC (which may not
+                // have the photo yet: it can still sit in the outbox).
+                onType: f.entry.page == null && f.pc?.page == null
                     ? () => unawaited(_type(f))
                     : null,
                 onReport: bytes == null ? null : () => _report(f),

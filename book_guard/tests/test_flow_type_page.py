@@ -5,12 +5,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 import json
+import os
 from typing import TYPE_CHECKING
 
 import pytest
 
-from book_guard import _photos, _quiz, _reread
+from book_guard import _inbox, _photos, _quiz, _reread
 from book_guard._app_handlers import HANDLERS
+from book_guard._photo import PhotoFile
 from book_guard._photos import OK, REJECTED
 from book_guard._quiz import Verdict
 from book_guard._requests import Response, handle_requests
@@ -22,6 +24,7 @@ from book_guard.tests._flow_helpers import (
     quiz_pair,
     rec,
     seed_photos,
+    sha,
 )
 
 if TYPE_CHECKING:
@@ -139,6 +142,43 @@ def test_the_handler_is_registered_and_answers_over_the_request_channel(
     assert handle_requests(bg_paths, HANDLERS) == 1
     reply = json.loads((bg_paths.responses / "req-type-1.json").read_text())
     assert (reply["ok"], reply["code"]) == (True, "read")
+
+
+def _ask_before_the_pass(paths: Paths, name: str) -> Path:
+    """A type_page request for ``name`` while its photo sits in the inbox."""
+    paths.requests.mkdir(parents=True, exist_ok=True)
+    body = {"id": "req-type-2", "type": "type_page", "photo": name, "page": 29}
+    (paths.requests / "req-type-2.json").write_text(json.dumps(body))
+    return paths.responses / "req-type-2.json"
+
+
+def test_a_request_for_a_photo_still_in_the_inbox_waits_for_it(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The phone queued the page number while the photo was not read yet (the
+    # PC was off, or the upload was still settling): neither is lost.
+    bg_paths.inbox.mkdir(parents=True, exist_ok=True)
+    name = "stop_a.jpg"
+    path = bg_paths.inbox / name
+    path.write_bytes(b"jpeg")
+    os.utime(path, (T0.timestamp(), T0.timestamp()))
+    reply = _ask_before_the_pass(bg_paths, name)
+    assert handle_requests(bg_paths, HANDLERS) == 0
+    assert not reply.exists()
+    assert (bg_paths.requests / "req-type-2.json").exists()  # kept, not refused
+    photo = PhotoFile(sha=sha(name), taken_at=T0, jpeg_b64=name)
+    monkeypatch.setattr(_inbox, "open_photo", lambda _p: photo)
+    monkeypatch.setattr(_inbox, "make_thumb", lambda *_a: None)
+
+    def unnumbered(_path: Path, _context: Context, _box: Box | None) -> Reading:
+        return Reading(OTHER, None, None, "text", reason="no page number found")
+
+    _inbox.process_inbox(bg_paths, reader=unnumbered, now=T0.timestamp() + 60)
+    monkeypatch.setattr(_reread, "read", _reader([]))
+    assert handle_requests(bg_paths, HANDLERS) == 1
+    assert json.loads(reply.read_text())["code"] == "read"
+    (record,) = _photos.load(bg_paths.photos).values()
+    assert (record.page, record.status, record.page_source) == (29, OK, "typed")
 
 
 def test_old_caches_load_with_no_source(bg_paths: Paths) -> None:

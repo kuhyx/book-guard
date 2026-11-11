@@ -25,7 +25,7 @@ from book_guard._flock import exclusive
 from book_guard._photo_context import context_for, parse_box
 from book_guard._photos import OK, REJECTED, TYPED
 from book_guard._reader import read
-from book_guard._requests import Response
+from book_guard._requests import DeferredError, Response
 from book_guard._vision import OTHER, PAGE
 
 if TYPE_CHECKING:
@@ -94,6 +94,12 @@ def type_page(paths: Paths, request: dict[str, Any]) -> Response:
     with exclusive(paths):
         records = _photos.load(paths.photos)
         record = next((r for r in records.values() if r.name == name), None)
+        if record is None and (paths.inbox / name).is_file():
+            # The phone queues the number right behind the photo, and the PC
+            # answers it before the photo is read (still settling, or its
+            # reader was down): wait for the photo, never refuse the number.
+            msg = f"{name} is not read yet"
+            raise DeferredError(msg)
         if record is None or not record.taken_at:
             return Response(ok=False, code="no_photo")
         if record.page is not None:
