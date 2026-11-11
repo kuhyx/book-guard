@@ -20,7 +20,7 @@ requires-python = ">=3.14"
 dependencies = [
     "gatelock @ git+https://github.com/kuhyx/utils@gatelock-v0.13.0#subdirectory=gatelock",
     "freedays @ git+https://github.com/kuhyx/utils@freedays-v0.4.0#subdirectory=freedays",
-    "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.4.0#subdirectory=sickdays",
+    "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.0#subdirectory=sickdays",
     "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdirectory=focus_project",
     "fastembed==0.9.1; python_version < '3.15'",
     "numpy==2.5.4",
