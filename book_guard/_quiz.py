@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Final
 from book_guard import _errlog, _ledger, _local, _paths
 from book_guard._bonus import earns, qualifies
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
+from book_guard._inclusive import COUNTING, INCLUSIVE
 from book_guard._ledger import CREDIT, REJECT, Entry
 from book_guard._photos import TYPED
 from book_guard._prompt import (
@@ -167,6 +168,7 @@ def record_verdict(
             "started_at": str(int(session.started_at.timestamp())),
             "ended_at": str(int(ended.timestamp())),
             "bonus": "0",
+            COUNTING: INCLUSIVE,
             "feedback": verdict.feedback[:1500],
             "summary": summary.strip()[:1000],
             "attempt": str(attempt),

@@ -100,14 +100,14 @@ def test_a_passing_rewrite_is_credited_once_with_its_bonus(bg_paths: Paths) -> N
     _quiz.record_verdict(bg_paths, None, session, Verdict(False, "thin"), "first")
     entry = _quiz.record_verdict(bg_paths, None, session, Verdict(True, "ok"), "two")
     assert entry is not None
-    assert (entry.entry_id, entry.kind, entry.amount) == (f"{sid}#2", CREDIT, 30)
+    assert (entry.entry_id, entry.kind, entry.amount) == (f"{sid}#2", CREDIT, 31)
     assert (entry.detail["attempt"], entry.detail["bonus"]) == ("2", "1")
     assert entry.detail["ended_at"] == str(int(session.ended_at.timestamp()))
     again = _quiz.record_verdict(bg_paths, None, session, Verdict(True, "x"), "3")
     assert again is None  # credited: nothing more is recorded
 
     ledger = _ledger.load(bg_paths.ledger, bg_paths.key_file)
-    assert [e.amount for e in ledger.of_kind(CREDIT)] == [30]
+    assert [e.amount for e in ledger.of_kind(CREDIT)] == [31]
     view = _view(bg_paths)
     assert view.status == CREDITED
     assert (detail(view)["feedback"], detail(view)["summary"]) == ("ok", "two")

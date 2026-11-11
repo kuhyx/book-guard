@@ -148,7 +148,7 @@ def test_session_files(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> None
     _session_files.write_session_files(bg_paths, snap)
     target = bg_paths.sessions / _session_files.file_name(session_id)
     doc = json.loads(target.read_text("utf-8"))
-    assert [p["role"] for p in doc["photos"]] == ["start", "end"]
+    assert [p["role"] for p in doc["photos"]] == ["start", "end", "check"]
     assert doc["book"] == "War"
     assert doc["status"] == "credited"
     stamp = target.stat().st_mtime_ns

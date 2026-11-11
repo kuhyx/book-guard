@@ -38,12 +38,12 @@ def test_library_end_to_end(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) ->
     assert (book["status"], book["current"], book["pages_read"]) == (
         "finished",
         True,
-        1,
+        2,
     )
     (session,) = book["sessions"]
     assert session["id"] == sid
     assert session["status"] == "credited"
-    assert [p["role"] for p in session["photos"]] == ["start", "end"]
+    assert [p["role"] for p in session["photos"]] == ["start", "end", "check"]
     (attempt,) = session["attempts"]
     assert attempt["summary"] == LONG.strip()  # in full, not the ledger's cut
     assert (attempt["passed"], attempt["graded"], attempt["missing"]) == (

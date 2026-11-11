@@ -123,6 +123,10 @@ void main() {
       );
     });
 
+    test('a stop may be on the start page itself', () {
+      expect(pick([7], const PageContext(after: 7)).hit?.value, 7);
+    });
+
     test('stops never take the bigger of two', () {
       expect(pick([3, 51], const PageContext(after: 7)).hit?.value, 51);
       expect(

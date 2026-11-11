@@ -10,12 +10,16 @@ export 'package:book_guard_app/src/journal.dart';
 /// sha256 hex of a photo's bytes -- `book_guard/_photo.py` sha256_of.
 String photoSha(Uint8List bytes) => sha256.convert(bytes).toString();
 
-/// The check page between [startPage] and [endPage], exactly as the PC
-/// names it (`book_guard/_sessions.py` check_page_for); null when there is
-/// no page strictly between.
+/// Seconds a page takes at the least; a stop on the start page sooner than
+/// this is the start photo retaken (`book_guard/_constants.py`).
+const minSecondsPerPage = 50;
+
+/// The check page from [startPage] to [endPage], both included, exactly as
+/// the PC names it (`book_guard/_sessions.py` check_page_for); null only
+/// when the stop is before the start.
 int? checkPageFor(int startPage, String startSha, int endPage, String endSha) {
-  final low = startPage + 1;
-  final high = endPage - 1;
+  final low = startPage;
+  final high = endPage;
   if (high < low) return null;
   final digest = sha256.convert(utf8.encode(startSha + endSha)).bytes;
   var seed = BigInt.zero;
@@ -83,19 +87,28 @@ LocalView? localView(GuardState? state, List<JournalEntry> journal) {
     } else if (e.label == 'stop' && open != null && page != null) {
       final start = open;
       final startPage = start.page;
-      if (startPage != null && page > startPage) {
-        final check = checkPageFor(startPage, start.sha, page, e.sha);
-        final session = SessionInfo(
-          id: sessionId(start.sha, e.sha),
-          startPage: startPage,
-          endPage: page,
-          checkPage: check,
-          pages: page - startPage,
-          minutes: e.takenAt.difference(start.takenAt).inMinutes,
-          startedAt: start.takenAt,
-          status: check == null ? 'needs-quiz' : 'needs-check-photo',
+      final seconds = e.takenAt.difference(start.takenAt).inSeconds;
+      final retaken = page == startPage && seconds < minSecondsPerPage;
+      if (startPage != null && retaken) {
+        // The same page that soon is the start photo taken again. (The PC
+        // also looks at the photo after a later same-page stop; the buttons
+        // name the stop here.)
+        (open, openPage) = (e, page);
+        continue;
+      }
+      if (startPage != null && page >= startPage) {
+        needCheck.add(
+          SessionInfo(
+            id: sessionId(start.sha, e.sha),
+            startPage: startPage,
+            endPage: page,
+            checkPage: checkPageFor(startPage, start.sha, page, e.sha),
+            pages: page - startPage + 1,
+            minutes: seconds ~/ 60,
+            startedAt: start.takenAt,
+            status: 'needs-check-photo',
+          ),
         );
-        (check == null ? needSummary : needCheck).add(session);
       }
       (open, openPage) = (null, null);
     } else if (e.label.startsWith('check')) {

@@ -86,7 +86,7 @@ def test_too_fast_is_refused(bg_paths: Paths) -> None:
         bg_paths, {"session_id": view.session.session_id, "start": _iso(100)}
     )
     assert response == Response(
-        ok=False, code="too_short", data={"pages": 53, "minutes": 44}
+        ok=False, code="too_short", data={"pages": 54, "minutes": 45}
     )
 
 

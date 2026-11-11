@@ -29,7 +29,7 @@ def test_session_properties() -> None:
     start, end = _p("a", 10, 0), _p("b", 30, 45.5)
     session = Session(start, end, 20)
     assert session.session_id == f"session:{'a' * 16}-{'b' * 16}"
-    assert session.pages == 20
+    assert session.pages == 21
     assert session.seconds == 45.5 * 60
     assert session.minutes == 45
     assert session.state == NEEDS_CHECK
@@ -39,17 +39,13 @@ def test_session_properties() -> None:
     assert session.evidence == [start, session.check, end]
 
 
-def test_pages_with_missing_numbers() -> None:
-    assert Session(_p("a", None, 0), _p("b", None, 1), None).pages == 0
-
-
 def test_too_fast() -> None:
-    # 20 pages need 20 * 50 s = 16 min 40 s.
-    session = Session(_p("a", 10, 0), _p("b", 30, 16), None)
+    # 21 pages (both ends count) need 21 * 50 s = 17 min 30 s.
+    session = Session(_p("a", 10, 0), _p("b", 30, 17), None)
     assert session.state == TOO_FAST
-    enough = Session(_p("a", 10, 0), _p("b", 30, 17), None)
+    enough = Session(_p("a", 10, 0), _p("b", 30, 18), None)
     assert enough.state == NEEDS_QUIZ
-    # The real 2026-10-02 session: 44 pages in 43 minutes counts.
+    # The real 2026-10-02 session: 45 pages in 43 minutes counts.
     real = Session(_p("a", 7, 0), _p("b", 51, 43), None)
     assert real.state == NEEDS_QUIZ
 
@@ -58,10 +54,9 @@ def test_check_page_for() -> None:
     start, end = _p("a", 10, 0), _p("b", 30, 40)
     page = _sessions.check_page_for(start, end)
     assert page is not None
-    assert 11 <= page <= 29
+    assert 10 <= page <= 30
     assert page == _sessions.check_page_for(start, end)  # deterministic
-    assert _sessions.check_page_for(_p("a", 10, 0), _p("b", 11, 5)) is None
-    assert _sessions.check_page_for(_p("a", 10, 0), _p("b", 12, 5)) == 11
+    assert _sessions.check_page_for(_p("a", 10, 0), _p("b", 9, 5)) is None
 
 
 def test_simple_pair_then_check_photo() -> None:
@@ -83,14 +78,8 @@ def test_check_photo_must_be_after_end() -> None:
     assert sessions[0].state == NEEDS_CHECK
 
 
-def test_one_page_session_needs_no_check() -> None:
-    sessions = _sessions.build_sessions([_p("a", 10, 0), _p("b", 11, 2)])
-    assert sessions[0].check_page is None
-    assert sessions[0].state == NEEDS_QUIZ
-
-
 def test_backwards_photo_replaces_start() -> None:
-    photos = [_p("a", 50, 0), _p("b", 50, 1), _p("c", 10, 2), _p("d", 12, 5)]
+    photos = [_p("a", 50, 0), _p("b", 50, 0.5), _p("c", 10, 2), _p("d", 12, 5)]
     sessions = _sessions.build_sessions(photos)
     assert [(s.start.name, s.end.name) for s in sessions] == [("c", "d")]
 

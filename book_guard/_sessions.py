@@ -4,17 +4,21 @@
 The protocol the phone side follows:
 
 1. Photograph the open page when you start reading.
-2. Photograph the open page when you stop.
+2. Photograph the open page when you stop (the last page you read).
 3. Photograph the *check page* book-guard then names (in NEXT.txt) --
-   a page between the two, picked from the photos' hashes, so it cannot be
-   known before the end photo exists.
+   a page from the start page to the stop page, both included, picked from
+   the photos' hashes, so it cannot be known before the end photo exists.
+
+Both ends count: a session is ``stop page - start page + 1`` pages, and a
+stop on the start page is one page.
 
 Walking the photos in capture order:
 
 * a photo showing a pending session's check page, taken after that session
   ended, is that session's check photo;
-* otherwise it closes the open session if it shows a later page within
-  :data:`MAX_SESSION` of the start;
+* otherwise it closes the open session if it shows the start page (at least
+  :data:`MIN_SECONDS_PER_PAGE` later -- sooner is a retaken start) or a later
+  page, within :data:`MAX_SESSION` of the start;
 * otherwise it opens a new session (a stale or backwards start is replaced).
 
 Everything is re-derived from the photo cache on every run, so there is no
@@ -93,8 +97,12 @@ class Session:
 
     @property
     def pages(self) -> int:
-        """Pages read: start page up to (not including) the end page."""
-        return int(self.end.page or 0) - int(self.start.page or 0)
+        """Pages read: both the start and the stop page count.
+
+        Read in the app, the end is the first page *not* read (an estimate).
+        """
+        span = int(self.end.page or 0) - int(self.start.page or 0)
+        return span if self.ebook is not None else span + 1
 
     @property
     def seconds(self) -> float:
@@ -129,12 +137,12 @@ class Session:
 
 
 def check_page_for(start: PhotoRecord, end: PhotoRecord) -> int | None:
-    """The page to photograph as proof, strictly between start and end.
+    """The page to photograph as proof: from the start page to the stop page.
 
-    ``None`` when there is no page strictly between (a 1-page session) --
-    both of its pages are already photographed.
+    Both ends are drawn from (a one-page session names its own page); ``None``
+    only when the stop page is before the start page.
     """
-    low, high = int(start.page or 0) + 1, int(end.page or 0) - 1
+    low, high = int(start.page or 0), int(end.page or 0)
     if high < low:
         return None
     seed = hashlib.sha256((start.sha + end.sha).encode()).digest()
@@ -149,6 +157,27 @@ def _claims_check(pending: list[Session], photo: PhotoRecord) -> bool:
             pending.remove(session)
             return True
     return False
+
+
+def _closes(start: PhotoRecord, photo: PhotoRecord, after: PhotoRecord | None) -> bool:
+    """Whether ``photo`` can be the stop of ``start``'s session.
+
+    A later page always can. The same page only after a real minute of
+    reading (a quicker one is the start photo retaken), and not when a later
+    page follows within :data:`MAX_SESSION`: then ``photo`` is the start
+    taken again and ``after`` its stop -- how photos of one page were always
+    paired, so a session credited that way keeps its photos.
+    """
+    low, high = int(start.page or 0), int(photo.page or 0)
+    if high != low:
+        return high > low
+    if (photo.taken - start.taken).total_seconds() < MIN_SECONDS_PER_PAGE:
+        return False
+    return not (
+        after is not None
+        and int(after.page or 0) > high
+        and after.taken - photo.taken <= MAX_SESSION
+    )
 
 
 def _broken(start: PhotoRecord, photo: PhotoRecord, breaks: Sequence[datetime]) -> bool:
@@ -171,12 +200,13 @@ def build_sessions(
     sessions: list[Session] = []
     pending: list[Session] = []
     start: PhotoRecord | None = None
-    for photo in pages:
+    for index, photo in enumerate(pages):
         if _claims_check(pending, photo):
             continue
+        following = pages[index + 1] if index + 1 < len(pages) else None
         if (
             start is None
-            or int(photo.page or 0) <= int(start.page or 0)
+            or not _closes(start, photo, following)
             or photo.taken - start.taken > MAX_SESSION
             or _broken(start, photo, breaks)
         ):
@@ -184,8 +214,7 @@ def build_sessions(
             continue
         session = Session(start, photo, check_page_for(start, photo))
         sessions.append(session)
-        if session.check_page is not None:
-            pending.append(session)
+        pending.append(session)
         start = None
     return sessions
 

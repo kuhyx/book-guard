@@ -34,12 +34,12 @@ void main() {
       final start = e('start_a.jpg', 'start', 51, 0);
       final stop = e('stop_b.jpg', 'stop', 103, 50);
       final check = checkPageFor(51, start.sha, 103, stop.sha)!;
-      expect(check, inInclusiveRange(52, 102));
+      expect(check, inInclusiveRange(51, 103));
       final view = localView(state(), [start, stop])!;
       expect(view.openStart, isNull);
       expect(view.waiting, 2);
       final local = view.needCheck.last;
-      expect((local.checkPage, local.pages, local.minutes), (check, 52, 50));
+      expect((local.checkPage, local.pages, local.minutes), (check, 53, 50));
       expect(local.id, sessionId(start.sha, stop.sha));
       final done = localView(state(), [
         start,
@@ -56,8 +56,34 @@ void main() {
         start,
         e('stop_b.jpg', 'stop', 52, 5),
       ])!;
-      // 51 -> 52 has no page between: straight to the summary.
-      expect(view.needSummary.single.checkPage, isNull);
+      // 51 -> 52 reads two pages; the check page is one of them.
+      final check = view.needCheck.last.checkPage;
+      expect(check, inInclusiveRange(51, 52));
+      expect(view.needCheck.last.pages, 2);
+    });
+
+    test('a stop on the start page is a one-page session', () {
+      final start = e('start_a.jpg', 'start', 51, 0);
+      final view = localView(state(), [start, e('stop_b.jpg', 'stop', 51, 5)])!;
+      final one = view.needCheck.last;
+      expect((one.pages, one.checkPage), (1, 51));
+    });
+
+    test('a stop on the start page within 50 s is a retaken start', () {
+      final view = localView(state(), [
+        e('start_a.jpg', 'start', 51, 0),
+        e('stop_b.jpg', 'stop', 51, 0),
+      ])!;
+      expect(view.openStart, 51);
+      expect(view.needCheck.map((s) => s.id), ['session:pc']);
+    });
+
+    test('check pages equal the PC (book_guard/_sessions.py)', () {
+      // The same literals sit in book_guard/tests/test_core_inclusive.py.
+      expect(checkPageFor(51, 'start', 103, 'stop'), 97);
+      expect(checkPageFor(10, 'a', 10, 'b'), 10);
+      expect(checkPageFor(7, 'x', 8, 'y'), 7);
+      expect(checkPageFor(1, 'p', 29, 'q'), 15);
     });
 
     test('only a start pending: reading since its page', () {

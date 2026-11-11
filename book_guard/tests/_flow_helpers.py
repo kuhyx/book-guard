@@ -17,7 +17,7 @@ from book_guard._ledger import CREDIT, ESCAPE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._pace import Pace
 from book_guard._photos import OK, PhotoRecord
-from book_guard._sessions import build_sessions
+from book_guard._sessions import build_sessions, check_page_for
 from book_guard._state import SessionView, Snapshot
 
 if TYPE_CHECKING:
@@ -69,11 +69,16 @@ def seed_photos(paths: Paths, *records: PhotoRecord) -> None:
 def quiz_pair(
     tag: str = "q", start: datetime = T0, *, text: str = ""
 ) -> list[PhotoRecord]:
-    """Pages 10 -> 11 five minutes apart: no check page, so NEEDS_QUIZ."""
-    return [
-        rec(f"{tag}-start", 10, start, text=text),
-        rec(f"{tag}-end", 11, start + timedelta(minutes=5), text=text),
-    ]
+    """Pages 10 -> 11 five minutes apart, then the check photo: NEEDS_QUIZ."""
+    first = rec(f"{tag}-start", 10, start, text=text)
+    last = rec(f"{tag}-end", 11, start + timedelta(minutes=5), text=text)
+    check = rec(
+        f"{tag}-check",
+        check_page_for(first, last),
+        start + timedelta(minutes=6),
+        text=text,
+    )
+    return [first, last, check]
 
 
 def check_pair(tag: str = "c", start: datetime = T0) -> list[PhotoRecord]:

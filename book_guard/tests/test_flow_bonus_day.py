@@ -27,7 +27,7 @@ def _record(paths: Paths, pages: int, tag: str = "s", *, minutes: int = 60) -> s
     session = only_session(
         [
             rec(f"{tag}-start", 10, start),
-            rec(f"{tag}-end", 10 + pages, start + timedelta(minutes=minutes)),
+            rec(f"{tag}-end", 9 + pages, start + timedelta(minutes=minutes)),
         ]
     )
     entry = _quiz.record_verdict(paths, make_book(), session, Verdict(True, "f"), "s")

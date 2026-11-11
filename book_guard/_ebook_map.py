@@ -81,7 +81,8 @@ class PageMap:
         """The physical page ``offset`` falls on (``last_page + 1`` at the end).
 
         Reading from offset ``a`` to ``b`` covers ``page_at(b) - page_at(a)``
-        pages -- the stop page is not read, exactly as with photos.
+        pages -- the end page is not read (in-app sessions keep that rule;
+        paper sessions count both ends).
         """
         return max(1, math.floor(page_coordinate(self.knots, offset)))
 

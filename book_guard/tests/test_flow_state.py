@@ -175,11 +175,11 @@ def test_to_json_full(bg_paths: Paths) -> None:
     assert (first["status"], first["book"], first["check_page"]) == (
         CREDITED,
         "War",
-        None,
+        10,
     )
     assert doc["todo"][0].startswith("TAKE A PHOTO of page ")
     assert first["detail"].startswith("sessions/session_")
-    assert len(doc["photos"]) == 7
+    assert len(doc["photos"]) == 9
     newest = doc["photos"][0]
     assert newest["file"].startswith("processed/")
     assert newest["file"].endswith(newest["name"])

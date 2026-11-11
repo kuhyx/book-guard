@@ -12,7 +12,7 @@ from book_guard import _widen
 from book_guard._cli import main
 from book_guard._ledger import load
 from book_guard._session_times import RETIME
-from book_guard._sessions import NEEDS_QUIZ, TOO_FAST
+from book_guard._sessions import NEEDS_CHECK, TOO_FAST
 from book_guard._state import snapshot
 from book_guard.tests._flow_helpers import T0, add_book, add_entry, rec, seed_photos
 
@@ -38,7 +38,7 @@ def test_a_widened_start_reaches_the_session(bg_paths: Paths) -> None:
     message = _widen.widen(bg_paths, sid, READ_FROM, None, "phone lost the start")
     assert message.endswith("(54 min)")
     (view,) = snapshot(bg_paths).sessions
-    assert (view.status, view.session.started_at) == (NEEDS_QUIZ, READ_FROM)
+    assert (view.status, view.session.started_at) == (NEEDS_CHECK, READ_FROM)
     assert view.session.ended_at == END
     (row,) = load(bg_paths.ledger, bg_paths.key_file).of_kind(RETIME)
     assert row.detail["reason"] == "phone lost the start"
@@ -58,7 +58,7 @@ def test_an_end_can_move_too(bg_paths: Paths) -> None:
         (("nope", READ_FROM, "r"), "No such session."),
         ((None, READ_FROM, "  "), "A reason is required."),
         ((None, END, "r"), "The start must come before the end."),
-        ((None, START - timedelta(seconds=10), "r"), "1 pages need at least"),
+        ((None, START - timedelta(seconds=10), "r"), "2 pages need at least"),
     ],
 )
 def test_refusals(

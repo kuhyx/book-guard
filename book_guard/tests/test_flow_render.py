@@ -43,7 +43,7 @@ TODAY = [
 )
 def test_session_line_every_status(status: str, action: str) -> None:
     line = session_line(SessionView(CHECK, None, status))
-    assert line == f"p. 10-20 (10 p, 20 min) {WHEN} -- {action}"
+    assert line == f"p. 10-20 (11 p, 20 min) {WHEN} -- {action}"
 
 
 def test_todo_lines_empty_when_nothing_pending() -> None:

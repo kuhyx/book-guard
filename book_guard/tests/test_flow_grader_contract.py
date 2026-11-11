@@ -59,7 +59,7 @@ def test_a_rewrite_is_judged_on_the_checklist_only() -> None:
 def test_what_the_grader_cannot_check_is_never_a_reason_to_fail() -> None:
     session = only_session(quiz_pair())
     plain = build_prompt(None, session, SUMMARY)
-    assert "ONLY 2 photographed pages, not the 1 pages the reader read" in plain
+    assert "ONLY 3 photographed pages, not the 2 pages the reader read" in plain
     assert "is NEVER a reason to fail" in plain
     assert "Your own memory of the book is not evidence" in plain
     with_text = build_prompt(None, session, SUMMARY, Context(span="BOOK TEXT"))
@@ -137,7 +137,7 @@ def test_an_hour_of_grader_outage_credits_ungraded_with_the_bonus(
     assert (verdict.passed, verdict.feedback) == (True, _grading.UNGRADED)
     (entry,) = _ledger.load(bg_paths.ledger, bg_paths.key_file).of_kind(CREDIT)
     assert (entry.amount, entry.detail["graded"], entry.detail["bonus"]) == (
-        30,
+        31,
         "0",
         "1",
     )

@@ -114,7 +114,7 @@ def test_build_prompt_with_book_and_span() -> None:
     session = only_session(quiz_pair(text="It was a dark night."))
     prompt = build_prompt(make_book(), session, f"  {SUMMARY}  ", Context(span="SPAN"))
     assert prompt.startswith(f"Book: War -- Tol (ISBN {ISBN13}).")
-    assert "read pages 10-10 (1 pages)" in prompt
+    assert "read pages 10-11 (2 pages)" in prompt
     assert "--- page 10 (where they started) ---\nIt was a dark night." in prompt
     assert "Pace and time are checked elsewhere" in prompt
     assert "\nSPAN\n" in prompt
@@ -128,7 +128,7 @@ def test_build_prompt_without_book_or_span() -> None:
     prompt = build_prompt(None, only_session(quiz_pair()), SUMMARY)
     assert prompt.startswith("Book: an unregistered book (ISBN unknown).")
     assert (
-        "--- page 11 (where they STOPPED -- not read, do not expect it) ---\n(no legible text)"
+        "--- page 11 (where they STOPPED -- the last page read) ---\n(no legible text)"
         in prompt
     )
     assert "the book's own text" not in prompt
@@ -157,7 +157,7 @@ def test_record_verdict_credit_row(bg_paths: Paths) -> None:
     assert entry is not None
     assert (entry.kind, entry.amount, entry.day) == (
         CREDIT,
-        30,
+        31,
         big.end.taken.astimezone().date().isoformat(),
     )
     assert entry.detail["bonus"] == "1"
@@ -177,7 +177,7 @@ def test_record_verdict_reject_row(bg_paths: Paths) -> None:
     assert (entry.kind, entry.amount) == (REJECT, 0)
     assert entry.detail["bonus"] == "0"
     assert entry.detail["isbn"] == entry.detail["title"] == ""
-    assert entry.detail["check_page"] == ""
+    assert entry.detail["check_page"] == str(session.check_page)
 
 
 @pytest.mark.parametrize(

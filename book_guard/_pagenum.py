@@ -73,7 +73,7 @@ class Context:
     expected: int | None = None
     """A check photo: the page that was asked for."""
     after: int | None = None
-    """A stop photo: the open session's start page."""
+    """A stop photo: the open session's start page (the stop may be on it)."""
     near: int | None = None
     """A start photo: where the last session (same book) ended."""
     last_page: int | None = None
@@ -129,7 +129,7 @@ def _plausible(found: list[int], context: Context) -> list[int]:
     top = _ANY_PAGE if not context.last_page else context.last_page + LAST_PAGE_SLACK
     keep = [n for n in dict.fromkeys(found) if 1 <= n <= top]
     if context.after is not None:
-        keep = [n for n in keep if n > context.after]
+        keep = [n for n in keep if n >= context.after]
     return keep
 
 

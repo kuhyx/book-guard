@@ -10,10 +10,11 @@ lock window, HMAC key, free-day pool and sick-day pool.
 Paper cannot be proven read, only made cheaper to read than to fake:
 
 1. **Start** -- photograph the open page (page number visible).
-2. **Stop** -- photograph the page where you stopped.
+2. **Stop** -- photograph the last page you read. Both ends count: pages
+   read = stop page - start page + 1, and a stop on the start page is 1.
 3. **Check** -- photograph the page book-guard then names: a random page
-   between the two, derived from the photos' hashes, so it cannot be known
-   in advance.
+   from the start page to the stop page, both included, derived from the
+   photos' hashes, so it cannot be known in advance.
 4. **Summary** -- 3-5 sentences in your own words, Polish or English.
 
 **Page numbers never need Claude, the PC or a network.** The phone reads
@@ -35,7 +36,8 @@ for, past the open start, nearest the last end) -- two candidates left is
 `--model` is given for one run) only grades summaries and reads contents
 pages; while it is down they wait, and the app says since when.
 The EXIF capture times are
-the session clock: under 50 s per page is page-flipping and does not count.
+the session clock: under 50 s per page is page-flipping and does not count (a
+stop on the start page less than 50 s after it is the start photo retaken).
 
 The grader reads the **book's own text** for the stretch when an ebook file
 is attached (any format: epub, mobi, azw3, fb2, pdf, djvu, docx, ...). The
@@ -131,6 +133,8 @@ book-guard quiz                        # write the pending summary
 book-guard ask --week                  # any day's requirement: --date D, --month,
                                        #   --simulate=-20@2026-10-16 (display only)
 book-guard library                     # every book; --isbn X, --export md
+book-guard backfill-inclusive          # once: +1 page per session credited
+                                       #   before both ends counted (--dry-run)
 book-guard index                       # index files dropped into Reading/books
 ```
 

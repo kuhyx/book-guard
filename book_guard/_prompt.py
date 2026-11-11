@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 _ROLE: Final = {
     "start": " (where they started)",
     "check": " (a check page in the middle)",
-    "stop": " (where they STOPPED -- not read, do not expect it)",
+    "stop": " (where they STOPPED -- the last page read)",
 }
 
 SYSTEM: Final = (
@@ -67,14 +67,13 @@ def build_prompt(
     if session.estimated:
         return ebook_prompt(book, session, summary, context)
     title = book.label if book else "an unregistered book"
-    last_read = int(session.end.page or 0) - 1
     lines = [
         f"Book: {title} (ISBN {book.isbn if book else 'unknown'}).",
         (
-            f"The reader read pages {session.start.page}-{last_read}"
+            f"The reader read pages {session.start.page}-{session.end.page}"
             f" ({session.pages} pages). They photographed the page they started"
             " on, a check page in between, and the page where they STOPPED --"
-            " the stop page was not read."
+            " the stop page was read too."
         ),
         "Transcribed text of those photos (OCR: expect garbled words):",
     ]

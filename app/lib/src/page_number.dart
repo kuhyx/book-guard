@@ -63,7 +63,7 @@ class PageContext {
   /// A check photo: the page that was asked for.
   final int? expected;
 
-  /// A stop photo: the open session's start page.
+  /// A stop photo: the open session's start page (the stop may be on it).
   final int? after;
 
   /// A start photo: where the last session ended.
@@ -209,7 +209,7 @@ PageChoice choosePage(
     for (final hit in hits)
       if (hit.value >= 1 &&
           hit.value <= top &&
-          (context.after == null || hit.value > context.after!) &&
+          (context.after == null || hit.value >= context.after!) &&
           seen.add(hit.value))
         hit,
   ];

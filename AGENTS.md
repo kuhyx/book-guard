@@ -76,6 +76,20 @@ Read README.md first. These are the invariants that are easy to break.
   requirement, the lock and the bonus alike. Days before it replay the old
   rules exactly (surplus off Mon-Fri, debt onto weekends, the 20-page pass)
   -- never re-split the days before a switch.
+- **Both ends of a paper session count** (`_sessions.Session.pages` =
+  stop - start + 1; a stop on the start page is 1 page, unless it comes under
+  50 s after the start: then it is the start retaken). The check page is
+  drawn from start..stop inclusive (`check_page_for`; the Dart
+  `checkPageFor` must match -- literals pinned in `test_core_inclusive.py`
+  and `local_session_test.dart`). In-app sessions keep end - start (their end
+  is the first page not read). Rows written under this rule carry
+  `detail.counting == "inclusive"` (`_quiz.record_verdict`); every older
+  `session:<sha16>-<sha16>[#n]` credit gets exactly one signed +1 top-up,
+  `inclusive:<id>` (same `day` and `detail.ended_at`, `detail.topup_of`, no
+  bonus), from `book-guard backfill-inclusive [--dry-run]`
+  (`_inclusive.py`, idempotent). Never top up a stamped row, never run
+  `regrant` from it. The grading prompt was moved to match without a
+  `grader_suite.py` re-run: re-run it.
 - **The lock asks one question** (`_state._one_number`, `_pace.kept`): did
   yesterday keep its number? Missed -> locked until today's number is in.
   Kept = asked 0, read it, or carries the bonus. The timer only fires at the

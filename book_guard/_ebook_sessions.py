@@ -65,7 +65,7 @@ class EbookRead:
     end_offset: int
     start_page: int
     end_page: int
-    """The first page *not* read, like a stop photo's page."""
+    """The first page *not* read (a paper stop page is read; this one is not)."""
     started_at: str
     ended_at: str
     text_sha: str

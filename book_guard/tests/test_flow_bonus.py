@@ -30,7 +30,7 @@ DAY = "2026-10-05"
 def _session(pages: int, minutes: int) -> Session:
     """A session of exactly ``pages`` pages and ``minutes`` minutes on DAY."""
     return only_session(
-        [rec("s", 10, T0), rec("e", 10 + pages, T0 + timedelta(minutes=minutes))]
+        [rec("s", 10, T0), rec("e", 9 + pages, T0 + timedelta(minutes=minutes))]
     )
 
 

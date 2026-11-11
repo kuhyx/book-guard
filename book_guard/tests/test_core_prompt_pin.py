@@ -6,6 +6,11 @@ In-app (ebook) reading added its own prompt branch; the photo prompt --
 with or without the book's text, first summary or rewrite, Haiku or the
 local fallback's reminder -- must not move by a single byte without the
 suite being re-run.
+
+Moved once without a re-run (2026-11-11, both ends of a paper session count):
+the page range now ends on the stop page (``10-20``, 11 pages), and the stop
+page is "the last page read" instead of "not read". Re-run
+``scripts/grader_suite.py`` to re-measure.
 """
 
 from __future__ import annotations
@@ -50,10 +55,10 @@ CASES = {
 }
 
 PINNED = {
-    "photos": "824fd0544f10d1bf47e6b412285f7f1c42fa699771bd6acbcaeecee8dcd6baa1",
-    "photos+span": "ac001d00c69a12a7aafc13b40eb70f3f0506d334a1ae64bc25072d5c353eca9b",
-    "rewrite": "e7e48c23f6cb337fc5d8c8843d18ed1fd8ef8f761369e0a267eed81e9a4a0dd1",
-    "photos+local": "bc7e55dd2765640cc7c91011412fb4cc4618e6d22e00123784817b3dc173f6d9",
+    "photos": "43eac27e604c0130d5c7521b2083186e29bdc8429a3e22655f0483914d1d67ae",
+    "photos+span": "d5b2541b2a6105a66f1a5db894551087af197829e4803f5e7bae0263b6111335",
+    "rewrite": "5e49ca3ddbaa949a4e1511b4461fa362be6b2edb8f27c7e0985da89ea107a5c4",
+    "photos+local": "b03af5706f073fc8bec58cdb32a4a3afa531f5fd0d58a7bd5493a1865a35dfa8",
 }
 
 
