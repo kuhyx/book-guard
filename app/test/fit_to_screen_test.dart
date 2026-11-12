@@ -303,6 +303,21 @@ void main() {
     _expectTappable(tester, spoken('all sessions'));
   });
 
+  testWidgets('Read photos offline: grid, failed strip and queue stay', (
+    tester,
+  ) async {
+    await _open(tester, 'read', offline: true);
+    await tester.tap(spoken('photos'));
+    await settle(tester, 10);
+    expect(find.byIcon(Icons.cloud_off), findsNothing);
+    _expectNoVerticalScroll(tester);
+    _expectTappable(tester, spoken('failed photos'));
+    _expectTappable(tester, spoken('Box the number'));
+    _expectTappable(tester, find.byKey(const ValueKey('photo-p1.jpg')));
+    // The queue badge in the app bar counts what waits for the PC.
+    expect(find.byType(Badge), findsWidgets);
+  });
+
   testWidgets('a mouse drag pages the grid (the desktop build)', (
     tester,
   ) async {
