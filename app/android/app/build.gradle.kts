@@ -118,8 +118,12 @@ kotlin {
     }
 }
 
-// Every task that packs or reads the assets waits for the model.
-tasks.matching { it.name.endsWith("Assets") }.configureEach {
+// Every task that packs or reads the assets waits for the model; so does
+// every lint task, which AGP 9.5 makes read the asset folders too.
+tasks.matching {
+    it.name.endsWith("Assets") || it.name.startsWith("lint") ||
+        it.name.contains("Lint")
+}.configureEach {
     dependsOn(fetchTessdata, fetchTessdataFull)
 }
 
