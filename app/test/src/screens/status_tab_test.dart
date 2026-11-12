@@ -2,8 +2,8 @@ import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_a.dart';

@@ -5,7 +5,7 @@ import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The Read tab's photo page: photos that failed (box again, report) in a
 /// sideways strip, then every photo the PC filed as a paged grid filling

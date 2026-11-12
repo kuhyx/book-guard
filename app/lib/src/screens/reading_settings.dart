@@ -4,7 +4,7 @@ import 'package:book_guard_app/src/ebook_store.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/screens/reading_style.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The in-app reader's settings: the text size (a number), with a line of
 /// the book's own glyphs to judge it by. The reader itself shows nothing

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Asks for a page number on a numeric keypad; pops the number, or null
 /// when cancelled or nothing was typed. Wordless: a number glyph leads the

@@ -4,7 +4,7 @@ import 'package:book_guard_app/src/screens/book_cues.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Edit the current book: title, author, ISBN, last page and chapters.
 ///

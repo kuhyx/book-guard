@@ -9,7 +9,7 @@ import 'package:book_guard_app/src/screens/summary_verdict.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The summary for [session]: typed text kept as a draft, locked while the
 /// grader has it, and still "with the grader" after leaving the tab -- the

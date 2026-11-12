@@ -1,7 +1,7 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// While the PC's Claude is down: since when, and until when if it is
 /// known -- both as numerals (`16:25`, or `15.10 16:25` on another day).

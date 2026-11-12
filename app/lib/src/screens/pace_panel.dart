@@ -4,7 +4,7 @@ import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/icon_pickers.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// This week, a month grid, any day, and a `±N` simulation -- all offline,
 /// on the port of the PC's plan, from `state.json`'s `pace_inputs`.

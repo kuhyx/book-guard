@@ -12,8 +12,8 @@ import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Four icon tabs over one live snapshot: status, read, book, library.
 ///

@@ -2,7 +2,7 @@ import 'package:book_guard_app/src/library.dart';
 import 'package:book_guard_app/src/screens/book_cues.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A book as a tile: its status glyph, title and pages read.
 class BookTile extends StatelessWidget {

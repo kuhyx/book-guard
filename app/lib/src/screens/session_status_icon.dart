@@ -5,7 +5,7 @@ library;
 
 import 'package:book_guard_app/src/session_info.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The status key that picks the glyph for [session]: a failed summary
 /// waiting for its rewrite is `retry`, whatever the ledger status says.

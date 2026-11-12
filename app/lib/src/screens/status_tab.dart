@@ -5,7 +5,7 @@ import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/status_cards.dart';
 import 'package:book_guard_app/src/screens/status_tiles.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 export 'package:book_guard_app/src/screens/session_status_icon.dart'
     show statusText;

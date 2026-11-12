@@ -1,6 +1,6 @@
 import 'package:book_guard_app/src/screens/picker_parts.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Whether [end] lands on the day after [start] -- the same rule as
 /// `onDayOf(startAt, end)` in `session_times.dart`: earlier than a minute

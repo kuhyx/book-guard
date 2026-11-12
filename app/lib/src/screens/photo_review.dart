@@ -11,7 +11,7 @@ import 'package:book_guard_app/src/screens/review_buttons.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 export 'package:book_guard_app/src/screens/review_result.dart';
 

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:book_guard_app/src/library.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Asks for a note's text, and optionally its page and chapter (one chip
 /// per chapter; tap the chosen one again for none); returns the note to

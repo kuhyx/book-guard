@@ -7,8 +7,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// What a cue reports.
 enum CueKind {

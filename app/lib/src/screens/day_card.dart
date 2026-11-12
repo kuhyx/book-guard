@@ -2,7 +2,7 @@ import 'package:book_guard_app/src/pace/day_views.dart';
 import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Everything about one day (what `dayLines` used to say), as glyphs and
 /// numbers: the day and which side of today it is on, what it asks and what

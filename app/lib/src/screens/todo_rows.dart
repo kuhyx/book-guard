@@ -5,7 +5,7 @@ library;
 
 import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 final _number = RegExp(r'\d+(?:-\d+)?');
 final _clock = RegExp(r'\d{1,2}:\d{2}');

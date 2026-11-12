@@ -15,7 +15,7 @@ import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/hold_button.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 export 'package:book_guard_app/src/screens/failed_photo.dart';
 

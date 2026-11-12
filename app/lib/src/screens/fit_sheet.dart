@@ -1,5 +1,5 @@
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A sheet that scrolls on its own: the place for whatever a fitted tab
 /// leaves out.

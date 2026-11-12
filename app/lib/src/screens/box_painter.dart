@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The review screen's boxes: every number found (thin), the chosen one
 /// (thick) and the box being drawn.

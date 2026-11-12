@@ -1,7 +1,7 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/book_cues.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The current book's author, last page, file and chapter, as glyphs and
 /// numbers.

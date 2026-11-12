@@ -2,8 +2,8 @@ import 'package:book_guard_app/src/pace/day_views.dart';
 import 'package:book_guard_app/src/screens/day_card.dart';
 import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/pace_cells.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_a.dart';

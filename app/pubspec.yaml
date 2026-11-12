@@ -15,7 +15,7 @@ dependencies:
   design_system:
     git:
       url: https://github.com/kuhyx/utils
-      ref: design_system-v0.3.1
+      ref: design_system-v0.4.0
       path: design_system
   # Picks the book file (epub, pdf, mobi, ...) on both phone and desktop.
   file_selector: 1.1.0
@@ -32,6 +32,7 @@ dependencies:
   # Session photos from the camera. Called with no resize/quality options so
   # the camera's original bytes -- and their EXIF capture time -- are uploaded.
   image_picker: 1.2.4
+  material_ui: 1.11.0
   path: 1.9.1
   # The offline outbox and the error log live in the app's own folders.
   path_provider: 2.1.6

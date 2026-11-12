@@ -2,7 +2,7 @@ import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/screens/review_result.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The review screen's buttons: retake (left), send without a number when
 /// none was found, and the tick that sends the chosen number.

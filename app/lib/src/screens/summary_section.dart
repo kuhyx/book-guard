@@ -2,7 +2,7 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/grader_note.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Characters from which a summary can be credited without the grader.
 const summaryTarget = 150;

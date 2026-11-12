@@ -4,8 +4,8 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// An icon button that fires [onConfirmed] only after being held for
 /// [hold]; letting go early resets the ring.

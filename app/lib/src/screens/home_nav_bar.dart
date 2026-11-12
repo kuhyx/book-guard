@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The four tabs at the bottom of the home screen; the Read tab carries a
 /// dot while a session waits for a check photo or a summary.

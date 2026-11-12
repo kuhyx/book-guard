@@ -9,7 +9,7 @@ import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One past session: its photos, what the PC read off them, the summary
 /// written and what the grader said (book-guard `_session_files`).

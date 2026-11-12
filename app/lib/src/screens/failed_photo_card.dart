@@ -5,7 +5,7 @@ import 'package:book_guard_app/src/screens/photo_mark.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One failed photo: its thumbnail, a glyph for what went wrong, the number
 /// the phone read (if any) and what can be done about it.

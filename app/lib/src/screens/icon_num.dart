@@ -1,7 +1,7 @@
 /// A glyph beside a number: the text-free shape of "20 pages" or "30 min".
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Pages (credited, read, asked).
 const IconData pagesGlyph = Icons.description_outlined;

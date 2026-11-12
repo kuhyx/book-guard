@@ -1,8 +1,8 @@
 /// An icon-captioned text field and a spoken-only name for any widget.
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A text field captioned by a leading icon; the old label words live only
 /// in [semanticLabel] (screen readers, tests), never painted. The value the

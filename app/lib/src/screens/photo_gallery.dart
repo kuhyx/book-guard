@@ -6,7 +6,7 @@ import 'package:book_guard_app/src/screens/fit_sheet.dart';
 import 'package:book_guard_app/src/screens/photo_mark.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Superseded by `PhotoStatus.of` (a glyph, not a sentence); paints
 /// nothing. Left only until `book_tab.dart` has switched.

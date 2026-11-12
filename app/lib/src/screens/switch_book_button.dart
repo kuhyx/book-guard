@@ -8,7 +8,7 @@ import 'package:book_guard_app/src/ui/hold_button.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The read-now button for [book]: queues a `switch_book` request (after a
 /// hold-to-confirm when a session is open) and hides itself once queued or

@@ -5,9 +5,9 @@ import 'package:book_guard_app/src/local_store.dart';
 import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
 import 'package:book_guard_app/src/screens/settings_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/fake_api.dart';
 import '../support/finders_a.dart';

@@ -5,7 +5,7 @@ library;
 import 'package:book_guard_app/src/book_extras.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One state of a photo: a [cue], the page number it concerns, and (for a
 /// rejection) the reason that picks its own glyph.

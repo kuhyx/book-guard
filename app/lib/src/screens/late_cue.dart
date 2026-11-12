@@ -1,7 +1,7 @@
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The one cue for several late answers: the worst kind wins (error, then
 /// warn, info, ok), because a second snackbar would hide the first. A reply

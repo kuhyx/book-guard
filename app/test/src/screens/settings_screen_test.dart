@@ -3,9 +3,9 @@ import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:book_guard_app/src/screens/settings_screen.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_book.dart';

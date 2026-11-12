@@ -4,7 +4,7 @@ library;
 
 import 'package:book_guard_app/src/screens/icon_date_dialog.dart';
 import 'package:book_guard_app/src/screens/icon_time_dialog.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Opens a month grid on [initialDate]; resolves to the picked day (local,
 /// date only) on the check icon, or `null` on close or dismiss.

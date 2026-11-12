@@ -5,7 +5,7 @@ library;
 
 import 'package:book_guard_app/src/guard_response.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 const CueKind _ok = CueKind.ok;
 const CueKind _info = CueKind.info;

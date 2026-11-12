@@ -5,7 +5,7 @@ import 'package:book_guard_app/src/screens/library_tab.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The role of a session photo as a glyph (start, stop, check page).
 IconData photoRoleIcon(String role) => switch (role) {

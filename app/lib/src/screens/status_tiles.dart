@@ -9,7 +9,7 @@ import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:book_guard_app/src/screens/status_cards.dart';
 import 'package:book_guard_app/src/screens/todo_rows.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// How many of the newest sessions get a tile of their own; the rest wait
 /// behind the all-sessions tile.

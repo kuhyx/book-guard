@@ -4,7 +4,7 @@ import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/session_screen.dart';
 import 'package:book_guard_app/src/screens/session_status_icon.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One recent session: its status glyph, then the page range, the pages and
 /// the minutes as numbers. Tapping opens its history when there is one.

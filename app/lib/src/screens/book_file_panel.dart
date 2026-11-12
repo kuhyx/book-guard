@@ -4,7 +4,7 @@ import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Picks a book file; replaced in tests.
 typedef BookFileSource = Future<XFile?> Function();

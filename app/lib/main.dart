@@ -5,7 +5,7 @@ import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/self_test.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

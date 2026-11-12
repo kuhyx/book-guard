@@ -5,8 +5,8 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/grader_note.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:book_guard_app/src/summary_store.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_read.dart';

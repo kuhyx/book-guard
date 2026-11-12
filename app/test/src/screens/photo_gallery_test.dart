@@ -7,8 +7,8 @@ import 'package:book_guard_app/src/screens/photo_mark.dart';
 import 'package:book_guard_app/src/screens/photo_status.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_read.dart';

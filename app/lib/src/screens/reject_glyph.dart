@@ -8,7 +8,7 @@ import 'dart:async';
 
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// What the phone says when it found no number on a photo the PC has not
 /// read yet (the card for it is drawn before the PC answers).

@@ -4,7 +4,7 @@ library;
 
 import 'package:book_guard_app/src/book_extras.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The glyph and spoken name of a [PhotoKind].
 (IconData, String) photoKindGlyph(PhotoKind kind) => switch (kind) {

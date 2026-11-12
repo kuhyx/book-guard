@@ -7,7 +7,7 @@ import 'package:book_guard_app/src/screens/photo_status.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The Read tab's session page: start / stop / check, the e-book, the
 /// summary. It fits the screen; it scrolls only while the keyboard is up

@@ -14,9 +14,9 @@ import 'package:book_guard_app/src/screens/report_dialog.dart';
 import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../support/fake_api.dart';
 import '../support/fake_reader.dart';

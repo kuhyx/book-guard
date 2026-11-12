@@ -10,7 +10,7 @@ import 'package:book_guard_app/src/screens/note_editor.dart';
 import 'package:book_guard_app/src/screens/switch_book_button.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One book from the library: chapters, every session with its full
 /// summaries and the grader's replies and photos (from the PC's thumbs,

@@ -3,8 +3,8 @@
 library;
 
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// An [Icon] whose spoken label is [label].
 Finder iconLabeled(String label) => find.byWidgetPredicate(

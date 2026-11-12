@@ -5,8 +5,8 @@ library;
 
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The [Icon] whose spoken label is [label] (a glyph button's glyph too).
 Finder iconLabeled(String label) =>

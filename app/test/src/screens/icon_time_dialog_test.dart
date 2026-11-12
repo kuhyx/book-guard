@@ -3,8 +3,8 @@ import 'package:book_guard_app/src/screens/icon_time_dialog.dart';
 import 'package:book_guard_app/src/screens/picker_parts.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef _Range = ({TimeOfDay start, TimeOfDay end});
 

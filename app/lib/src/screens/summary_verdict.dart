@@ -2,7 +2,7 @@ import 'package:book_guard_app/src/guard_response.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The cue for the grader's answer: the reply's own code when it has one,
 /// else its `passed` flag (an old PC), else the neutral glyph.

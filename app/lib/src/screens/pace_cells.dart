@@ -1,7 +1,7 @@
 import 'package:book_guard_app/src/pace/day_views.dart';
 import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// `15.10`: day and month as numerals.
 String shortDay(DateTime day) =>

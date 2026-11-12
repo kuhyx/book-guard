@@ -13,7 +13,7 @@ import 'package:book_guard_app/src/screens/read_pages.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/session_buttons.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 export 'package:book_guard_app/src/screens/read_support.dart'
     show PhotoSource, pickPhoto;
