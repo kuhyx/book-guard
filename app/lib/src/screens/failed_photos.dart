@@ -195,31 +195,47 @@ class _FailedPhotosState extends State<FailedPhotos> {
               ),
           ],
         ),
-        for (final f in failed)
-          FutureBuilder<(Uint8List?, bool)>(
-            future: _loads[f.entry.name] ??= _load(f.entry.name),
-            builder: (context, snap) {
-              final bytes = snap.data?.$1;
-              return FailedPhotoCard(
-                failed: f,
-                bytes: bytes,
-                reported:
-                    (snap.data?.$2 ?? false) ||
-                    _reported.contains(f.entry.name),
-                onBox: f.pc != null && widget.reader != null
-                    ? () => _box(f)
-                    : null,
-                // No number read by the phone, nor by the PC (which may not
-                // have the photo yet: it can still sit in the outbox).
-                onType: f.entry.page == null && f.pc?.page == null
-                    ? () => unawaited(_type(f))
-                    : null,
-                onReport: bytes == null ? null : () => _report(f),
-                onDismiss: () => _dismiss([f]),
-              );
-            },
+        // A sideways strip, as tall as its tallest card: however many
+        // failed, the page never scrolls vertically.
+        LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final (i, f) in failed.indexed) ...[
+                  if (i > 0) const SizedBox(width: AppSpacing.sm),
+                  SizedBox(
+                    // One card at a time, the next one peeking in.
+                    width: box.maxWidth * (failed.length == 1 ? 1 : 0.85),
+                    child: _card(f),
+                  ),
+                ],
+              ],
+            ),
           ),
+        ),
       ],
     );
   }
+
+  Widget _card(FailedPhoto f) => FutureBuilder<(Uint8List?, bool)>(
+    future: _loads[f.entry.name] ??= _load(f.entry.name),
+    builder: (context, snap) {
+      final bytes = snap.data?.$1;
+      return FailedPhotoCard(
+        failed: f,
+        bytes: bytes,
+        reported: (snap.data?.$2 ?? false) || _reported.contains(f.entry.name),
+        onBox: f.pc != null && widget.reader != null ? () => _box(f) : null,
+        // No number read by the phone, nor by the PC (which may not have
+        // the photo yet: it can still sit in the outbox).
+        onType: f.entry.page == null && f.pc?.page == null
+            ? () => unawaited(_type(f))
+            : null,
+        onReport: bytes == null ? null : () => _report(f),
+        onDismiss: () => _dismiss([f]),
+      );
+    },
+  );
 }

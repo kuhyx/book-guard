@@ -2,23 +2,22 @@ import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/icon_num.dart';
-import 'package:book_guard_app/src/screens/pace_panel.dart';
-import 'package:book_guard_app/src/screens/session_rows.dart';
 import 'package:book_guard_app/src/screens/status_cards.dart';
-import 'package:book_guard_app/src/screens/todo_rows.dart';
+import 'package:book_guard_app/src/screens/status_tiles.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 export 'package:book_guard_app/src/screens/session_status_icon.dart'
     show statusText;
 
-/// Pace, what to do next, and recent sessions: glyphs and numbers only.
+/// Pace, what to do next, and recent sessions: glyphs and numbers only,
+/// fitted to one screen -- the pace cells and older sessions sit in sheets,
+/// tiles past the screen page sideways. The app bar's refresh refetches.
 class StatusTab extends StatelessWidget {
   /// Creates the tab.
   const new({
     required this.state,
     required this.error,
-    required this.onRefresh,
     super.key,
     this.api,
     this.waiting = 0,
@@ -30,9 +29,6 @@ class StatusTab extends StatelessWidget {
   /// The last fetch error, if any.
   final Object? error;
 
-  /// Pull-to-refresh.
-  final Future<void> Function() onRefresh;
-
   /// For opening a session's history; null hides the link.
   final GuardApi? api;
 
@@ -42,32 +38,30 @@ class StatusTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = state;
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (error != null)
             _ErrorCard(error: error!, since: s?.generatedAt, waiting: waiting),
           if (s == null && error == null) const _Waiting(),
-          if (s != null) ..._body(s),
+          if (s != null) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: LockMark(locked: s.locked, reason: s.reason),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            PaceTile(state: s),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: StatusTiles(state: s, api: api),
+            ),
+          ],
         ],
       ),
     );
   }
-
-  List<Widget> _body(GuardState s) => [
-    Align(
-      alignment: Alignment.centerLeft,
-      child: LockMark(locked: s.locked, reason: s.reason),
-    ),
-    const SizedBox(height: AppSpacing.md),
-    PaceCard(pace: s.pace),
-    if (s.paceInputs case final inputs?) PacePanel(inputs: inputs),
-    for (final t in s.todo) TodoRow(t),
-    for (final session in s.sessions.reversed)
-      SessionRow(session: session, api: api),
-  ];
 }
 
 /// Before the first snapshot: an hourglass.

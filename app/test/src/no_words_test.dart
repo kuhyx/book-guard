@@ -56,13 +56,13 @@ void main() {
     return api;
   }
 
-  /// Builds every lazily laid out row of the status list.
-  Future<void> scrollThrough(WidgetTester tester) async {
-    final list = find.byType(Scrollable).first;
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(list, const Offset(0, -400));
-      await tester.pump();
-    }
+  /// Opens the pace sheet, when the snapshot has one, so its cells are
+  /// checked too.
+  Future<void> openPaceSheet(WidgetTester tester) async {
+    final details = iconLabeled('pace details');
+    if (details.evaluate().isEmpty) return;
+    await tester.tap(details);
+    await tester.pumpAndSettle();
   }
 
   Future<void> home(WidgetTester tester, IconData tab) async {
@@ -155,7 +155,8 @@ void main() {
   for (final MapEntry(:key, :value) in states.entries) {
     testWidgets('the status tab paints no words: $key', (tester) async {
       await pumpHome(tester, value());
-      await scrollThrough(tester);
+      expectNoWords(tester, content: content);
+      await openPaceSheet(tester);
       expectNoWords(tester, content: content);
     });
   }
@@ -169,7 +170,9 @@ void main() {
         'pace_inputs': inputsJson(credits: {'2026-10-13': 17}),
       }),
     );
-    await scrollThrough(tester);
+    expectNoWords(tester, content: content);
+    // The cells sit in the sheet behind the pace card.
+    await openPaceSheet(tester);
     expectNoWords(tester, content: content);
     await tester.ensureVisible(iconLabeled('5 pages more'));
     await tester.tap(iconLabeled('5 pages more'));

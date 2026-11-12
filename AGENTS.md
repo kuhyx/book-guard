@@ -189,3 +189,4 @@ tree: never restart it from a test run.
 - lint: `ruff check . && (cd app && flutter analyze --fatal-infos)`
 - coverage: `.venv/bin/python -m pytest -q --cov-report=lcov:coverage.lcov`
 - coverage-gaps: `coverage-gaps coverage.lcov`
+- deploy: `scripts/deploy.sh`

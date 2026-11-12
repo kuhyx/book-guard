@@ -14,17 +14,22 @@ Future<void> _pump(
   WidgetTester tester, {
   GuardState? state,
   Object? error,
-  Future<void> Function()? onRefresh,
   int waiting = 0,
-}) => pumpTab(
-  tester,
-  StatusTab(
-    state: state,
-    error: error,
-    onRefresh: onRefresh ?? () async {},
-    waiting: waiting,
-  ),
-);
+}) {
+  _tall(tester);
+  return pumpTab(
+    tester,
+    StatusTab(state: state, error: error, waiting: waiting),
+  );
+}
+
+/// A phone-tall surface, so every tile is on the first page.
+void _tall(WidgetTester tester) {
+  tester.view
+    ..physicalSize = const Size(800, 1800)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
 
 void main() {
   testWidgets('waits for the PC before the first snapshot: an hourglass', (
@@ -91,15 +96,13 @@ void main() {
     expect(find.byIcon(Icons.photo_camera), findsWidgets);
     expect(find.text('42'), findsOneWidget);
 
-    // The list builds lazily, so scroll each row into existence.
-    Future<void> reveal(Finder finder) =>
-        tester.scrollUntilVisible(finder, 100);
     // Newest first: the unknown status is a question mark.
-    await reveal(find.byIcon(Icons.help_outline));
+    final mystery = tester.getRect(find.byIcon(Icons.help_outline));
+    final first = tester.getRect(iconLabeled('photograph the check page'));
+    expect(mystery.top, lessThan(first.top));
     expect(find.text('5-9'), findsOneWidget);
-    await reveal(find.byIcon(Icons.edit));
+    expect(find.byIcon(Icons.edit), findsWidgets);
     expect(find.text('21-0'), findsOneWidget);
-    await reveal(iconLabeled('photograph the check page'));
     expect(find.text('1-20'), findsOneWidget);
     expect(find.text('30'), findsWidgets);
     expect(iconLabeled('credited'), findsOneWidget);
@@ -145,16 +148,31 @@ void main() {
     );
   });
 
-  testWidgets('pull to refresh calls back', (tester) async {
-    var refreshed = 0;
+  testWidgets('past six sessions the rest wait behind a sheet', (tester) async {
     await _pump(
       tester,
-      state: sampleState(),
-      onRefresh: () async => refreshed++,
+      state: sampleState({
+        'todo': const <Object>[],
+        'sessions': [
+          for (var i = 1; i <= 8; i++)
+            {'id': 's$i', 'start_page': i, 'end_page': i, 'status': 'credited'},
+        ],
+      }),
     );
-    await tester.fling(find.byType(ListView), const Offset(0, 400), 1000);
-    await settle(tester, 20);
-    expect(refreshed, 1);
+    expect(find.text('8-8'), findsOneWidget);
+    expect(find.text('3-3'), findsOneWidget);
+    expect(find.text('2-2'), findsNothing);
+    await tester.tap(iconLabeled('all sessions'));
+    await tester.pumpAndSettle();
+    expect(find.text('2-2'), findsOneWidget);
+    expect(find.text('1-1'), findsOneWidget);
+  });
+
+  testWidgets('without pace inputs the pace card opens nothing', (
+    tester,
+  ) async {
+    await _pump(tester, state: sampleState());
+    expect(iconLabeled('pace details'), findsNothing);
   });
 
   test('every session status has its own glyph, tint and spoken label', () {
@@ -177,6 +195,7 @@ void main() {
   });
 
   testWidgets('a session with details opens its history', (tester) async {
+    _tall(tester);
     final api = FakeApi();
     await pumpTab(
       tester,
@@ -196,11 +215,9 @@ void main() {
           ],
         }),
         error: null,
-        onRefresh: () async {},
         api: api,
       ),
     );
-    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
     await tapVisible(tester, find.text('1-3'));
     await tester.pumpAndSettle();
     expect(api.fetched, isEmpty);
@@ -218,7 +235,9 @@ void main() {
         ],
       }),
     );
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    await tester.tap(find.byIcon(Icons.check_circle).last);
+    await tester.pumpAndSettle();
+    expect(find.byType(StatusTab), findsOneWidget);
   });
 
   testWidgets('a retry wins over the ledger status', (tester) async {

@@ -7,8 +7,9 @@ import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
-/// The bottom of the Read tab: photos that failed (box again, report),
-/// then every photo the PC filed.
+/// The Read tab's photo page: photos that failed (box again, report) in a
+/// sideways strip, then every photo the PC filed as a paged grid filling
+/// the rest -- nothing on it scrolls vertically.
 class PhotoHistory extends StatelessWidget {
   /// Creates the section.
   const new({
@@ -38,21 +39,31 @@ class PhotoHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = this.state;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FailedPhotos(
-          api: api,
-          state: state,
-          journal: journal,
-          reader: reader,
-          onChanged: onChanged,
-        ),
-        if (state != null && state.photos.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          PhotoGallery(api: api, photos: state.photos),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FailedPhotos(
+            api: api,
+            state: state,
+            journal: journal,
+            reader: reader,
+            onChanged: onChanged,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(
+            child: state == null || state.photos.isEmpty
+                ? const SizedBox.shrink()
+                : PhotoGallery(api: api, photos: state.photos),
+          ),
         ],
-      ],
+      ),
     );
   }
 }

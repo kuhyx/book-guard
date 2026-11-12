@@ -83,8 +83,6 @@ void main() {
     await settle(tester);
     expect(find.text('19'), findsOneWidget);
     expect(find.byIcon(Icons.description), findsOneWidget);
-    expect(find.text('02.10 20:14'), findsOneWidget);
-    expect(spoken('time unknown'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
     expect(find.byType(RejectBadge), findsOneWidget);
     expect(rejected(RejectGlyph.notPage), findsWidgets);
@@ -93,6 +91,41 @@ void main() {
     // Each thumbnail is fetched once, however often the list rebuilds.
     await tester.pump();
     expect(api.fetched, ['thumbs/abc.jpg', 'thumbs/missing.jpg']);
+    // The time sits behind a long-press, with the mark and the verdict.
+    final sheet = find.byType(BottomSheet);
+    await tester.longPress(find.text('19'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: sheet, matching: find.text('02.10 20:14')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.byIcon(Icons.check_circle)),
+      findsOneWidget,
+    );
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    // The undated one.
+    await tester.longPress(find.byType(Card).last);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: sheet, matching: spoken('time unknown')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.byType(RejectBadge)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the long-press sheet opens the photo full size', (tester) async {
+    api.files['processed/abc-x.jpg'] = _png;
+    await pumpTab(tester, PhotoGallery(api: api, photos: [reading()]));
+    await tester.longPress(find.text('19'));
+    await tester.pumpAndSettle();
+    await tester.tap(spoken('full size'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget);
   });
 
   testWidgets('a thumbnail still downloading shows a spinner', (tester) async {

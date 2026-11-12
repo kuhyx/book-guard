@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/fit_sheet.dart';
 import 'package:book_guard_app/src/screens/photo_mark.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:design_system/design_system.dart';
@@ -25,7 +26,8 @@ void openPhoto(BuildContext context, GuardApi api, String file) =>
       ),
     );
 
-/// The newest uploads with what the PC made of each; tap for full size.
+/// The newest uploads as a 3-column grid fitted to its box and paged
+/// sideways; tap for full size, long-press for the time and the verdict.
 class PhotoGallery extends StatefulWidget {
   /// Creates the gallery.
   const new({required this.api, required this.photos, super.key});
@@ -49,31 +51,83 @@ class _PhotoGalleryState extends State<PhotoGallery> {
 
   void _open(PhotoInfo photo) => openPhoto(context, widget.api, photo.file);
 
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      for (final photo in widget.photos)
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: SizedBox.square(
-            dimension: 56,
-            child: RemoteImage(bytes: _thumb(photo.thumb), fit: BoxFit.cover),
-          ),
-          title: Align(
-            alignment: Alignment.centerLeft,
-            child: PhotoMark(photo),
-          ),
-          subtitle: _when(photo.takenAt),
-          trailing: photo.accepted
-              ? Icon(
-                  Icons.check_circle,
-                  color: context.statusColors.success,
-                  semanticLabel: 'accepted',
-                )
-              : RejectBadge(photo.reason),
-          onTap: () => _open(photo),
+  void _details(PhotoInfo photo) => showFitSheet(
+    context,
+    Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.sm,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        PhotoMark(photo),
+        _verdict(context, photo),
+        _when(photo.takenAt),
+        IconButton(
+          icon: const Icon(Icons.zoom_in, semanticLabel: 'full size'),
+          onPressed: () => _open(photo),
         ),
-    ],
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) => FitGrid(
+    itemCount: widget.photos.length,
+    padding: EdgeInsets.zero,
+    itemBuilder: (context, i) {
+      final photo = widget.photos[i];
+      return Card(
+        key: ValueKey('photo-${photo.name}'),
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _open(photo),
+          onLongPress: () => _details(photo),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              RemoteImage(bytes: _thumb(photo.thumb), fit: BoxFit.cover),
+              Positioned(
+                left: AppSpacing.xs,
+                bottom: AppSpacing.xs,
+                child: _Chip(child: PhotoMark(photo)),
+              ),
+              Positioned(
+                right: AppSpacing.xs,
+                top: AppSpacing.xs,
+                child: _Chip(child: _verdict(context, photo, size: 18)),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// The PC's verdict: a green tick, or the reject glyph.
+Widget _verdict(BuildContext context, PhotoInfo photo, {double size = 24}) =>
+    photo.accepted
+    ? Icon(
+        Icons.check_circle,
+        size: size,
+        color: context.statusColors.success,
+        semanticLabel: 'accepted',
+      )
+    : RejectBadge(photo.reason, size: size);
+
+/// A mark kept legible over any photo.
+class _Chip extends StatelessWidget {
+  const new({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(AppSpacing.xs),
+    ),
+    child: Padding(padding: const EdgeInsets.all(2), child: child),
   );
 }
 

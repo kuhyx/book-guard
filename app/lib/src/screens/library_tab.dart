@@ -4,7 +4,9 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/library_store.dart';
 import 'package:book_guard_app/src/screens/book_cues.dart';
+import 'package:book_guard_app/src/screens/fit_sheet.dart';
 import 'package:book_guard_app/src/screens/library_book_screen.dart';
+import 'package:book_guard_app/src/screens/library_tiles.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +21,9 @@ String dmy(DateTime? moment) {
 
 /// Every book ever read (book-guard `library.json`): finished or in
 /// progress, its dates and pages; tap one for its chapters, sessions,
-/// summaries, notes and photos. Shows the kept copy offline.
+/// summaries, notes and photos. Shows the kept copy offline. Three columns
+/// of text tiles fitted to the screen, paged sideways; a long-press shows
+/// the author, dates and counts.
 class LibraryTab extends StatefulWidget {
   /// Creates the tab.
   const new({required this.api, required this.state, super.key});
@@ -115,98 +119,40 @@ class _LibraryTabState extends State<LibraryTab> {
       for (final b in _library?.books ?? const <LibraryBook>[]) _shown(b),
     ];
     if (!_loaded) return const Center(child: CircularProgressIndicator());
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          if (books.isEmpty)
-            const EmptyGlyph(
-              Icons.local_library_outlined,
-              semanticLabel: 'No books yet',
-            ),
-          for (final book in books)
-            Card(
-              child: ListTile(
-                isThreeLine: true,
-                leading: Icon(
-                  book.status == 'finished'
-                      ? Icons.check_circle_outline
-                      : book.current
-                      ? Icons.auto_stories
-                      : Icons.book_outlined,
-                  semanticLabel: book.status,
-                ),
-                title: Text(book.title),
-                subtitle: _Facts(book, notes: mergeNotes(book, _device).length),
-                onTap: () => unawaited(_open(book)),
+    if (books.isEmpty) {
+      return const Center(
+        child: EmptyGlyph(
+          Icons.local_library_outlined,
+          semanticLabel: 'No books yet',
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: FitGrid(
+        itemCount: books.length,
+        itemBuilder: (context, i) {
+          final book = books[i];
+          return BookTile(
+            book,
+            onTap: () => unawaited(_open(book)),
+            onLongPress: () => showFitSheet(
+              context,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    book.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  BookFacts(book, notes: mergeNotes(book, _device).length),
+                ],
               ),
             ),
-        ],
+          );
+        },
       ),
-    );
-  }
-}
-
-/// A book's author, pages, dates and counts as numbers beside glyphs.
-class _Facts extends StatelessWidget {
-  const new(this.book, {required this.notes});
-
-  final LibraryBook book;
-  final int notes;
-
-  @override
-  Widget build(BuildContext context) {
-    final finished = book.status == 'finished';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (book.author.isNotEmpty) Text(book.author),
-        Wrap(
-          spacing: AppSpacing.md,
-          children: [
-            IconNumber(
-              Icons.last_page,
-              '${book.lastPageRead ?? 0}/${book.pages ?? '?'}',
-              semanticLabel: 'Pages',
-            ),
-            if (finished)
-              IconNumber(
-                Icons.check_circle,
-                dmy(book.finishedAt),
-                semanticLabel: 'Finished',
-                color: context.statusColors.success,
-              )
-            else if (book.status == 'reading') ...[
-              IconNumber(
-                Icons.today,
-                dmy(book.firstReadAt),
-                semanticLabel: 'First read',
-              ),
-              IconNumber(
-                Icons.event,
-                dmy(book.lastReadAt),
-                semanticLabel: 'Last read',
-              ),
-            ],
-          ],
-        ),
-        Wrap(
-          spacing: AppSpacing.md,
-          children: [
-            IconNumber(
-              Icons.history,
-              '${book.sessions.length}',
-              semanticLabel: 'Sessions',
-            ),
-            IconNumber(
-              Icons.sticky_note_2_outlined,
-              '$notes',
-              semanticLabel: 'Notes',
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

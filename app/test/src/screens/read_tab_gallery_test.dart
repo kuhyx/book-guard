@@ -1,4 +1,6 @@
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/local_session.dart';
+import 'package:book_guard_app/src/photo_reports.dart';
 import 'package:book_guard_app/src/screens/photo_mark.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
@@ -55,15 +57,16 @@ void main() {
         ],
       }),
     );
-    await tester.scrollUntilVisible(
-      find.byType(PhotoMark),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.tap(spoken('photos'));
+    await settle(tester);
     expect(
       find.descendant(of: find.byType(PhotoMark), matching: find.text('7')),
       findsOneWidget,
     );
+    // And back to the session page.
+    await tester.tap(spoken('session'));
+    await settle(tester);
+    expect(spoken('Stop reading'), findsOneWidget);
   });
 
   testWidgets('a cancelled pick uploads nothing but still refreshes', (
@@ -84,5 +87,38 @@ void main() {
     await settle(tester);
     expect(cueOf(CueKind.error), findsOneWidget);
     expect(changed, 1);
+  });
+
+  testWidgets('a failed photo dots the photos switch until dismissed', (
+    tester,
+  ) async {
+    final journal = [
+      JournalEntry(
+        name: 'lost.jpg',
+        label: 'start',
+        sha: 'a' * 64,
+        takenAt: DateTime.utc(2026, 10, 3, 12),
+      ),
+    ];
+    Future<void> show() async {
+      await pumpTab(
+        tester,
+        ReadTab(
+          api: api,
+          state: sampleState(),
+          desktop: false,
+          onChanged: () async {},
+          journal: journal,
+        ),
+      );
+      await settle(tester);
+    }
+
+    await show();
+    expect(find.byType(Badge), findsOneWidget);
+    await api.dismissPhoto('lost.jpg');
+    await tester.pumpWidget(const SizedBox());
+    await show();
+    expect(find.byType(Badge), findsNothing);
   });
 }

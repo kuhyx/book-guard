@@ -5,15 +5,14 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
-import 'package:book_guard_app/src/screens/ebook_entry.dart';
+import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:book_guard_app/src/screens/photo_delivery.dart';
 import 'package:book_guard_app/src/screens/photo_history.dart';
 import 'package:book_guard_app/src/screens/photo_status.dart';
+import 'package:book_guard_app/src/screens/read_pages.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
 import 'package:book_guard_app/src/screens/session_buttons.dart';
-import 'package:book_guard_app/src/screens/summary_panel.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
-import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
 
 export 'package:book_guard_app/src/screens/read_support.dart'
@@ -71,6 +70,9 @@ class ReadTab extends StatefulWidget {
 
 class _ReadTabState extends State<ReadTab> {
   bool _busy = false;
+
+  /// 0: the session; 1: the photos.
+  int _page = 0;
   PhotoStatus? _photoStatus;
 
   int? get _openStart {
@@ -197,53 +199,49 @@ class _ReadTabState extends State<ReadTab> {
 
   @override
   Widget build(BuildContext context) {
-    final state = widget.state;
-    final (checks, quiz, reading) = (_checks, _quiz, _openStart);
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_busy) const LinearProgressIndicator(),
-        SessionPrompt(waiting: widget.local?.waiting ?? 0),
-        const SizedBox(height: AppSpacing.md),
-        SessionButtons(
-          reading: reading,
-          desktop: widget.desktop,
-          captures: widget.captures,
-          checks: checks,
-          onPhoto: _busy ? null : _photo,
-          onResume: _busy ? null : _resume,
-        ),
-        EbookEntry(
+        ReadPageSwitch(
           api: widget.api,
-          state: state,
-          paperStart: reading,
-          onChanged: widget.onChanged,
+          failed: [
+            for (final f in failedPhotos(widget.state, widget.journal))
+              f.entry.name,
+          ],
+          page: _page,
+          onSelected: (page) => setState(() => _page = page),
         ),
-        if (_photoStatus case final status?) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerLeft,
-            // A new status is a new chip: it buzzes once as it appears.
-            child: PhotoStatusChip(status, key: ObjectKey(status)),
-          ),
-        ],
-        if (quiz.isNotEmpty)
-          SummaryPanel(
-            key: ValueKey(quiz.first.id),
-            api: widget.api,
-            session: quiz.first,
-            state: state,
-            pace: state?.pace,
-            onChanged: widget.onChanged,
-          ),
-        PhotoHistory(
-          api: widget.api,
-          state: state,
-          journal: widget.journal,
-          reader: widget.reader,
-          onChanged: widget.onChanged,
+        Expanded(
+          child: _page == 0
+              ? _session(context)
+              : PhotoHistory(
+                  api: widget.api,
+                  state: widget.state,
+                  journal: widget.journal,
+                  reader: widget.reader,
+                  onChanged: widget.onChanged,
+                ),
         ),
       ],
     );
   }
+
+  Widget _session(BuildContext context) => ReadSessionPage(
+    api: widget.api,
+    state: widget.state,
+    waiting: widget.local?.waiting ?? 0,
+    reading: _openStart,
+    quiz: _quiz,
+    status: _photoStatus,
+    onChanged: widget.onChanged,
+    buttons: SessionButtons(
+      reading: _openStart,
+      desktop: widget.desktop,
+      captures: widget.captures,
+      checks: _checks,
+      onPhoto: _busy ? null : _photo,
+      onResume: _busy ? null : _resume,
+    ),
+  );
 }

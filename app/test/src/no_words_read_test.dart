@@ -168,6 +168,10 @@ void main() {
         ),
         scroll: false,
       );
+      // They live on the photos page; the switch carries a dot meanwhile.
+      expect(find.byType(Badge), findsOneWidget);
+      await tester.tap(spoken('photos'));
+      await settle(tester, 10);
       expect(spoken('failed photos'), findsOneWidget);
       expectNoWords(tester, content: _content);
     });
@@ -385,7 +389,11 @@ void main() {
   testWidgets('the gallery lists every kind and every rejection', (
     tester,
   ) async {
-    await show(tester, PhotoGallery(api: api, photos: _photos()));
+    await show(
+      tester,
+      PhotoGallery(api: api, photos: _photos()),
+      scroll: false,
+    );
     expectNoWords(tester, content: _content);
   });
 

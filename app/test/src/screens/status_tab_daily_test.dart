@@ -10,15 +10,8 @@ import '../../support/states.dart';
 
 // The one-number card (from the PC's resplit): today first, then the month.
 
-Future<void> _pump(
-  WidgetTester tester, {
-  GuardState? state,
-  Object? error,
-  Future<void> Function()? onRefresh,
-}) => pumpTab(
-  tester,
-  StatusTab(state: state, error: error, onRefresh: onRefresh ?? () async {}),
-);
+Future<void> _pump(WidgetTester tester, {GuardState? state, Object? error}) =>
+    pumpTab(tester, StatusTab(state: state, error: error));
 
 void main() {
   /// A one-number day: [today] read of [asks]; [quota] 0 on a sick day.

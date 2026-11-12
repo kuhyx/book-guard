@@ -10,7 +10,13 @@ import 'package:book_guard_app/src/screens/read_support.dart'
     show retrieveLostPhoto;
 import 'package:book_guard_app/src/screens/settings_screen.dart';
 import 'package:design_system/design_system.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+/// Lets a mouse drag page the fitted grids: the desktop build is the web
+/// app, and Flutter's default ignores mouse drags.
+final ScrollBehavior appScrollBehavior = const MaterialScrollBehavior()
+    .copyWith(dragDevices: PointerDeviceKind.values.toSet());
 
 /// The root widget: one app for the phone and the desktop web build.
 class BookGuardApp extends StatefulWidget {
@@ -98,6 +104,7 @@ class _BookGuardAppState extends State<BookGuardApp> {
       title: 'Book Guard',
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
+      scrollBehavior: appScrollBehavior,
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : api == null

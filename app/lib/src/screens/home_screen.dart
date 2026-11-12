@@ -171,7 +171,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       StatusTab(
         state: state,
         error: _error,
-        onRefresh: refresh,
         api: widget.api,
         waiting: _waiting,
       ),
