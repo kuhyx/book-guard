@@ -1,7 +1,6 @@
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/session_status_icon.dart';
-import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -9,33 +8,13 @@ import '../../support/fake_api.dart';
 import '../../support/finders_a.dart';
 import '../../support/no_words.dart';
 import '../../support/states.dart';
-
-Future<void> _pump(
-  WidgetTester tester, {
-  GuardState? state,
-  Object? error,
-  int waiting = 0,
-}) {
-  _tall(tester);
-  return pumpTab(
-    tester,
-    StatusTab(state: state, error: error, waiting: waiting),
-  );
-}
-
-/// A phone-tall surface, so every tile is on the first page.
-void _tall(WidgetTester tester) {
-  tester.view
-    ..physicalSize = const Size(800, 1800)
-    ..devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-}
+import '../../support/status_pump.dart';
 
 void main() {
   testWidgets('waits for the PC before the first snapshot: an hourglass', (
     tester,
   ) async {
-    await _pump(tester);
+    await pumpStatus(tester);
     expect(iconLabeled('waiting for the PC'), findsOneWidget);
     expect(find.byIcon(Icons.lock), findsNothing);
     expectNoWords(tester);
@@ -44,7 +23,7 @@ void main() {
   testWidgets('a fetch error is the error glyph and its status number', (
     tester,
   ) async {
-    await _pump(tester, error: shareDown());
+    await pumpStatus(tester, error: shareDown());
     expect(find.byIcon(Icons.error), findsOneWidget);
     expect(find.text('500'), findsOneWidget);
     expect(iconLabeled('waiting for the PC'), findsNothing);
@@ -54,7 +33,7 @@ void main() {
   testWidgets('an unreachable PC is the cloud, the snapshot time, the queue', (
     tester,
   ) async {
-    await _pump(
+    await pumpStatus(
       tester,
       state: sampleState(),
       error: const DavException('Reading/state.json', 0),
@@ -68,7 +47,7 @@ void main() {
   });
 
   testWidgets('a locked, behind month with todo and sessions', (tester) async {
-    await _pump(
+    await pumpStatus(
       tester,
       state: sampleState({
         'sessions': [
@@ -110,7 +89,7 @@ void main() {
   });
 
   testWidgets('an unlocked month on pace, nothing to do', (tester) async {
-    await _pump(
+    await pumpStatus(
       tester,
       state: GuardState.fromJson(const {
         'reason': 'All good',
@@ -134,7 +113,7 @@ void main() {
   });
 
   testWidgets('pace past the target is clamped to a full bar', (tester) async {
-    await _pump(
+    await pumpStatus(
       tester,
       state: GuardState.fromJson(const {
         'pace': {'target': 10, 'pages': 30},
@@ -146,33 +125,6 @@ void main() {
           .value,
       1,
     );
-  });
-
-  testWidgets('past six sessions the rest wait behind a sheet', (tester) async {
-    await _pump(
-      tester,
-      state: sampleState({
-        'todo': const <Object>[],
-        'sessions': [
-          for (var i = 1; i <= 8; i++)
-            {'id': 's$i', 'start_page': i, 'end_page': i, 'status': 'credited'},
-        ],
-      }),
-    );
-    expect(find.text('8-8'), findsOneWidget);
-    expect(find.text('3-3'), findsOneWidget);
-    expect(find.text('2-2'), findsNothing);
-    await tester.tap(iconLabeled('all sessions'));
-    await tester.pumpAndSettle();
-    expect(find.text('2-2'), findsOneWidget);
-    expect(find.text('1-1'), findsOneWidget);
-  });
-
-  testWidgets('without pace inputs the pace card opens nothing', (
-    tester,
-  ) async {
-    await _pump(tester, state: sampleState());
-    expect(iconLabeled('pace details'), findsNothing);
   });
 
   test('every session status has its own glyph, tint and spoken label', () {
@@ -194,75 +146,10 @@ void main() {
     );
   });
 
-  testWidgets('a session with details opens its history', (tester) async {
-    _tall(tester);
-    final api = FakeApi();
-    await pumpTab(
-      tester,
-      StatusTab(
-        state: sampleState({
-          'sessions': [
-            {
-              'id': 's1',
-              'start_page': 7,
-              'end_page': 51,
-              'pages': 44,
-              'minutes': 43,
-              'status': 'credited',
-              'detail': 'sessions/s1.json',
-            },
-            {'id': 's2', 'start_page': 1, 'end_page': 3, 'status': 'credited'},
-          ],
-        }),
-        error: null,
-        api: api,
-      ),
-    );
-    await tapVisible(tester, find.text('1-3'));
-    await tester.pumpAndSettle();
-    expect(api.fetched, isEmpty);
-    await tapVisible(tester, find.text('7-51'));
-    await tester.pumpAndSettle();
-    expect(api.fetched, ['sessions/s1.json']);
-  });
-
-  testWidgets('without an api, sessions are not links', (tester) async {
-    await _pump(
-      tester,
-      state: sampleState({
-        'sessions': [
-          {'id': 's1', 'detail': 'sessions/s1.json', 'status': 'credited'},
-        ],
-      }),
-    );
-    await tester.tap(find.byIcon(Icons.check_circle).last);
-    await tester.pumpAndSettle();
-    expect(find.byType(StatusTab), findsOneWidget);
-  });
-
-  testWidgets('a retry wins over the ledger status', (tester) async {
-    await _pump(
-      tester,
-      state: sampleState({
-        'sessions': [
-          {
-            'id': 's1',
-            'start_page': 1,
-            'end_page': 9,
-            'status': 'needs-quiz',
-            'retry': {'feedback': 'f', 'summary': 's', 'missing': <String>[]},
-          },
-        ],
-      }),
-    );
-    expect(find.byIcon(Icons.replay), findsOneWidget);
-    expect(iconLabeled('summary failed: rewrite it'), findsOneWidget);
-  });
-
   testWidgets('the PC lines become glyphs and page numbers, never words', (
     tester,
   ) async {
-    await _pump(
+    await pumpStatus(
       tester,
       state: sampleState({
         'todo': [

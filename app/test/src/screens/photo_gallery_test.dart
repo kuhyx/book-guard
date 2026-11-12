@@ -23,6 +23,13 @@ final _png = Uint8List.fromList([
   0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 ]);
 
+/// `DD.MM HH:MM` in the machine's own zone, as the sheet shows it.
+String _stamp(DateTime utc) {
+  final t = utc.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(t.day)}.${two(t.month)} ${two(t.hour)}:${two(t.minute)}';
+}
+
 void main() {
   late FakeApi api;
 
@@ -96,7 +103,10 @@ void main() {
     await tester.longPress(find.text('19'));
     await tester.pumpAndSettle();
     expect(
-      find.descendant(of: sheet, matching: find.text('02.10 20:14')),
+      find.descendant(
+        of: sheet,
+        matching: find.text(_stamp(DateTime.utc(2026, 10, 2, 18, 14))),
+      ),
       findsOneWidget,
     );
     expect(

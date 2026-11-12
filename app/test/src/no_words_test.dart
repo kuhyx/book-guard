@@ -1,70 +1,19 @@
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
-import 'package:book_guard_app/src/library.dart';
-import 'package:book_guard_app/src/login_store.dart';
 import 'package:book_guard_app/src/screens/home_screen.dart';
-import 'package:book_guard_app/src/screens/library_book_screen.dart';
-import 'package:book_guard_app/src/screens/library_tab.dart';
-import 'package:book_guard_app/src/screens/settings_screen.dart';
 import 'package:design_system/design_system.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../support/fake_api.dart';
-import '../support/fake_share.dart';
 import '../support/finders_a.dart';
-import '../support/library_api.dart';
-import '../support/library_json.dart';
 import '../support/no_words.dart';
+import '../support/no_words_home.dart';
 import '../support/pace_inputs.dart';
 import '../support/states.dart';
 
-/// Text the reader or the book wrote: shown as it is.
-const content = [
-  'Atomic Habits', 'James Clear', 'Done Book', 'Next Book', 'Wstep', //
-  'Jeden', 'from the PC', 'first try', 'second try', 'mention the habit loop',
-  'bookguard', 'https://old.host',
-];
-
 void main() {
-  Future<FakeApi> pumpHome(
-    WidgetTester tester,
-    GuardState? state, {
-    bool desktop = false,
-    ThemeData? theme,
-    void Function(FakeApi api)? setUp,
-  }) async {
-    tallSurface(tester);
-    final api = FakeApi(state: state);
-    setUp?.call(api);
-    // A fresh HomeScreen: the previous one (and its state) must be gone.
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: theme ?? buildLightTheme(),
-        home: HomeScreen(
-          api: api,
-          desktop: desktop,
-          refreshEvery: const Duration(hours: 1),
-        ),
-      ),
-    );
-    await settle(tester);
-    addTearDown(() => tester.pumpWidget(const SizedBox()));
-    return api;
-  }
-
-  /// Opens the pace sheet, when the snapshot has one, so its cells are
-  /// checked too.
-  Future<void> openPaceSheet(WidgetTester tester) async {
-    final details = iconLabeled('pace details');
-    if (details.evaluate().isEmpty) return;
-    await tester.tap(details);
-    await tester.pumpAndSettle();
-  }
-
   Future<void> home(WidgetTester tester, IconData tab) async {
     await pumpHome(tester, sampleState());
     await tester.tap(navTab(tab));
@@ -245,51 +194,5 @@ void main() {
     addTearDown(() => tester.pumpWidget(const SizedBox()));
     expectNoWords(tester, content: content);
     expect(iconLabeled('connection'), findsNothing);
-  });
-
-  testWidgets('the library and a book paint no words', (tester) async {
-    tallSurface(tester);
-    final share = FakeShare();
-    putLibrary(share, libraryJson());
-    final api = libraryApi(share);
-    await pumpTab(tester, LibraryTab(api: api, state: null));
-    await settle(tester);
-    expectNoWords(tester, content: content);
-    final book = LibraryBook.fromJson(
-      (libraryJson()['books'] as List).first as Map<String, dynamic>,
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildLightTheme(),
-        home: LibraryBookScreen(api: api, book: book),
-      ),
-    );
-    await settle(tester);
-    expectNoWords(tester, content: content);
-  });
-
-  testWidgets('an empty library paints no words', (tester) async {
-    await pumpTab(
-      tester,
-      LibraryTab(api: libraryApi(FakeShare()), state: null),
-    );
-    await settle(tester);
-    expectNoWords(tester, content: content);
-  });
-
-  testWidgets('settings paint no words', (tester) async {
-    FlutterSecureStorage.setMockInitialValues({
-      'dufs_url': 'https://old.host',
-      'dufs_user': 'bookguard',
-      'dufs_password': 'old',
-    });
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildLightTheme(),
-        home: SettingsScreen(store: LoginStore(), onSaved: () async {}),
-      ),
-    );
-    await settle(tester);
-    expectNoWords(tester, content: content);
   });
 }

@@ -5,44 +5,10 @@ import 'package:book_guard_app/src/screens/pace_cells.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../support/day_view_fixture.dart';
 import '../../support/fake_api.dart';
 import '../../support/finders_a.dart';
 import '../../support/no_words.dart';
-
-DayView view({
-  DayKind kind = DayKind.past,
-  int credited = 22,
-  int required = 17,
-  int assumed = 22,
-  bool free = false,
-  bool sick = false,
-  bool oldRule = false,
-  bool beforeQuotas = false,
-  int simulated = 0,
-  int line = 100,
-  int pages = 60,
-  int debt = 0,
-  int credit = 0,
-}) => DayView(
-  day: DateTime.utc(2026, 10, 15),
-  kind: kind,
-  pace: DayPace(
-    month: DateTime.utc(2026, 10),
-    target: 1000,
-    carriedDebt: debt,
-    carriedCredit: credit,
-    pages: pages,
-    line: line,
-    required: required,
-  ),
-  credited: credited,
-  assumed: assumed,
-  free: free,
-  sick: sick,
-  oldRule: oldRule,
-  beforeQuotas: beforeQuotas,
-  simulated: simulated,
-);
 
 void main() {
   test('days and months are numerals', () {
@@ -196,83 +162,6 @@ void main() {
       ];
       expect(sizes.take(5).every((w) => w == 5), isTrue);
       expect(sizes.skip(5).every((w) => w == 10), isTrue);
-    });
-  });
-
-  group('DayCell', () {
-    Future<int> pumpCell(
-      WidgetTester tester,
-      DayView v, {
-      bool selected = false,
-      bool showDot = false,
-    }) async {
-      var taps = 0;
-      await pumpTab(
-        tester,
-        Row(
-          children: [
-            Expanded(
-              child: DayCell(
-                view: v,
-                selected: selected,
-                showDot: showDot,
-                onTap: () => taps++,
-              ),
-            ),
-          ],
-        ),
-      );
-      await tester.tap(find.text('15'));
-      return taps;
-    }
-
-    BoxDecoration decoration(WidgetTester tester) =>
-        tester.widget<Container>(find.byType(Container).first).decoration!
-            as BoxDecoration;
-
-    testWidgets('a met day is green with a check, taps select it', (
-      tester,
-    ) async {
-      expect(await pumpCell(tester, view()), 1);
-      expect(find.text('22/17'), findsOneWidget);
-      expect(decoration(tester).color, isNotNull);
-      expect(find.byIcon(Icons.check), findsOneWidget);
-      expectNoWords(tester);
-    });
-
-    testWidgets('a missed past day is red with a cross, selected is outlined', (
-      tester,
-    ) async {
-      await pumpCell(tester, view(credited: 3), selected: true);
-      final box = decoration(tester);
-      expect(box.color, isNotNull);
-      expect((box.border! as Border).top.width, 2);
-      expect(find.byIcon(Icons.close), findsOneWidget);
-    });
-
-    testWidgets('today, free, future and simulated days are not filled', (
-      tester,
-    ) async {
-      await pumpCell(tester, view(kind: DayKind.today, credited: 1));
-      expect(decoration(tester).color, isNull);
-      await pumpCell(tester, view(free: true, credited: 3));
-      expect(decoration(tester).color, isNull);
-      expect(find.byIcon(freeGlyph), findsOneWidget);
-      await pumpCell(tester, view(kind: DayKind.future, simulated: 5));
-      expect(decoration(tester).color, isNull);
-      final text = tester.widget<Text>(find.text('22/17'));
-      expect(text.style?.fontWeight, FontWeight.bold);
-    });
-
-    testWidgets('the week row puts a weekday dot over the date', (
-      tester,
-    ) async {
-      await pumpCell(tester, view(), showDot: true);
-      expect(find.byType(WeekdayDot), findsOneWidget);
-      expect(
-        tester.widget<WeekdayDot>(find.byType(WeekdayDot)).weekend,
-        isFalse,
-      );
     });
   });
 }

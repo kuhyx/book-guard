@@ -4,6 +4,7 @@ import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/national_library.dart';
 import 'package:book_guard_app/src/open_library.dart';
 import 'package:book_guard_app/src/screens/book_cues.dart';
+import 'package:book_guard_app/src/screens/book_finder_parts.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
@@ -201,38 +202,11 @@ class _BookFinderState extends State<BookFinder> {
           onPressed: _busy ? null : _search,
         ),
       ),
-      if (_missed)
-        Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.sm),
-          child: Center(
-            child: Icon(
-              Icons.search_off,
-              size: 64,
-              color: context.statusColors.warning,
-              semanticLabel: 'No books found: enter the ISBN below',
-            ),
-          ),
-        ),
+      if (_missed) const NoBooksFound(),
       for (final hit in _hits)
-        ListTile(
-          title: Text(hit.title),
-          subtitle: Wrap(
-            spacing: AppSpacing.md,
-            children: [
-              if (hit.author.isNotEmpty) Text(hit.author),
-              IconNumber(
-                Icons.last_page,
-                hit.pages == null ? '?' : '${hit.pages}',
-                semanticLabel: 'Pages',
-              ),
-              if (hit.isbn case final isbn?)
-                IconNumber(Icons.qr_code, isbn, semanticLabel: 'ISBN'),
-            ],
-          ),
-          trailing: Icon(
-            _unknown == null ? Icons.add : Icons.link,
-            semanticLabel: _unknown == null ? 'Register' : 'Name the ISBN',
-          ),
+        BookHitTile(
+          hit: hit,
+          registering: _unknown == null,
           enabled: (_unknown != null || hit.isbn != null) && !_busy,
           onTap: () => _register(hit),
         ),
