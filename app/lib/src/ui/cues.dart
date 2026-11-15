@@ -141,7 +141,9 @@ class _StatusCueState extends State<StatusCue>
                   Icon(widget.cue.glyph, color: tint),
                   if (badge != null) ...[
                     const SizedBox(width: AppSpacing.sm),
-                    badge,
+                    // A long badge (an outage past midnight) wraps instead
+                    // of overflowing a narrow column.
+                    Flexible(child: badge),
                   ],
                 ],
               ),

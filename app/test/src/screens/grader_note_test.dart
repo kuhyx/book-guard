@@ -1,6 +1,7 @@
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/grader_note.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 GuardState _down({String? until, String since = '2026-10-18T08:25:00'}) =>
     GuardState.fromJson({
@@ -60,6 +61,22 @@ void main() {
       )?.until,
       '19.10 16:40',
     );
+  });
+
+  // An outage that runs past midnight has a date on both ends; the chip
+  // must fit the Read tab's 284 px summary column, wrapping, not overflowing.
+  testWidgets('dates on both ends still fit a narrow column', (tester) async {
+    const note = GraderNote(since: '17.10 21:26', until: '18.10 00:26');
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(width: 300, child: GraderNoteChip(note)),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('17.10 21:26 - 18.10 00:26'), findsOneWidget);
   });
 }
 
