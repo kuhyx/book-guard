@@ -8,13 +8,12 @@ import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photo.dart';
 import 'package:book_guard_app/src/screens/failed_photo_card.dart';
-import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/failed_photo_view.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
 import 'package:book_guard_app/src/screens/report_dialog.dart';
 import 'package:book_guard_app/src/screens/type_page_dialog.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/hold_button.dart';
-import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:book_guard_app/src/ui/reply_cue.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
@@ -162,40 +161,6 @@ class _FailedPhotosState extends State<FailedPhotos> {
     );
   }
 
-  /// The photo view a grid tile opens, from the phone's copy; a photo the
-  /// PC has not got yet can be sent again from there.
-  void _open(FailedPhoto failed) => showPhotoView(
-    context,
-    _photo(failed.entry.name),
-    actions: [
-      if (failed.pc == null)
-        GlyphButton(
-          icon: Icons.cloud_upload_outlined,
-          semanticLabel: 'Send again',
-          onPressed: () => unawaited(_retry()),
-        ),
-    ],
-  );
-
-  /// Sends what the outbox holds (the photo is still in it: an upload
-  /// that failed is kept), then refetches so a sent photo leaves the strip.
-  Future<void> _retry() async {
-    Navigator.of(context).pop();
-    final waiting = await widget.api.flush();
-    if (!mounted) return;
-    showCue(
-      context,
-      waiting == 0
-          ? const Cue(CueKind.ok, icon: Icons.cloud_done, semanticLabel: 'sent')
-          : const Cue(
-              CueKind.warn,
-              icon: Icons.cloud_off,
-              semanticLabel: 'not sent, still on the phone',
-            ),
-    );
-    unawaited(widget.onChanged());
-  }
-
   Future<void> _dismiss(Iterable<FailedPhoto> failed) async {
     final names = [for (final f in failed) f.entry.name];
     setState(() => _dismissed?.addAll(names));
@@ -271,7 +236,13 @@ class _FailedPhotosState extends State<FailedPhotos> {
             : null,
         onReport: bytes == null ? null : () => _report(f),
         onDismiss: () => _dismiss([f]),
-        onOpen: () => _open(f),
+        onOpen: () => openFailedPhoto(
+          context,
+          failed: f,
+          bytes: _photo(f.entry.name),
+          api: widget.api,
+          onChanged: widget.onChanged,
+        ),
       );
     },
   );
