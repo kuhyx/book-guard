@@ -34,9 +34,13 @@ void showPhotoView(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(child: image),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: actions,
+                // Inset, so no glyph sits under the dialog's round corner.
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: actions,
+                  ),
                 ),
               ],
             ),
