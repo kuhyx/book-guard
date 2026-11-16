@@ -7,7 +7,7 @@ import 'package:book_guard_app/src/screens/photo_gallery.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// The Read tab's photo page: photos that failed (box again, report) in a
+/// The photos screen: photos that failed (box again, report) in a
 /// sideways strip, then every photo the PC filed as a paged grid filling
 /// the rest -- nothing on it scrolls vertically.
 class PhotoHistory extends StatelessWidget {

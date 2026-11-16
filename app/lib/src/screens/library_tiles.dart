@@ -4,7 +4,28 @@ import 'package:book_guard_app/src/screens/library_tab.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// A book as a tile: its status glyph, title and pages read.
+/// A book's tile fill: a fixed hue from the palette picked by a stable
+/// hash of its ISBN (title if none), at one of two depths, so the same
+/// book keeps its colour on every run and every device.
+Color bookColor(LibraryBook book, Color surface) {
+  const hues = [
+    AppPalette.accent,
+    AppPalette.success,
+    AppPalette.warning,
+    AppPalette.danger,
+  ];
+  // FNV-1a: String.hashCode is not promised to be stable across runs.
+  var hash = 0x811c9dc5;
+  for (final unit in (book.isbn.isEmpty ? book.title : book.isbn).codeUnits) {
+    hash = ((hash ^ unit) * 0x01000193) & 0xffffffff;
+  }
+  final hue = hues[hash % hues.length];
+  final depth = (hash ~/ hues.length).isEven ? 0.0 : 0.45;
+  return Color.lerp(hue, surface, depth)!;
+}
+
+/// A book as a colour tile: its status glyph and pages read; the title,
+/// author and dates sit behind a long-press.
 class BookTile extends StatelessWidget {
   /// Creates the tile.
   const new(
@@ -20,21 +41,28 @@ class BookTile extends StatelessWidget {
   /// Opens the book.
   final VoidCallback onTap;
 
-  /// Shows its facts.
+  /// Shows its title and facts.
   final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final fill = bookColor(book, theme.colorScheme.surface);
+    // Dark glyphs on a light fill, light on a dark one (dark theme).
+    final ink = fill.computeLuminance() > 0.3
+        ? AppPalette.ink
+        : AppPalette.textOnDark;
     return Card(
+      color: fill,
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Semantics(
+          label: book.title,
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 book.status == 'finished'
@@ -42,21 +70,14 @@ class BookTile extends StatelessWidget {
                     : book.current
                     ? Icons.auto_stories
                     : Icons.book_outlined,
+                color: ink,
+                size: 32,
                 semanticLabel: book.status,
               ),
               const SizedBox(height: AppSpacing.xs),
-              Expanded(
-                child: Text(
-                  book.title,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 4,
-                  style: theme.textTheme.bodySmall,
-                ),
-              ),
               Text(
                 '${book.lastPageRead ?? 0}/${book.pages ?? '?'}',
-                style: theme.textTheme.labelSmall,
+                style: theme.textTheme.labelSmall?.copyWith(color: ink),
               ),
             ],
           ),

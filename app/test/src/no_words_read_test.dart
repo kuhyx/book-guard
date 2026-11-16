@@ -103,10 +103,10 @@ void main() {
         ),
         scroll: false,
       );
-      // They live on the photos page; the switch carries a dot meanwhile.
+      // They live on the photos screen; its button carries a dot meanwhile.
       expect(find.byType(Badge), findsOneWidget);
       await tester.tap(spoken('photos'));
-      await settle(tester, 10);
+      await settle(tester, 60);
       expect(spoken('failed photos'), findsOneWidget);
       expectNoWords(tester, content: readContent);
     });

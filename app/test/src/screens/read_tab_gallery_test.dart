@@ -58,14 +58,14 @@ void main() {
       }),
     );
     await tester.tap(spoken('photos'));
-    await settle(tester);
+    await tester.pumpAndSettle();
     expect(
       find.descendant(of: find.byType(PhotoMark), matching: find.text('7')),
       findsOneWidget,
     );
-    // And back to the session page.
-    await tester.tap(spoken('session'));
-    await settle(tester);
+    // And back to the session.
+    await tester.tap(spoken('back'));
+    await tester.pumpAndSettle();
     expect(spoken('Stop reading'), findsOneWidget);
   });
 

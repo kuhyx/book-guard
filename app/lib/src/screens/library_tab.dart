@@ -135,6 +135,7 @@ class _LibraryTabState extends State<LibraryTab> {
           final book = books[i];
           return BookTile(
             book,
+            key: ValueKey('book-${book.isbn.isEmpty ? i : book.isbn}'),
             onTap: () => unawaited(_open(book)),
             onLongPress: () => showFitSheet(
               context,

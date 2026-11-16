@@ -158,11 +158,15 @@ void expectNoVerticalScroll(WidgetTester tester) {
   }
 }
 
-/// [finder] is on screen, above the nav bar, and takes a tap.
+/// [finder] is on screen, above the nav bar (or, on a screen without
+/// one, the gesture bar), and takes a tap.
 void expectTappable(WidgetTester tester, Finder finder) {
   expect(finder.hitTestable(), findsWidgets, reason: '$finder not tappable');
-  final nav = tester.getRect(find.byType(NavigationBar));
+  final nav = find.byType(NavigationBar);
+  final bottom = nav.evaluate().isEmpty
+      ? (2400 - 63) / 2.625
+      : tester.getRect(nav).top;
   final rect = tester.getRect(finder.first);
-  expect(rect.bottom, lessThanOrEqualTo(nav.top + 0.5), reason: '$finder');
+  expect(rect.bottom, lessThanOrEqualTo(bottom + 0.5), reason: '$finder');
   expect(rect.top, greaterThanOrEqualTo(132 / 2.625), reason: '$finder');
 }

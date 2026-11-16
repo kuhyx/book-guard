@@ -1,6 +1,7 @@
 import 'package:book_guard_app/src/library_store.dart';
 import 'package:book_guard_app/src/screens/library_book_screen.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
+import 'package:book_guard_app/src/screens/library_tiles.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -11,11 +12,17 @@ import '../../support/library_api.dart';
 import '../../support/library_json.dart';
 import '../../support/states.dart';
 
+/// The colour tile of the book titled [title] (the title is not painted).
+Finder _tile(String title) => find.byWidgetPredicate(
+  (w) => w is BookTile && w.book.title == title,
+  description: 'tile of $title',
+);
+
 /// Long-presses the tile titled [title]; returns its facts sheet.
 Future<Finder> _facts(WidgetTester tester, String title) async {
   await tester.pumpAndSettle();
   if (find.byType(BottomSheet).evaluate().isNotEmpty) await _close(tester);
-  await tester.longPress(find.text(title));
+  await tester.longPress(_tile(title));
   await tester.pumpAndSettle();
   return find.byType(BottomSheet);
 }
@@ -50,11 +57,16 @@ void main() {
     putLibrary(share, libraryJson());
     await pumpTab(tester, LibraryTab(api: libraryApi(share), state: null));
     await settle(tester);
-    expect(find.text('Atomic Habits'), findsOneWidget);
-    // The tiles: title and pages; the rest behind a long-press.
+    expect(_tile('Atomic Habits'), findsOneWidget);
+    // The tiles: colour, glyph and pages; the rest behind a long-press.
+    expect(find.text('Atomic Habits'), findsNothing);
     expect(find.text('81/320'), findsOneWidget);
     expect(find.text('James Clear'), findsNothing);
     final atomic = await _facts(tester, 'Atomic Habits');
+    expect(
+      find.descendant(of: atomic, matching: find.text('Atomic Habits')),
+      findsOneWidget,
+    );
     expect(glyphNumber(atomic, 'James Clear'), findsOneWidget);
     expect(glyphNumber(atomic, '81/320'), findsOneWidget);
     expect(glyphNumber(atomic, '02.10.2026'), findsOneWidget);
@@ -90,7 +102,7 @@ void main() {
     final offline = hung.apiWith(api.store);
     await pumpTab(tester, LibraryTab(api: offline, state: null));
     await settle(tester);
-    expect(find.text('Atomic Habits'), findsOneWidget);
+    expect(_tile('Atomic Habits'), findsOneWidget);
     hung.release();
     await settle(tester);
   });
@@ -102,7 +114,7 @@ void main() {
     share.down = true;
     await pumpTab(tester, LibraryTab(api: api, state: null));
     await settle(tester);
-    expect(find.text('Done Book'), findsOneWidget);
+    expect(_tile('Done Book'), findsOneWidget);
   });
 
   testWidgets('a newer snapshot reloads', (tester) async {
@@ -118,7 +130,7 @@ void main() {
     putLibrary(share, libraryJson());
     await pump('2026-10-15T10:00:10Z');
     await settle(tester);
-    expect(find.text('Atomic Habits'), findsOneWidget);
+    expect(_tile('Atomic Habits'), findsOneWidget);
   });
 
   testWidgets('tapping a book opens its screen', (tester) async {
@@ -126,7 +138,7 @@ void main() {
     putLibrary(share, libraryJson());
     await pumpTab(tester, LibraryTab(api: libraryApi(share), state: null));
     await settle(tester);
-    await tester.tap(find.text('Done Book'));
+    await tester.tap(_tile('Done Book'));
     await tester.pumpAndSettle();
     expect(find.byType(LibraryBookScreen), findsOneWidget);
   });
@@ -147,7 +159,7 @@ void main() {
     final atomic = await _facts(tester, 'Atomic Habits');
     expect(glyphNumber(atomic, '2'), findsNWidgets(2));
     await _close(tester);
-    await tester.tap(find.text('Done Book'));
+    await tester.tap(_tile('Done Book'));
     await tester.pumpAndSettle();
     await api.saveNote(note('later', books[1].isbn));
     await tester.pageBack();
@@ -169,7 +181,7 @@ void main() {
     );
     await pump('2026-10-15T10:00:00Z');
     await settle(tester);
-    await tester.tap(find.text('Next Book'));
+    await tester.tap(_tile('Next Book'));
     await tester.pumpAndSettle();
     tester
         .widget<LibraryBookScreen>(find.byType(LibraryBookScreen))

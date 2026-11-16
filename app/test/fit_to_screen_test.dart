@@ -2,6 +2,8 @@
 // the overflow pages sideways, and the primary actions can be tapped.
 
 import 'package:book_guard_app/src/screens/library_book_screen.dart';
+import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/photos_screen.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/screens/report_dialog.dart';
 import 'package:book_guard_app/src/screens/session_screen.dart';
@@ -48,7 +50,7 @@ void main() {
     expect(find.byType(SessionScreen), findsOneWidget);
   });
 
-  testWidgets('Read fits: session buttons, failed photos, paged photo grid', (
+  testWidgets('Read fits: session buttons, summary and a photos button', (
     tester,
   ) async {
     await openHome(tester, 'read');
@@ -64,12 +66,58 @@ void main() {
       ),
     );
     expect(find.byType(SummaryPanel), findsOneWidget);
+    // The photos live on their own screen, not a page of this tab.
+    expect(find.byType(PhotoGallery), findsNothing);
     expectTappable(tester, spoken('photos'));
+    expect(find.byType(Badge), findsWidgets, reason: 'failed photos dot');
+  });
+
+  testWidgets('Photos screen fits: failed strip, paged grid, report', (
+    tester,
+  ) async {
+    await openHome(tester, 'read');
     await tester.tap(spoken('photos'));
-    await settle(tester, 10);
+    await settle(tester, 60);
+    expect(find.byType(PhotosScreen), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing, reason: 'own screen');
     expectNoVerticalScroll(tester);
     expectTappable(tester, spoken('failed photos'));
     expectTappable(tester, spoken('Box the number'));
+    expectTappable(tester, find.byKey(const ValueKey('photo-p1.jpg')));
+    final report = spoken('This should not fail');
+    expectTappable(tester, report);
+    await tester.tap(report.first);
+    await settle(tester, 20);
+    expect(find.byType(ReportDialog), findsOneWidget);
+    await tester.tapAt(const Offset(200, 120));
+    await settle(tester, 20);
+    // Back: the Read tab as it was.
+    await tester.tap(spoken('back'));
+    await settle(tester, 60);
+    expect(find.byType(PhotosScreen), findsNothing);
+    expect(find.byType(SummaryPanel), findsOneWidget);
+  });
+
+  testWidgets('Gallery fits: 40 photos as a 3-column paged grid', (
+    tester,
+  ) async {
+    pixel6a(tester);
+    final api = FakeApi(state: busyState());
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: PhotoGallery(api: api, photos: busyState().photos),
+          ),
+        ),
+      ),
+    );
+    await settle(tester, 10);
+    expectNoVerticalScroll(tester);
+    Rect at(int i) => tester.getRect(find.byKey(ValueKey('photo-p$i.jpg')));
+    expect(at(1).top, at(0).top, reason: '3 in a row');
+    expect(at(2).top, at(0).top, reason: '3 in a row');
+    expect(at(3).top, greaterThan(at(0).top), reason: 'the 4th wraps');
     final photo = find.byKey(const ValueKey('photo-p1.jpg'));
     expectTappable(tester, photo);
     // The rest of the 40 photos page sideways.
@@ -96,11 +144,14 @@ void main() {
     );
     await tester.tapAt(const Offset(200, 120));
     await settle(tester, 20);
-    final report = spoken('This should not fail');
-    expectTappable(tester, report);
-    await tester.tap(report.first);
-    await settle(tester, 20);
-    expect(find.byType(ReportDialog), findsOneWidget);
+    // Swipe page by page to the last photo.
+    final last = find.byKey(const ValueKey('photo-p39.jpg'));
+    for (var i = 0; i < 5 && last.evaluate().isEmpty; i++) {
+      await tester.dragFrom(const Offset(300, 400), const Offset(-300, 0));
+      await settle(tester, 40);
+    }
+    expect(find.byKey(const ValueKey('photo-p0.jpg')), findsNothing);
+    expect(last, findsOneWidget);
   });
 
   testWidgets('Read with the keyboard up for a summary never overflows', (
@@ -113,19 +164,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Library fits: 3-column text tiles, paged', (tester) async {
+  testWidgets('Library fits: 3-column colour tiles, paged', (tester) async {
     await openHome(tester, 'library');
     expectNoVerticalScroll(tester);
-    final first = find.text('A rather long book title number 0');
+    Finder tile(int i) =>
+        find.byKey(ValueKey('book-97800000000${i.toString().padLeft(2, '0')}'));
+    final first = tile(0);
     expectTappable(tester, first);
-    final a = tester.getRect(first);
-    final b = tester.getRect(find.text('A rather long book title number 1'));
-    expect(b.left, greaterThan(a.right), reason: 'tiles share a row');
-    expect(find.text('A rather long book title number 29'), findsNothing);
+    expect(
+      tester.getRect(tile(1)).left,
+      greaterThan(tester.getRect(first).right),
+    );
+    expect(tester.getRect(tile(2)).top, tester.getRect(first).top);
+    expect(tester.getRect(tile(3)).top, greaterThan(tester.getRect(first).top));
+    // Colour, not text: no title on a tile, and the tiles differ.
+    expect(find.text('A rather long book title number 0'), findsNothing);
+    final fills = {
+      for (var i = 0; i < 9; i++)
+        tester
+            .widget<Card>(
+              find.descendant(of: tile(i), matching: find.byType(Card)),
+            )
+            .color,
+    };
+    expect(fills.length, greaterThan(3));
+    expect(tile(29), findsNothing);
     expect(find.byKey(const ValueKey('fit-grid-dot-1')), findsOneWidget);
+    // Long-press: the title, the author and the facts.
     await tester.longPress(first);
     await settle(tester, 20);
-    expect(find.text('Author 0'), findsOneWidget);
+    final sheet = find.byType(BottomSheet);
+    for (final text in ['A rather long book title number 0', 'Author 0']) {
+      expect(find.descendant(of: sheet, matching: find.text(text)), findsOne);
+    }
     await tester.tapAt(const Offset(200, 120));
     await settle(tester, 20);
     await tester.tap(first);
@@ -144,19 +215,16 @@ void main() {
     expectTappable(tester, spoken('all sessions'));
   });
 
-  testWidgets('Read photos offline: grid, failed strip and queue stay', (
+  testWidgets('Photos screen offline: grid and failed strip stay', (
     tester,
   ) async {
     await openHome(tester, 'read', offline: true);
     await tester.tap(spoken('photos'));
-    await settle(tester, 10);
-    expect(find.byIcon(Icons.cloud_off), findsNothing);
+    await settle(tester, 60);
     expectNoVerticalScroll(tester);
     expectTappable(tester, spoken('failed photos'));
     expectTappable(tester, spoken('Box the number'));
     expectTappable(tester, find.byKey(const ValueKey('photo-p1.jpg')));
-    // The queue badge in the app bar counts what waits for the PC.
-    expect(find.byType(Badge), findsWidgets);
   });
 
   testWidgets('a mouse drag pages the grid (the desktop build)', (
@@ -164,11 +232,11 @@ void main() {
   ) async {
     await openHome(tester, 'library');
     await tester.drag(
-      find.text('A rather long book title number 0'),
+      find.byKey(const ValueKey('book-9780000000000')),
       const Offset(-300, 0),
       kind: PointerDeviceKind.mouse,
     );
     await settle(tester, 30);
-    expect(find.text('A rather long book title number 29'), findsOneWidget);
+    expect(find.byKey(const ValueKey('book-9780000000029')), findsOneWidget);
   });
 }
