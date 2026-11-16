@@ -98,8 +98,14 @@ class FakeApi extends GuardApi {
   /// What each queued photo's sidecar said, by name.
   final Map<String, ({int? page, Box? box})> notes = {};
 
+  /// How many times the outbox was flushed.
+  int flushes = 0;
+
   @override
-  Future<int> flush() async => offline ? 1 : 0;
+  Future<int> flush() async {
+    flushes++;
+    return offline ? 1 : 0;
+  }
 
   @override
   Future<String> queuePhoto(

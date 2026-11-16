@@ -1,7 +1,6 @@
 // Shared by the fit-to-screen tests: Pixel 6a geometry, a busy snapshot,
 // a 30-book library, and the two assertions the tests make.
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:book_guard_app/src/app.dart';
 import 'package:book_guard_app/src/dav_client.dart';
@@ -16,6 +15,7 @@ import 'package:material_ui/material_ui.dart';
 import 'fake_api.dart';
 import 'fake_reader.dart';
 import 'finders_read.dart';
+import 'library_api.dart' show tinyPng;
 import 'pace_inputs.dart';
 import 'states.dart';
 
@@ -91,6 +91,7 @@ Future<FakeApi> openHome(
   WidgetTester tester,
   String tab, {
   bool offline = false,
+  int unread = 0,
 }) async {
   pixel6a(tester);
   final api = FakeApi(state: busyState());
@@ -110,9 +111,11 @@ Future<FakeApi> openHome(
   );
   // The newest is the PC's rejected p1.jpg (box again); the rest the phone
   // could not read. Every one is kept on the phone, so each can be reported.
-  for (var i = 0; i < 3; i++) {
+  // [unread] more come after p1.jpg: the phone read no number and the PC
+  // has not got them (older ones count as known to the PC).
+  for (var i = 0; i < 3 + unread; i++) {
     final name = i == 2 ? 'p1.jpg' : 'failed$i.jpg';
-    await api.store.write('photos/$name', Uint8List.fromList([1, 2, 3]));
+    await api.store.write('photos/$name', tinyPng);
     await api.journal.add(
       JournalEntry(
         name: name,

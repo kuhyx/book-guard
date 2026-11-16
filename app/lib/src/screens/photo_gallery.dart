@@ -15,16 +15,34 @@ String photoVerdict(PhotoInfo? photo) => '';
 
 /// The full-size photo at [file] (relative to `Reading/`), zoomable.
 void openPhoto(BuildContext context, GuardApi api, String file) =>
-    showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        child: RemoteImage(
-          bytes: api.fetchBytes(file),
-          fit: BoxFit.contain,
-          zoom: true,
-        ),
-      ),
-    );
+    showPhotoView(context, api.fetchBytes(file));
+
+/// The photo view every photo opens in: [bytes] full size and zoomable,
+/// with [actions] (glyph buttons) in a row under it.
+void showPhotoView(
+  BuildContext context,
+  Future<Uint8List?> bytes, {
+  List<Widget> actions = const [],
+}) {
+  final image = RemoteImage(bytes: bytes, fit: BoxFit.contain, zoom: true);
+  showDialog<void>(
+    context: context,
+    builder: (context) => Dialog(
+      child: actions.isEmpty
+          ? image
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: image),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: actions,
+                ),
+              ],
+            ),
+    ),
+  );
+}
 
 /// The newest uploads as a 3-column grid fitted to its box and paged
 /// sideways; tap for full size, long-press for the time and the verdict.
@@ -73,6 +91,9 @@ class _PhotoGalleryState extends State<PhotoGallery> {
   Widget build(BuildContext context) => FitGrid(
     itemCount: widget.photos.length,
     padding: EdgeInsets.zero,
+    // A little under square, so a full page of 15 still fits under the
+    // failed strip; the thumbnails crop to cover.
+    minSquare: 0.85,
     itemBuilder: (context, i) {
       final photo = widget.photos[i];
       return Card(

@@ -20,6 +20,7 @@ class FailedPhotoCard extends StatelessWidget {
     this.onBox,
     this.onType,
     this.onReport,
+    this.onOpen,
   });
 
   /// The photo and why it failed.
@@ -41,6 +42,9 @@ class FailedPhotoCard extends StatelessWidget {
   /// File a report; null disables the button.
   final VoidCallback? onReport;
 
+  /// Opens the photo view; null leaves the thumbnail inert.
+  final VoidCallback? onOpen;
+
   /// Hides the card on this device.
   final VoidCallback onDismiss;
 
@@ -54,15 +58,19 @@ class FailedPhotoCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 72,
-              height: 96,
-              child: bytes == null
-                  ? const Icon(
-                      Icons.image_not_supported,
-                      semanticLabel: 'photo gone',
-                    )
-                  : Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 144),
+            InkWell(
+              key: ValueKey('failed-photo-${failed.entry.name}'),
+              onTap: onOpen,
+              child: SizedBox(
+                width: 72,
+                height: 96,
+                child: bytes == null
+                    ? const Icon(
+                        Icons.image_not_supported,
+                        semanticLabel: 'photo gone',
+                      )
+                    : Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 144),
+              ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
