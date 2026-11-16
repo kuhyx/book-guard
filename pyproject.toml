@@ -23,7 +23,7 @@ dependencies = [
     "sickdays @ git+https://github.com/kuhyx/utils@sickdays-v0.5.3#subdirectory=sickdays",
     "focus-project @ git+https://github.com/kuhyx/utils@focus-project-v0.10.0#subdirectory=focus_project",
     "fastembed==0.9.1; python_version < '3.15'",
-    "numpy==2.5.4",
+    "numpy==2.5.5",
     "pillow==12.3.0",
 ]
 
