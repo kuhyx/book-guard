@@ -108,6 +108,16 @@ a paper session, and a paper session formed later across it does not count.
 | Upload | within 7 days of the EXIF capture time (the phone queues offline) |
 | Starts | 2026-10-01 |
 
+**Evening mode** (`book-guard lock --production --evening`, the book rung of
+the evening gate chain run by `gatelock.evening_chain`): the verdict is the
+reading rung, never the pace: locked unless a `bonus == "1"` credit that ended
+today is in the signed ledger (`earned_time.done_today(READING, ...)`; an
+unreadable ledger or key counts as unpaid). It ignores the morning carrot and
+tonight's night-lockdown stamp, waits at most 10 s for X (exit 3: no window),
+and shows the day's pages against the bonus line plus a power icon in the
+corner: that icon ends the evening (exit 10). The window closes by itself
+(exit 0) when the bonus row lands. Arbiter rank 150.
+
 **Bonuses** (read from the ledger by the consumers, fail closed): a day whose
 credited pages (summed across sessions, dated by when the reading ended)
 reach **today's requirement** earns **+1h** of shutdown time in
