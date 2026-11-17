@@ -8,6 +8,8 @@ import 'package:book_guard_app/src/screens/box_painter.dart';
 import 'package:book_guard_app/src/screens/pulse_glyph.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
 import 'package:book_guard_app/src/screens/review_buttons.dart';
+import 'package:book_guard_app/src/screens/review_geometry.dart';
+import 'package:book_guard_app/src/screens/review_result.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/gestures.dart';
@@ -17,9 +19,8 @@ export 'package:book_guard_app/src/screens/review_result.dart';
 
 /// Shows the photo upright with the page number the phone found boxed.
 ///
-/// Wrong or missing? Tap another boxed number, or drag a box around the
-/// right one: that box is read again at full resolution -- the number
-/// itself is never typed, so it is always what is printed on the page.
+/// Wrong or missing? Tap another boxed number, drag a box around the right
+/// one (read again at full resolution), or type it on the keypad.
 class PhotoReview extends StatefulWidget {
   /// Creates the screen for the photo [bytes].
   const new({
@@ -49,6 +50,9 @@ class PhotoReview extends StatefulWidget {
 class _PhotoReviewState extends State<PhotoReview> {
   late PageChoice _choice;
 
+  /// The number the reader offered on opening (null: none), for corrections.
+  late final int? _ocr;
+
   /// The chosen number's box on the preview, when known.
   Box? _shown;
   Offset? _dragFrom;
@@ -60,6 +64,23 @@ class _PhotoReviewState extends State<PhotoReview> {
   void initState() {
     super.initState();
     _choice = choosePage(widget.scan.hits, widget.context);
+    _ocr = _choice.hit?.value;
+  }
+
+  void _send() {
+    final hit = _choice.hit!;
+    Navigator.of(context)
+        .pop(ReviewResult(page: hit.value, box: hit.box, ocrPage: _ocr));
+  }
+
+  Future<void> _type() async {
+    final result = await typeReview(
+      context,
+      hit: _choice.hit,
+      pencil: widget.scan.pencilPage,
+      ocr: _ocr,
+    );
+    if (result != null && mounted) Navigator.of(context).pop(result);
   }
 
   /// Preview pixels -> stored pixels for every hit, computed both ways.
@@ -98,16 +119,6 @@ class _PhotoReviewState extends State<PhotoReview> {
     });
   }
 
-  Box? _pixelBox(Offset a, Offset b, double factor) {
-    final box = (
-      left: (math.min(a.dx, b.dx) / factor).floor(),
-      top: (math.min(a.dy, b.dy) / factor).floor(),
-      right: (math.max(a.dx, b.dx) / factor).ceil(),
-      bottom: (math.max(a.dy, b.dy) / factor).ceil(),
-    );
-    return box.right - box.left < 4 || box.bottom - box.top < 4 ? null : box;
-  }
-
   @override
   Widget build(BuildContext context) {
     final hit = _choice.hit;
@@ -138,7 +149,12 @@ class _PhotoReviewState extends State<PhotoReview> {
               ),
             if (_reading) const LinearProgressIndicator(),
             Expanded(child: LayoutBuilder(builder: _photo)),
-            ReviewButtons(hit: hit, reading: _reading),
+            ReviewButtons(
+              hit: hit,
+              reading: _reading,
+              onType: () => unawaited(_type()),
+              onSend: _send,
+            ),
           ],
         ),
       ),
@@ -163,7 +179,7 @@ class _PhotoReviewState extends State<PhotoReview> {
           dragStartBehavior: DragStartBehavior.down,
           onTapUp: (d) {
             for (final (hit, box) in _hitBoxes) {
-              final rect = _rect(box, factor).inflate(16);
+              final rect = boxRect(box, factor).inflate(16);
               if (rect.contains(d.localPosition)) return _pick(hit, box);
             }
           },
@@ -179,7 +195,7 @@ class _PhotoReviewState extends State<PhotoReview> {
             setState(() => _dragFrom = _dragTo = null);
             final box = from == null || to == null
                 ? null
-                : _pixelBox(from, to, factor);
+                : pixelBox(from, to, factor);
             if (box != null) unawaited(_readDrawn(box));
           },
           child: Stack(
@@ -188,9 +204,9 @@ class _PhotoReviewState extends State<PhotoReview> {
               Image.memory(scan.preview, fit: BoxFit.fill),
               CustomPaint(
                 painter: ReviewBoxPainter(
-                  others: [for (final (_, b) in _hitBoxes) _rect(b, factor)],
+                  others: [for (final (_, b) in _hitBoxes) boxRect(b, factor)],
                   chosen: _chosenRect(factor),
-                  drawing: from(drag),
+                  drawing: dragRect(drag),
                   chosenColor: scheme.primary,
                   otherColor: scheme.outline,
                 ),
@@ -220,25 +236,14 @@ class _PhotoReviewState extends State<PhotoReview> {
     );
   }
 
-  Rect? from((Offset?, Offset?) drag) => drag.$1 == null || drag.$2 == null
-      ? null
-      : Rect.fromPoints(drag.$1!, drag.$2!);
-
   Rect? _chosenRect(double factor) {
     final shown = _shown;
-    if (shown != null) return _rect(shown, factor);
+    if (shown != null) return boxRect(shown, factor);
     final hit = _choice.hit;
     if (hit == null) return null;
     for (final (h, box) in _hitBoxes) {
-      if (identical(h, hit)) return _rect(box, factor);
+      if (identical(h, hit)) return boxRect(box, factor);
     }
     return null;
   }
-
-  Rect _rect(Box box, double factor) => Rect.fromLTRB(
-    box.left * factor,
-    box.top * factor,
-    box.right * factor,
-    box.bottom * factor,
-  );
 }

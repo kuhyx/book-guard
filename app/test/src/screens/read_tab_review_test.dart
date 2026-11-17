@@ -10,12 +10,13 @@ import 'package:material_ui/material_ui.dart';
 import '../../support/fake_api.dart';
 import '../../support/fake_reader.dart';
 import '../../support/finders_read.dart';
+import '../../support/keypad.dart';
 import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
 
-// A pencilled number the reader suggests is kept with the photo, never sent
-// as its page.
+// A photo never leaves the phone without a number: the review screen's keypad
+// (pre-filled with what the reader offered) is the only other way to one.
 
 void main() {
   late FakeApi api;
@@ -24,8 +25,9 @@ void main() {
 
   Future<void> pump(
     WidgetTester tester,
-    FakeReader reader, {
+    FakeReader? reader, {
     GuardState? state,
+    bool desktop = false,
   }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -35,7 +37,7 @@ void main() {
       ReadTab(
         api: api,
         state: state,
-        desktop: false,
+        desktop: desktop,
         onChanged: () async {},
         reader: reader,
         photoSource: ({required camera}) async =>
@@ -128,7 +130,7 @@ void main() {
     expect(api.notes['start_IMG.jpg']?.page, 7);
   });
 
-  testWidgets('an illegible box asks for a tighter one; send anyway works', (
+  testWidgets('an illegible box asks for a tighter one; the keypad sends', (
     tester,
   ) async {
     final reader = FakeReader(fakeScan([]));
@@ -145,9 +147,12 @@ void main() {
     expect(pulse(), findsOneWidget);
     expect(anyRejection(), findsOneWidget);
     expect(rejected(RejectGlyph.noNumber), findsOneWidget);
-    await tester.tap(spoken('Send anyway'));
-    await settle(tester, 10);
-    expect(api.notes['start_IMG.jpg'], (page: null, box: null));
+    // No way to send without a number.
+    expect(spoken('Send anyway'), findsNothing);
+    await typeOnKeypad(tester, 8);
+    expect(api.notes['start_IMG.jpg']?.page, 8);
+    expect(api.notes['start_IMG.jpg']?.box, isNull);
+    expect(api.ocrs['start_IMG.jpg'], isNull);
   });
 
   testWidgets('retake discards the photo', (tester) async {
@@ -177,40 +182,18 @@ void main() {
     );
   });
 
-  testWidgets('an unreadable image goes up without a number, logged', (
+  testWidgets('an unreadable image asks for the number, logged', (
     tester,
   ) async {
     await pump(tester, FakeReader(null), state: readingState());
     await open(tester, spoken('Start reading'));
-    expect(api.notes['start_IMG.jpg'], (page: null, box: null));
+    expect(api.notes, isEmpty);
+    expect(find.byType(TextField), findsOneWidget);
     expect(await api.errors.diagnostics(), contains('unreadable image'));
-  });
-
-  testWidgets('a pencilled number is kept with the photo, not sent as page', (
-    tester,
-  ) async {
-    final reader = FakeReader(fakeScan([]).withPencil(29));
-    await pump(tester, reader, state: readingState());
-    await open(tester, spoken('Start reading'));
-    await tester.tap(spoken('Send anyway'));
+    await tester.enterText(find.byType(TextField), '12');
+    await tester.tap(spoken('Send the typed page number'));
     await settle(tester, 10);
-    expect(api.notes['start_IMG.jpg']?.page, isNull);
-    expect(api.pencils['start_IMG.jpg'], 29);
-  });
-
-  testWidgets('a number the reader chose carries no pencil suggestion', (
-    tester,
-  ) async {
-    final reader = FakeReader(
-      fakeScan([(51, (left: 17, top: 54, right: 23, bottom: 58))])
-          .withPencil(29),
-    );
-    await pump(tester, reader, state: readingState(openStart: 31));
-    await open(tester, spoken('Stop reading'));
-    await tester.tap(spoken('Send the page number'));
-    await settle(tester, 10);
-    expect(api.notes['stop_IMG.jpg']?.page, 51);
-    expect(api.pencils['stop_IMG.jpg'], isNull);
+    expect(api.notes['start_IMG.jpg']?.page, 12);
   });
 }
 

@@ -20,10 +20,10 @@ import 'package:material_ui/material_ui.dart';
 
 export 'package:book_guard_app/src/screens/failed_photo.dart';
 
-/// The failed photos, each with "box the number" (the PC reads it again
-/// inside the box) and "this should not fail" (a bug report: the photo,
-/// what both readers made of it and what it really shows, sent to the PC's
-/// `Reading/logs/reports/`), and "dismiss" / "clear all", which only hide
+/// The failed photos, each with "box the number" (review: tick, box or keypad,
+/// the PC takes that number) and "this should not fail" (a bug report: the
+/// photo, what both readers made of it and what it really shows, sent to the
+/// PC's `Reading/logs/reports/`), and "dismiss" / "clear all", which only hide
 /// cards on this device (a later failure with a new name still shows).
 class FailedPhotos extends StatefulWidget {
   /// Creates the section.
@@ -101,14 +101,16 @@ class _FailedPhotosState extends State<FailedPhotos> {
         ),
       ),
     );
-    final box = result?.box;
-    if (box == null || !mounted) return;
-    // The number the phone read in the box is the page; the PC takes it.
-    final response = await widget.api.sendQueued('box', {
-      'photo': failed.entry.name,
-      'box': [box.left, box.top, box.right, box.bottom],
-      'page': ?result?.page,
-    });
+    final (page, box) = (result?.page, result?.box);
+    if (page == null || !mounted) return;
+    final response = await widget.api.sendQueued(
+      box == null ? 'type_page' : 'box',
+      {
+        'photo': failed.entry.name,
+        'page': page,
+        if (box != null) 'box': [box.left, box.top, box.right, box.bottom],
+      },
+    );
     if (!mounted) return;
     showReply(context, response);
     unawaited(widget.onChanged());
@@ -229,8 +231,7 @@ class _FailedPhotosState extends State<FailedPhotos> {
         bytes: bytes,
         reported: (snap.data?.$2 ?? false) || _reported.contains(f.entry.name),
         onBox: f.pc != null && widget.reader != null ? () => _box(f) : null,
-        // No number read by the phone, nor by the PC (which may not have
-        // the photo yet: it can still sit in the outbox).
+        // No number from the phone or the PC (it may not have the photo yet).
         onType: f.entry.page == null && f.pc?.page == null
             ? () => unawaited(_type(f))
             : null,

@@ -7,6 +7,7 @@ import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
+import 'package:book_guard_app/src/screens/type_page_dialog.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:image_picker/image_picker.dart';
@@ -83,9 +84,22 @@ int? _lastEnd(GuardState? state, List<JournalEntry> journal) {
   return book.latestPage ?? (stops.isEmpty ? null : stops.last.page);
 }
 
-/// Reads the photo on the device and lets the reader confirm or box the
-/// number. Null if they chose to retake it; an empty result when there is
-/// no reader (desktop) or the image could not be read (logged).
+/// Asks for the page number on the keypad alone (no reader, or an image it
+/// could not read); null when cancelled.
+Future<ReviewResult?> _keypadOnly(BuildContext context) async {
+  final page = await showDialog<int>(
+    context: context,
+    builder: (_) => const TypePageDialog(),
+  );
+  return page == null ? null : ReviewResult(page: page);
+}
+
+/// Reads the photo on the device and lets the reader confirm, box or type
+/// the number. The result carries a number, or is null when they backed out
+/// (the photo stays on the phone), or is a retake: nothing is sent without a
+/// number. No reader (desktop) or an unreadable image (logged) goes straight
+/// to the keypad. A number that differs from the first one OCR offered is
+/// logged as a correction.
 Future<ReviewResult?> reviewPhoto(
   BuildContext context, {
   required PageReader? reader,
@@ -95,7 +109,7 @@ Future<ReviewResult?> reviewPhoto(
   required ErrorLog errors,
   String? attempt,
 }) async {
-  if (reader == null) return const ReviewResult();
+  if (reader == null) return await _keypadOnly(context);
   final scan = await reader.scan(bytes, context: pageContext);
   // What the phone read, before anyone confirms it: the step a photo was
   // once lost after (2026-10-23, "Page 252?" and then gone).
@@ -104,11 +118,11 @@ Future<ReviewResult?> reviewPhoto(
     'hits': scan == null ? null : [for (final h in scan.hits) h.value],
     'turn': ?scan?.turn, // which way up it read the page (a 9 vs a 6)
   });
+  if (!context.mounted) return null;
   if (scan == null) {
     unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));
-    return const ReviewResult();
+    return await _keypadOnly(context);
   }
-  if (!context.mounted) return null;
   final result = await Navigator.of(context).push<ReviewResult>(
     MaterialPageRoute(
       builder: (_) => PhotoReview(
@@ -119,10 +133,17 @@ Future<ReviewResult?> reviewPhoto(
       ),
     ),
   );
-  // A photo sent with no number keeps the pencilled one the reader saw, as a
-  // suggestion for the keypad only.
-  if (result == null || result.retake || result.page != null) return result;
-  return ReviewResult(box: result.box, pencilPage: scan.pencilPage);
+  final (ocr, page) = (result?.ocrPage, result?.page);
+  if (ocr != null && page != null && ocr != page) {
+    unawaited(
+      errors.log('reader', 'ocr corrected', {
+        'photo': fileName,
+        'ocr': ocr,
+        'page': page,
+      }),
+    );
+  }
+  return result;
 }
 
 /// How many photos taken here the PC has not read yet: an outbox glyph and

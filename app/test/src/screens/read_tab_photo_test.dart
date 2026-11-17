@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_read.dart';
+import '../../support/keypad.dart';
 import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
@@ -55,8 +56,7 @@ void main() {
     await pump(tester, photo: _photo('IMG_1.jpg'));
     expect(find.byIcon(Icons.photo_camera), findsOneWidget);
     expect(find.byIcon(Icons.play_arrow), findsOneWidget);
-    await tapVisible(tester, spoken('Start reading'));
-    await settle(tester);
+    await tapAndType(tester, spoken('Start reading'));
     expect(cameras, [true]);
     expect(api.photos, {'start_IMG_1.jpg': _bytes});
     // One green chip with the page the PC read.
@@ -85,8 +85,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.upload_file), findsOneWidget);
-    await tapVisible(tester, spoken('Stop reading'));
-    await settle(tester);
+    await tapAndType(tester, spoken('Stop reading'));
     expect(cameras, [false]);
     expect(api.photos.keys, ['stop_p.jpg']);
   });
@@ -94,16 +93,14 @@ void main() {
   testWidgets('a check page gets its own button and file name', (tester) async {
     await pump(tester, state: sampleState(), photo: _photo('c.jpg'));
     expect(find.text('12'), findsOneWidget);
-    await tapVisible(tester, find.byIcon(Icons.fact_check));
-    await settle(tester);
+    await tapAndType(tester, find.byIcon(Icons.fact_check));
     expect(api.photos.keys, ['check12_c.jpg']);
   });
 
   testWidgets('a photo the PC rejects wears its reject glyph', (tester) async {
     api.readings['start_x.jpg'] = reading(kind: 'other', page: null);
     await pump(tester, photo: _photo('x.jpg'));
-    await tapVisible(tester, spoken('Start reading'));
-    await settle(tester);
+    await tapAndType(tester, spoken('Start reading'));
     expect(rejected(RejectGlyph.notPage), findsOneWidget);
     expect(cueOf(CueKind.ok), findsNothing);
   });
@@ -112,8 +109,7 @@ void main() {
     tester,
   ) async {
     await pump(tester, photo: _photo('x.jpg'));
-    await tapVisible(tester, spoken('Start reading'));
-    await settle(tester);
+    await tapAndType(tester, spoken('Start reading'));
     expect(cueOf(CueKind.warn), findsOneWidget);
   });
 
@@ -132,8 +128,7 @@ void main() {
         photoSource: ({required camera}) async => _photo('s.jpg'),
       ),
     );
-    await tapVisible(tester, spoken('Start reading'));
-    await settle(tester);
+    await tapAndType(tester, spoken('Start reading'));
     expect(cueWith(Icons.cloud_upload), findsOneWidget);
     final button = tester.widget<FilledButton>(buttonSpoken('Start reading'));
     expect(button.onPressed, isNull);

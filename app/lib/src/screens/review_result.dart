@@ -3,19 +3,21 @@ import 'package:book_guard_app/src/page_number.dart';
 /// What the review screen settled on for one photo.
 class ReviewResult {
   /// Creates a result.
-  const new({this.page, this.box, this.retake = false, this.pencilPage});
+  const new({this.page, this.box, this.retake = false, this.ocrPage});
 
   /// "Retake": the photo is deliberately thrown away. (Leaving the screen
   /// any other way returns null and keeps it.)
   final bool retake;
 
-  /// The page number the phone read (null: let the PC decide).
+  /// The page number to send: read by the phone or typed on the keypad.
+  /// Null only for a retake.
   final int? page;
 
-  /// Where it is, in the stored file's pixels.
+  /// Where it is, in the stored file's pixels -- only when [page] is the
+  /// number printed there.
   final Box? box;
 
-  /// A pencilled number the reader suggests where no printed one was read:
-  /// kept with the photo only as a keypad pre-fill, never sent as its page.
-  final int? pencilPage;
+  /// The first number OCR offered on the review screen (null: none), kept
+  /// beside [page] so the PC can see where the phone was corrected.
+  final int? ocrPage;
 }

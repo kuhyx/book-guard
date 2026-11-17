@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import '../support/fake_api.dart';
 import '../support/fake_reader.dart';
 import '../support/finders_read.dart';
+import '../support/keypad.dart';
 import '../support/no_words.dart';
 import '../support/no_words_read_support.dart';
 import '../support/states.dart';
@@ -118,7 +119,7 @@ void main() {
         tab(state: sampleState(), desktop: true),
         scroll: false,
       );
-      await tester.tap(spoken('Stop reading'));
+      await tapAndType(tester, spoken('Stop reading'));
       await settle(tester, 10);
       expect(inSnack(cueOf(CueKind.error)), findsOneWidget);
       expectNoWords(tester, content: readContent);
