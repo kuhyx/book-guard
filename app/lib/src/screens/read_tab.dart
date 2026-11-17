@@ -163,19 +163,25 @@ class _ReadTabState extends State<ReadTab> {
       await api.errors.event('photo', 'discarded', attempt);
       return _show(PhotoStatus.discarded);
     }
+    // Every result but a retake carries a number; without one, keep the photo.
+    final page = review.page;
+    if (page == null) {
+      await api.errors.event('photo', 'review-left', attempt);
+      return _show(PhotoStatus.kept);
+    }
     await api.errors.event('photo', 'reviewed', {
       ...attempt,
-      'page': review.page,
+      'page': page,
       'boxed': review.box != null,
     });
     final name = await api.queuePhoto(
       capture.label,
       capture.fileName,
       bytes,
-      page: review.page,
+      page: page,
       box: review.box,
+      ocrPage: review.ocrPage,
       isbn: widget.state?.book?.isbn,
-      pencilPage: review.pencilPage,
     );
     await api.captures.drop(capture);
     await api.errors.event('photo', 'queued', {...attempt, 'photo': name});
@@ -183,7 +189,7 @@ class _ReadTabState extends State<ReadTab> {
       api,
       name: name,
       attempt: capture.id,
-      page: review.page,
+      page: page,
       onSent: _show,
     );
     if (!mounted) return;

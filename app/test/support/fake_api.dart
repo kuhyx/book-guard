@@ -21,6 +21,9 @@ class FakeApi extends GuardApi {
   /// The pencil suggestion kept with each queued photo.
   final Map<String, int?> pencils = {};
 
+  /// The number OCR offered (the sidecar's `ocr_page`) per queued photo.
+  final Map<String, int?> ocrs = {};
+
   /// What [fetchState] returns.
   GuardState? state;
 
@@ -96,7 +99,7 @@ class FakeApi extends GuardApi {
   }
 
   /// What each queued photo's sidecar said, by name.
-  final Map<String, ({int? page, Box? box})> notes = {};
+  final Map<String, ({int page, Box? box})> notes = {};
 
   /// How many times the outbox was flushed.
   int flushes = 0;
@@ -112,8 +115,9 @@ class FakeApi extends GuardApi {
     String label,
     String fileName,
     Uint8List bytes, {
-    int? page,
+    required int page,
     Box? box,
+    int? ocrPage,
     DateTime? takenAt,
     String? isbn,
     int? pencilPage,
@@ -124,6 +128,7 @@ class FakeApi extends GuardApi {
     photos[name] = bytes;
     notes[name] = (page: page, box: box);
     pencils[name] = pencilPage;
+    ocrs[name] = ocrPage;
     return name;
   }
 

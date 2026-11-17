@@ -89,17 +89,17 @@ void main() {
         box: (left: 1, top: 2, right: 3, bottom: 4),
         takenAt: DateTime.utc(2026, 10, 3),
       );
-      await api.queuePhoto('stop', 'IMG2.jpg', _b('jpeg2'));
+      await api.queuePhoto('stop', 'IMG2.jpg', _b('jpeg2'), page: 52);
       expect(name, 'start_IMG_1.jpg');
       await api.flush();
       expect(jsonDecode(share.text('Reading/inbox/start_IMG_1.jpg.json')!), {
         'page': 51,
         'box': [1, 2, 3, 4],
       });
-      expect(
-        share.files.containsKey('Reading/inbox/stop_IMG2.jpg.json'),
-        isFalse,
-      );
+      // No `ocr_page` when the phone offered no number to correct.
+      expect(jsonDecode(share.text('Reading/inbox/stop_IMG2.jpg.json')!), {
+        'page': 52,
+      });
       final (first, second) = switch (await api.journal.load()) {
         [final a, final b] => (a, b),
         _ => throw StateError('two entries expected'),
@@ -108,13 +108,22 @@ void main() {
         (first.label, first.page, first.sha),
         ('start', 51, photoSha(_b('jpeg'))),
       );
-      expect(second.page, isNull);
+      expect(second.page, 52);
       expect(await api.localPhoto(name), _b('jpeg'));
     });
 
+    test('the sidecar names the number OCR offered as ocr_page', () async {
+      await api.queuePhoto('start', 'a.jpg', _b('a'), page: 29, ocrPage: 2);
+      await api.flush();
+      expect(jsonDecode(share.text('Reading/inbox/start_a.jpg.json')!), {
+        'page': 29,
+        'ocr_page': 2,
+      });
+    });
+
     test('a snapshot listing a photo marks it read for good', () async {
-      await api.queuePhoto('start', 'a.jpg', _b('a'));
-      await api.queuePhoto('stop', 'b.jpg', _b('b'));
+      await api.queuePhoto('start', 'a.jpg', _b('a'), page: 1);
+      await api.queuePhoto('stop', 'b.jpg', _b('b'), page: 2);
       share.putText(
         'Reading/state.json',
         jsonEncode({
@@ -182,7 +191,7 @@ void main() {
 
     test('only the newest photos are kept on the device', () async {
       for (var i = 0; i < keptPhotos + 2; i++) {
-        await api.queuePhoto('start', 'p$i.jpg', _b('$i'));
+        await api.queuePhoto('start', 'p$i.jpg', _b('$i'), page: i + 1);
       }
       expect(await store.list('photos/'), hasLength(keptPhotos));
       expect(await api.localPhoto('start_p0.jpg'), isNull);

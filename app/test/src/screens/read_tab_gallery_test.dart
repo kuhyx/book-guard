@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../support/fake_api.dart';
 import '../../support/finders_read.dart';
+import '../../support/keypad.dart';
 import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
@@ -83,8 +84,7 @@ void main() {
   testWidgets('an upload failure is shown, not thrown', (tester) async {
     api.uploadError = shareDown();
     await pump(tester, photo: _photo('x.jpg'));
-    await tapVisible(tester, spoken('Start reading'));
-    await settle(tester);
+    await tapAndType(tester, spoken('Start reading'));
     expect(cueOf(CueKind.error), findsOneWidget);
     expect(changed, 1);
   });

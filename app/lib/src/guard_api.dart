@@ -170,30 +170,33 @@ class GuardApi {
   }
 
   /// Stores a photo on the device and queues it (sidecar note first) for the
-  /// PC's inbox; [page], [box] are what the phone read, [isbn] the book it
-  /// is for, [pencilPage] a pencilled number kept only as a keypad pre-fill.
+  /// PC's inbox. [page] is the number sent (the PC takes it as is, so a photo
+  /// never goes without one), [box] where it is printed when the phone read
+  /// it, [ocrPage] the number OCR offered on the review screen (the sidecar's
+  /// `ocr_page`, omitted when it offered none), [isbn] the book it is for,
+  /// [pencilPage] a pencilled number kept only as a keypad pre-fill.
   /// Returns its upload name; call [outbox] `flush` to send.
   Future<String> queuePhoto(
     String label,
     String fileName,
     Uint8List bytes, {
-    int? page,
+    required int page,
     Box? box,
+    int? ocrPage,
     DateTime? takenAt,
     String? isbn,
     int? pencilPage,
   }) async {
     final name = safeName('${label}_$fileName');
-    if (page != null || box != null) {
-      final note = {
-        'page': ?page,
-        if (box != null) 'box': [box.left, box.top, box.right, box.bottom],
-      };
-      await outbox.put(
-        'inbox/$name.json',
-        Uint8List.fromList(utf8.encode(jsonEncode(note))),
-      );
-    }
+    final note = {
+      'page': page,
+      if (box != null) 'box': [box.left, box.top, box.right, box.bottom],
+      'ocr_page': ?ocrPage,
+    };
+    await outbox.put(
+      'inbox/$name.json',
+      Uint8List.fromList(utf8.encode(jsonEncode(note))),
+    );
     await outbox.put('inbox/$name', bytes);
     await store.write('photos/$name', bytes);
     await journal.add(
