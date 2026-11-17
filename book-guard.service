@@ -1,6 +1,9 @@
 [Unit]
 Description=Lock the PC while this month's reading is behind the pace line
 After=graphical-session.target
+# A crash can never loop thousands of times (9177 restarts on 2026-11-17).
+StartLimitIntervalSec=600
+StartLimitBurst=10
 
 [Service]
 Type=simple

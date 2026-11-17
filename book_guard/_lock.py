@@ -24,6 +24,7 @@ from gatelock import (
     LockWindow,
     assert_not_under_pytest,
     wait_for_turn,
+    wait_for_x_server,
 )
 
 from book_guard import _ledger, _pictos
@@ -230,6 +231,11 @@ def run_gate(paths: Paths, *, production: bool, today: date | None = None) -> in
     if not _ledger.key_usable(paths.key_file):
         _logger.error("integrity key %s unreadable -- gate not armed", paths.key_file)
         return 0
+    if production:
+        # No X at start is a wait, not a TclError crash loop (~15,700 restarts,
+        # 2026-11-17). Waits with no clock, before deciding, so the verdict is
+        # the one after the display is up.
+        wait_for_x_server()
     auto_grant(paths, today=today)
     snap = snapshot(paths, today=today)
     write_next_file(paths, snap)
