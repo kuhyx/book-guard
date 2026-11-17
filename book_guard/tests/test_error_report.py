@@ -56,7 +56,7 @@ class _FakeParser:
 def test_lock_window_watches_stalls_once_installed(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A lock window built after install reports its own freezes."""
+    """A lock window run after install reports its own freezes."""
     install_lock_fakes(monkeypatch)
     watch = MagicMock()
     monkeypatch.setattr(_lock, "watch_stalls", watch)
@@ -64,6 +64,8 @@ def test_lock_window_watches_stalls_once_installed(
     gate = _lock.BookGuardLock(
         bg_paths, snapshot(bg_paths, today=LOCKED_DAY), production=False
     )
+    watch.assert_not_called()  # queueing for the screen is no stall
+    gate.run()
     watch.assert_called_once_with(gate.root, _error_report.SLOT.reporter)
 
 
@@ -76,5 +78,5 @@ def test_lock_window_without_reporter_watches_nothing(
     monkeypatch.setattr(_lock, "watch_stalls", watch)
     _lock.BookGuardLock(
         bg_paths, snapshot(bg_paths, today=LOCKED_DAY), production=False
-    )
+    ).run()
     watch.assert_not_called()

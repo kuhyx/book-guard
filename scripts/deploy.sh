@@ -4,6 +4,9 @@
 #
 #   1. The gate daemon runs from ~/src/book-guard: fast-forward it (fails on
 #      a dirty tree, never stashes kuhy's work).
+#   1b. Reinstall it into the system python the units run (pinned
+#      dependencies such as gatelock move with pyproject), then import the
+#      CLI with that interpreter.
 #   2. The desktop app: scripts/install_desktop.sh (web build + wrapper).
 #   3. The phone: a release APK through phone_deploy.sh (adb install -r,
 #      never an uninstall: app data survives). A phone out of reach (exit 30)
@@ -30,6 +33,11 @@ git -C "${LIVE}" fetch --quiet origin
 git -C "${LIVE}" pull --ff-only --quiet origin main
 [[ "$(git -C "${LIVE}" rev-parse HEAD)" == "$(git -C "${LIVE}" rev-parse origin/main)" ]] ||
   die "${LIVE} is not at origin/main"
+
+/usr/bin/python3 -m pip install --user --break-system-packages -q -e "${LIVE}" ||
+  die "pip install into the system python failed"
+/usr/bin/python3 -c 'import book_guard._cli' ||
+  die "the units' python cannot import book_guard"
 
 "${LIVE}/scripts/install_desktop.sh"
 [[ -s "${BUNDLE}" ]] || die "desktop bundle missing: ${BUNDLE}"

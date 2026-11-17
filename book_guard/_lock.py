@@ -83,8 +83,6 @@ class BookGuardLock:
             rank=self._rank,
         )
         self.root = GateRoot()
-        if _error_report.SLOT.reporter is not None:
-            watch_stalls(self.root, _error_report.SLOT.reporter)
         self.root.title("book_guard")
         self._vars = make_vars(self.root)
         arbiter = Arbiter(
@@ -226,7 +224,13 @@ class BookGuardLock:
             self._lock.close()
 
     def run(self) -> None:
-        """Hand control to Tk until the lock releases."""
+        """Hand control to Tk until the lock releases.
+
+        The stall watch starts here, not at ``GateRoot()``: ``wait_for_turn``
+        sleeps outside Tk, and that queueing is not a frozen window.
+        """
+        if _error_report.SLOT.reporter is not None:
+            watch_stalls(self.root, _error_report.SLOT.reporter)
         self._lock.run()
 
 
