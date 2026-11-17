@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Final, TextIO
 from book_guard import (
     _ask_cli,
     _ebook_cli,
+    _error_report,
     _inclusive,
     _index_cli,
     _library_cli,
@@ -245,6 +246,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse ``argv`` and run one command."""
     logging.basicConfig(level=logging.INFO, format="book-guard: %(message)s")
+    _error_report.install()
     args = _parser().parse_args(argv)
     handler: Callable[[argparse.Namespace], int] = args.handler
     return handler(args)

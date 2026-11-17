@@ -188,6 +188,14 @@ In a Claude session, `/book-check` relays a summary to the same grader
 (Haiku-gated by a hook; `keep model` to override), and the read-only
 `book-guard` MCP server offers `get_status`, `search_book`, `session_text`.
 
+## Error reports
+
+Every uncaught, thread or Tk callback error, and any freeze of a lock window
+over 1 s, goes to the shared app-errors spool through `gatelock.error_report`
+(`book_guard/_error_report.py`, installed by the CLI). The PC's `app-errors`
+timer turns each one into a ticket on the todoImplementer board (kuhyx/utils
+`DOCS-app-errors.md`). Nothing shows on screen.
+
 ## Install
 
 ```bash

@@ -32,11 +32,12 @@ import sys
 import types
 from typing import TYPE_CHECKING, Final
 
+from gatelock import error_report
 import numpy as np
 import pytest
 import sickdays
 
-from book_guard import _focus, _http, _openlibrary, _paths
+from book_guard import _error_report, _focus, _http, _openlibrary, _paths
 from book_guard._paths import Paths
 from scripts import check_onnxruntime_wheel
 
@@ -142,6 +143,23 @@ def _fake_sick_pool(monkeypatch: pytest.MonkeyPatch, pool: SickPool) -> None:
     # real file (the writers resolve their paths in sickdays' own modules).
     for writer in ("add_sick_day", "set_kept_lockers", "remove_sick_day", "sync"):
         monkeypatch.setattr(f"sickdays.{writer}", no_pool_write)
+
+
+@pytest.fixture(autouse=True)
+def _no_error_hooks(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Keep the CLI from hooking the test process's errors into the real spool.
+
+    gatelock installs its hooks once per process: a reporter already in
+    ``INSTALLED`` makes ``install`` return it untouched, so no hook is set and
+    every report lands in this test's folder.
+    """
+    reporter = error_report.Reporter(
+        app=_error_report.APP,
+        repo=_error_report.REPO,
+        spool=tmp_path / "app-errors-spool",
+    )
+    monkeypatch.setattr(error_report.INSTALLED, "reporter", reporter)
+    monkeypatch.setattr(_error_report.SLOT, "reporter", None)
 
 
 @pytest.fixture(autouse=True)

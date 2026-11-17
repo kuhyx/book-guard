@@ -22,8 +22,9 @@ from gatelock import (
     wait_for_turn,
     wait_for_x_server,
 )
+from gatelock.error_report import watch_stalls
 
-from book_guard import _ledger, _pictos
+from book_guard import _error_report, _ledger, _pictos
 from book_guard._actions import ESCAPE_NO_ROOM, ESCAPE_WRONG, escape_today, process
 from book_guard._autogrant import auto_grant
 from book_guard._claude import ClaudeUnavailableError
@@ -82,6 +83,8 @@ class BookGuardLock:
             rank=self._rank,
         )
         self.root = GateRoot()
+        if _error_report.SLOT.reporter is not None:
+            watch_stalls(self.root, _error_report.SLOT.reporter)
         self.root.title("book_guard")
         self._vars = make_vars(self.root)
         arbiter = Arbiter(
