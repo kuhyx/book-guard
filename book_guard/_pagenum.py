@@ -80,8 +80,8 @@ class Context:
     """The book's last page, when known (:data:`LAST_PAGE_SLACK` more is let in)."""
     hint: int | None = None
     """What the phone read. When set it IS the page: ``_reader.read`` takes
-    it without consulting anything below -- these rules are the fallback
-    for photos the phone did not read."""
+    it without consulting anything below -- these rules are only used by
+    ``scripts/page_truth.py``; the inbox never runs them."""
 
 
 @dataclass(frozen=True)

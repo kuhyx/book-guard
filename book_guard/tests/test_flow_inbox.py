@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+import json
 import os
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,7 @@ from book_guard import _inbox, _photos
 from book_guard._books import Chapter
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._photo import PhotoFile
+from book_guard._photo_context import sidecar_path
 from book_guard._photos import REJECTED
 from book_guard._vision import ISBN, PAGE, Reading
 from book_guard.tests._flow_helpers import T0, sha
@@ -22,18 +24,27 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from book_guard._pagenum import Box, Context
+    from book_guard._pagenum import Context
     from book_guard._paths import Paths
 
 UPLOADED = T0 + timedelta(minutes=30)
 NOW = UPLOADED.timestamp() + 60
 
 
-def _drop(paths: Paths, name: str, *, mtime: float = UPLOADED.timestamp()) -> Path:
+def _drop(
+    paths: Paths,
+    name: str,
+    *,
+    mtime: float = UPLOADED.timestamp(),
+    page: int | None = None,
+) -> Path:
+    """An inbox photo; ``page`` is the number its sidecar note carries."""
     paths.inbox.mkdir(parents=True, exist_ok=True)
     path = paths.inbox / name
     path.write_bytes(name.encode())
     os.utime(path, (mtime, mtime))
+    if page is not None:
+        sidecar_path(path).write_text(json.dumps({"page": page}), encoding="utf-8")
     return path
 
 
@@ -47,8 +58,8 @@ def _photo(name: str, taken: datetime | None = T0) -> PhotoFile:
     return PhotoFile(sha=sha(name), taken_at=taken, jpeg_b64=name)
 
 
-def _page_reader(page: int = 12) -> Callable[[Path, Context, Box | None], Reading]:
-    return lambda _path, _context, _box: Reading(
+def _page_reader(page: int = 12) -> Callable[[Path, Context], Reading]:
+    return lambda _path, _context: Reading(
         kind=PAGE, page_number=page, isbn=None, text="words"
     )
 
@@ -62,7 +73,7 @@ def test_missing_inbox_reads_nothing(bg_paths: Paths) -> None:
 def test_reads_a_page_and_files_it_away(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _drop(bg_paths, "a.jpg")
+    _drop(bg_paths, "a.jpg", page=12)
     _fake_open(monkeypatch, {"a.jpg": _photo("a")})
     result = _inbox.process_inbox(bg_paths, reader=_page_reader(), now=NOW)
     (record,) = result.read
@@ -115,7 +126,7 @@ def test_duplicate_is_filed_without_reading(
     _drop(bg_paths, "again.jpg")
     _fake_open(monkeypatch, {"again.jpg": _photo("a")})
 
-    def no_read(_path: Path, _context: Context, _box: Box | None) -> Reading:
+    def no_read(_path: Path, _context: Context) -> Reading:
         raise AssertionError
 
     result = _inbox.process_inbox(bg_paths, reader=no_read, now=NOW)
@@ -152,7 +163,7 @@ def test_a_week_old_photo_still_counts(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The phone queues offline: six days in the outbox is not a rejection."""
-    _drop(bg_paths, "late.jpg")
+    _drop(bg_paths, "late.jpg", page=12)
     _fake_open(monkeypatch, {"late.jpg": _photo("late", UPLOADED - timedelta(days=6))})
     (record,) = _inbox.process_inbox(bg_paths, reader=_page_reader(), now=NOW).read
     assert record.status != REJECTED
@@ -184,15 +195,12 @@ def test_isbn_collection(bg_paths: Paths, monkeypatch: pytest.MonkeyPatch) -> No
     _drop(bg_paths, "a.jpg", mtime=UPLOADED.timestamp() - 2)
     _drop(bg_paths, "b.jpg")
     _fake_open(monkeypatch, {"a.jpg": _photo("a"), "b.jpg": _photo("b")})
-    readings = {
-        "a": Reading(kind=ISBN, page_number=None, isbn="9780140449136", text=""),
-        "b": Reading(kind=ISBN, page_number=None, isbn=None, text=""),
-    }
+    barcodes = {"a": "9780140449136", "b": None}
     result = _inbox.process_inbox(
-        bg_paths, reader=lambda path, _context, _box: readings[path.stem], now=NOW
+        bg_paths, barcode=lambda path: barcodes[path.stem], now=NOW
     )
     assert result.new_isbns == ["9780140449136"]
-    assert len(result.read) == 2
+    assert [r.kind for r in result.read] == [ISBN, "other"]
 
 
 def test_real_jpeg_with_exif_default_clock(bg_paths: Paths) -> None:
@@ -204,6 +212,7 @@ def test_real_jpeg_with_exif_default_clock(bg_paths: Paths) -> None:
     exif[0x0132] = taken.astimezone().strftime("%Y:%m:%d %H:%M:%S")
     path = bg_paths.inbox / "real.jpg"
     image.save(path, exif=exif)
+    sidecar_path(path).write_text('{"page": 7}', encoding="utf-8")
     old = datetime.now(tz=UTC).timestamp() - 60
     os.utime(path, (old, old))
     (record,) = _inbox.process_inbox(bg_paths, reader=_page_reader(7)).read

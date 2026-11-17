@@ -14,14 +14,18 @@ Three outcomes per file, and only the first two move it out of the inbox:
   photo while Claude was unreachable. Left where it is, nothing recorded,
   retried next trigger.
 
-Page photos never wait for Claude: a page number the phone read (its
-sidecar note) is taken as is, and only a photo without one has its number
-read on this PC (:mod:`book_guard._reader`).
+Page photos never wait for Claude: the page number the phone sent (its
+sidecar note) is taken as is and is the only one there is -- the PC never
+reads a page number. A photo without one is rejected as ``needs number``
+(it then shows in the phone's failed photos, where the keypad re-sends it);
+only a barcode zbar decodes still makes it an ISBN photo. When the note's
+``ocr_page`` differs from its ``page``, the OCR was corrected and the photo
+becomes a ``scripts/page_truth.py`` row (:mod:`book_guard._page_truth`).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 import logging
 import time
@@ -29,11 +33,13 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard import _ebook_sessions, _ledger, _photos
 from book_guard._claude import ClaudeUnavailableError
-from book_guard._constants import MAX_UPLOAD_DELAY, UPLOAD_SETTLE_SECONDS
+from book_guard._constants import UPLOAD_SETTLE_SECONDS
 from book_guard._errlog import log_error
+from book_guard._inbox_record import Pass, classify, contents_record
+from book_guard._ocr import barcode_isbn
 from book_guard._photo import open_photo
-from book_guard._photo_context import context_for, read_sidecar, sidecar_path
-from book_guard._photos import OK, REJECTED, PhotoRecord
+from book_guard._photo_context import sidecar_path
+from book_guard._photos import REJECTED, PhotoRecord
 from book_guard._reader import read
 from book_guard._thumbs import make_thumb
 from book_guard._toc import TOC_PREFIX, read_toc
@@ -44,14 +50,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from book_guard._books import Chapter
-    from book_guard._ledger import Ledger
-    from book_guard._pagenum import Box, Context
+    from book_guard._inbox_record import BarcodeReader, Reader
     from book_guard._paths import Paths
-    from book_guard._photo import PhotoFile
-    from book_guard._sessions import Session
-    from book_guard._vision import Reading
 
-    Reader = Callable[[Path, Context, Box | None], Reading]
     TocReader = Callable[[Path, str], tuple[Chapter, ...]]
 
 _logger: Final = logging.getLogger(__name__)
@@ -97,77 +98,11 @@ def _file_away(path: Path, paths: Paths, sha: str, rotation: int = 0) -> None:
     make_thumb(target, paths.thumbs, rotation)
 
 
-def _rejected(
-    photo: PhotoFile, path: Path, uploaded: datetime, reason: str
-) -> PhotoRecord:
-    taken = photo.taken_at.isoformat() if photo.taken_at else ""
-    return PhotoRecord(
-        sha=photo.sha,
-        name=path.name,
-        taken_at=taken,
-        uploaded_at=uploaded.isoformat(),
-        kind="other",
-        status=REJECTED,
-        reason=reason,
-    )
-
-
-def _contents_record(
-    photo: PhotoFile, path: Path, uploaded: datetime, chapters: tuple[Chapter, ...]
-) -> PhotoRecord:
-    """A contents photo: not session evidence, so no clock checks."""
-    return PhotoRecord(
-        sha=photo.sha,
-        name=path.name,
-        taken_at=photo.taken_at.isoformat() if photo.taken_at else "",
-        uploaded_at=uploaded.isoformat(),
-        kind="toc",
-        text="\n".join(f"{c.start}\t{c.title}" for c in chapters),
-    )
-
-
-def _record(
-    photo: PhotoFile,
-    path: Path,
-    uploaded: datetime,
-    reader: Reader,
-    known: tuple[dict[str, PhotoRecord], Ledger, list[Session]],
-) -> tuple[PhotoRecord, int]:
-    """Classify one photo against the ``known`` photo cache, ledger, app sessions.
-
-    Returns the record and the turn that makes it upright (for the thumb).
-    """
-    if photo.taken_at is None:
-        return _rejected(photo, path, uploaded, "no EXIF capture time"), 0
-    if uploaded - photo.taken_at > MAX_UPLOAD_DELAY:
-        reason = "uploaded more than 7 days after it was taken"
-        return _rejected(photo, path, uploaded, reason), 0
-    records, ledger, app = known
-    note = read_sidecar(path)
-    context = replace(
-        context_for(path.name, photo.taken_at, records, ledger, app), hint=note.hint
-    )
-    reading = reader(path, context, note.box)
-    record = PhotoRecord(
-        sha=photo.sha,
-        name=path.name,
-        taken_at=photo.taken_at.isoformat(),
-        uploaded_at=uploaded.isoformat(),
-        kind=reading.kind,
-        page=reading.page_number,
-        isbn=reading.isbn,
-        text=reading.text,
-        status=REJECTED if reading.reason else OK,
-        reason=reading.reason,
-        pencil_page=reading.pencil_page,
-    )
-    return record, reading.rotation
-
-
 def process_inbox(
     paths: Paths,
     *,
     reader: Reader = read,
+    barcode: BarcodeReader = barcode_isbn,
     toc_reader: TocReader = read_toc,
     now: float | None = None,
 ) -> InboxResult:
@@ -177,10 +112,12 @@ def process_inbox(
     and each one left in the inbox is retried intact.
     """
     clock = time.time() if now is None else now
-    records = _photos.load(paths.photos)
     # The ledger and the in-app sessions do not change during a pass.
-    known = (
-        records,
+    known = Pass(
+        paths,
+        reader,
+        barcode,
+        _photos.load(paths.photos),
         _ledger.load(paths.ledger, paths.key_file),
         _ebook_sessions.sessions(paths),
     )
@@ -192,7 +129,7 @@ def process_inbox(
         if photo is None:
             result.deferred.append(path.name)
             continue
-        if photo.sha in records:
+        if photo.sha in known.records:
             _file_away(path, paths, photo.sha)
             result.duplicates += 1
             continue
@@ -202,15 +139,15 @@ def process_inbox(
         try:
             if path.name.startswith(TOC_PREFIX):
                 chapters = toc_reader(path, photo.jpeg_b64)
-                record = _contents_record(photo, path, uploaded, chapters)
+                record = contents_record(photo, path, uploaded, chapters)
             else:
-                record, rotation = _record(photo, path, uploaded, reader, known)
+                record, rotation = classify(photo, path, uploaded, known)
         except ClaudeUnavailableError as exc:
             _logger.warning("could not read %s (%s); retrying later", path.name, exc)
             result.deferred.append(path.name)
             break
-        records[photo.sha] = record
-        _photos.save(paths.photos, records)
+        known.records[photo.sha] = record
+        _photos.save(paths.photos, known.records)
         if record.status == REJECTED:
             log_error(
                 paths,

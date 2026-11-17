@@ -10,8 +10,10 @@
    photo was taken for (:mod:`book_guard._sparse` takes a second look when
    the page offers none, e.g. a number set between ornaments, and
    :mod:`book_guard._margin` a third, for a lone patch of ink in the margin:
-   a tiny corner number, a pencilled one). This is the
-   fallback for photos with no phone reading (the desktop web app has no OCR).
+   a tiny corner number, a pencilled one). The inbox no longer uses this:
+   a photo with no phone number is rejected ("needs number"), never read
+   here. It stays as the measured reference for ``scripts/page_truth.py``
+   and its labelled photos.
 3. A page whose number cannot be pinned down carries the reason, so the
    app can ask for the number to be boxed instead of the photo vanishing.
 """
@@ -99,7 +101,7 @@ def read(path: Path, context: Context, box: Box | None = None) -> Reading:
 
 
 def _pc_reading(path: Path, context: Context, box: Box | None) -> Reading:
-    """The fallback: no number from the phone, so the PC finds one itself."""
+    """No number from the phone: the PC finds one itself (page_truth only)."""
     isbn = barcode_isbn(path)
     if isbn is not None:
         return Reading(kind=ISBN, page_number=None, isbn=isbn, text="")

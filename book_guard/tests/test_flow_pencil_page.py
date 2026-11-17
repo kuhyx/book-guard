@@ -8,28 +8,26 @@ becomes ``page``. The app's keypad pre-fills from ``pencil_page`` in
 
 from __future__ import annotations
 
+from dataclasses import replace
 import json
-import os
 from typing import TYPE_CHECKING
 
 from PIL import Image
 
-from book_guard import _inbox, _photos, _reader, _reread, _state_json
+from book_guard import _photos, _reader, _reread, _state_json
 from book_guard._app_handlers import HANDLERS
 from book_guard._ocr import Scan
 from book_guard._pagenum import Context
-from book_guard._photo import PhotoFile
 from book_guard._photos import OK, REJECTED
 from book_guard._requests import handle_requests
 from book_guard._vision import OTHER, PAGE, Reading
-from book_guard.tests._flow_helpers import T0, rec, seed_photos, sha
+from book_guard.tests._flow_helpers import T0, rec, seed_photos
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import pytest
 
-    from book_guard._pagenum import Box
     from book_guard._paths import Paths
 
 
@@ -83,28 +81,21 @@ def test_the_reader_does_not_ask_for_pencil_when_a_number_was_found(
     assert (reading.kind, reading.page_number, reading.pencil_page) == (PAGE, 7, None)
 
 
-def _inbox_one(
-    paths: Paths, monkeypatch: pytest.MonkeyPatch, pencil: int | None
-) -> str:
-    paths.inbox.mkdir(parents=True, exist_ok=True)
-    name = "start_a.jpg"
-    (paths.inbox / name).write_bytes(b"jpeg")
-    photo = PhotoFile(sha=sha(name), taken_at=T0, jpeg_b64=name)
-    monkeypatch.setattr(_inbox, "open_photo", lambda _p: photo)
-    monkeypatch.setattr(_inbox, "make_thumb", lambda *_a: None)
-
-    def read(_path: Path, _context: Context, _box: Box | None) -> Reading:
-        return _reading(pencil)
-
-    os.utime(paths.inbox / name, (T0.timestamp(), T0.timestamp()))
-    _inbox.process_inbox(paths, reader=read, now=T0.timestamp() + 60)
-    return name
+def _inbox_one(paths: Paths, pencil: int | None) -> str:
+    """A rejected photo as the cache holds it, with the phone's pre-fill."""
+    record = replace(
+        rec("start_a", None, T0, kind=OTHER, status=REJECTED), pencil_page=pencil
+    )
+    seed_photos(paths, record)
+    paths.processed.mkdir(parents=True, exist_ok=True)
+    (paths.processed / f"{record.sha[:12]}-{record.name}").write_bytes(b"jpeg")
+    return record.name
 
 
 def test_the_suggestion_rides_on_a_rejected_record_never_as_page(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _inbox_one(bg_paths, monkeypatch, 29)
+    _inbox_one(bg_paths, 29)
     (record,) = _photos.load(bg_paths.photos).values()
     assert (record.kind, record.page, record.status) == (OTHER, None, REJECTED)
     assert record.pencil_page == 29
@@ -113,7 +104,7 @@ def test_the_suggestion_rides_on_a_rejected_record_never_as_page(
 def test_no_suggestion_is_none_and_old_caches_load(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _inbox_one(bg_paths, monkeypatch, None)
+    _inbox_one(bg_paths, None)
     (record,) = _photos.load(bg_paths.photos).values()
     assert record.pencil_page is None
     raw = json.loads(bg_paths.photos.read_text())
@@ -125,7 +116,7 @@ def test_no_suggestion_is_none_and_old_caches_load(
 def test_state_json_publishes_the_suggestion_on_the_photo_entry(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _inbox_one(bg_paths, monkeypatch, 29)
+    _inbox_one(bg_paths, 29)
     entry = _state_json._photos(bg_paths)[0]
     assert (entry["page"], entry["status"], entry["pencil_page"]) == (
         None,
@@ -137,12 +128,12 @@ def test_state_json_publishes_the_suggestion_on_the_photo_entry(
 def test_confirming_the_suggestion_is_the_normal_typed_request(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    name = _inbox_one(bg_paths, monkeypatch, 29)
+    name = _inbox_one(bg_paths, 29)
     (record,) = _photos.load(bg_paths.photos).values()
     filed = bg_paths.processed / f"{record.sha[:12]}-{name}"
     assert filed.is_file()
 
-    def read(_path: Path, context: Context, _box: Box | None = None) -> Reading:
+    def read(_path: Path, context: Context) -> Reading:
         return Reading(PAGE, context.hint, None, "words")
 
     monkeypatch.setattr(_reread, "read", read)
@@ -162,11 +153,11 @@ def test_a_box_reread_keeps_or_clears_the_suggestion(
     bg_paths.processed.mkdir(parents=True, exist_ok=True)
     (bg_paths.processed / f"{record.sha[:12]}-{record.name}").write_bytes(b"jpeg")
 
-    def read(_path: Path, _context: Context, _box: Box | None = None) -> Reading:
+    def read(_path: Path, _context: Context) -> Reading:
         return _reading(12)
 
     monkeypatch.setattr(_reread, "read", read)
-    request = {"photo": "start_b.jpg", "box": [1, 2, 30, 40]}
+    request = {"photo": "start_b.jpg", "box": [1, 2, 30, 40], "page": 7}
     assert _reread.box_photo(bg_paths, request).code == "no_page"
     (kept,) = _photos.load(bg_paths.photos).values()
     assert kept.pencil_page == 12

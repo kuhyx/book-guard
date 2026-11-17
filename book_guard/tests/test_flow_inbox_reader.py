@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
     import pytest
 
-    from book_guard._pagenum import Box
     from book_guard._paths import Paths
 
 UPLOADED = T0 + timedelta(minutes=30)
@@ -41,25 +40,25 @@ def _fake_open(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
     monkeypatch.setattr(_inbox, "open_photo", lambda _path: photo)
 
 
-def test_sidecar_box_and_hint_reach_the_reader(
+def test_sidecar_hint_reaches_the_reader_and_the_box_does_not(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     photo = _drop(bg_paths, "check19_a.jpg")
     note = sidecar_path(photo)
     note.write_text('{"page": 19, "box": [1, 2, 30, 40]}', encoding="utf-8")
     _fake_open(monkeypatch, "check19_a.jpg")
-    seen: list[tuple[Context, Box | None]] = []
+    seen: list[Context] = []
     turns: list[int] = []
     monkeypatch.setattr(
         _inbox, "make_thumb", lambda _filed, _thumbs, turn: turns.append(turn)
     )
 
-    def reader(_path: Path, context: Context, box: Box | None) -> Reading:
-        seen.append((context, box))
+    def reader(_path: Path, context: Context) -> Reading:
+        seen.append(context)
         return Reading(PAGE, 19, None, "words", rotation=90)
 
     (record,) = _inbox.process_inbox(bg_paths, reader=reader, now=NOW).read
-    assert seen == [(Context(expected=19, hint=19), (1, 2, 30, 40))]
+    assert seen == [Context(expected=19, hint=19)]
     assert record.page == 19
     assert turns == [90]  # the thumbnail is turned as the page was read
     assert not note.exists()
@@ -68,10 +67,11 @@ def test_sidecar_box_and_hint_reach_the_reader(
 def test_reader_reason_rejects_and_is_logged(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _drop(bg_paths, "start_a.jpg")
+    note = sidecar_path(_drop(bg_paths, "start_a.jpg"))
+    note.write_text('{"page": 3}', encoding="utf-8")
     _fake_open(monkeypatch, "start_a.jpg")
 
-    def unclear(_path: Path, _context: Context, _box: Box | None) -> Reading:
+    def unclear(_path: Path, _context: Context) -> Reading:
         return Reading(
             OTHER, None, None, "text", reason="page number unclear (3 or 51)"
         )

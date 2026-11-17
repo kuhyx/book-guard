@@ -27,15 +27,17 @@ on the phone and goes to `~/data/cloud/Reading/` over dufs whenever the PC
 answers; offline, the app names the check page and the session exactly as
 the PC will. **The phone's number is the page**: the `.path` unit takes it
 as is within seconds, and Tesseract only turns the photo upright and
-transcribes it for the grader. A photo that arrives with no number (the
-desktop web app, or "Send anyway") falls back to the PC: Tesseract reads
-the boxed number or the whole page, zbar reads ISBN barcodes, and which
-number is the page is decided by what the photo was for (check page asked
-for, past the open start, nearest the last end) -- two candidates left is
-"unclear", never a guess. A page with no printed number but one pencilled in
-the margin gets a pre-fill from a small local digit network (no LLM; weights
-`app/assets/pencil_digits.bin`, `_pencil*.py` and its Dart port): never
-accepted by itself, it only fills the keypad the user confirms. Claude (**Haiku**, unless
+transcribes it for the grader. **It is the only page number there is**:
+the PC never reads one itself. A photo that arrives with no number (the
+desktop web app, or "Send anyway") is rejected as `needs number`, never
+guessed; it appears in the phone's failed photos and the keypad sends the
+number again (zbar still reads ISBN barcodes). When the reader corrects what
+the phone's OCR offered (the note's `ocr_page` differs from its `page`), the
+PC logs an `ocr corrected` error and files the photo as a new row of
+`scripts/page_truth.py` (`~/data/book-guard_binaries/page_truth/`), so that
+check fails until the reader is fixed. A small local digit network
+(`app/assets/pencil_digits.bin`, no LLM) pre-fills the keypad for a pencilled
+number on the phone: never accepted by itself. Claude (**Haiku**, unless
 `--model` is given for one run) only grades summaries and reads contents
 pages; while it is down they wait, and the app says since when.
 The EXIF capture times are
@@ -166,8 +168,8 @@ it proxies WebDAV with the login, so the browser never holds it.
 
 Failures from both sides land in `Reading/logs/errors.jsonl`, one JSON
 object per line (the app's bug icon copies its own for pasting). A failed
-photo can be boxed again or reported as "this should not fail": the report
-(photo + both readings + the real page) is filed under
+photo can be sent again with its number or reported as "this should not fail":
+the report (photo + both readings + the real page) is filed under
 `~/.local/share/book_guard/reports/`, ready to become a row of
 `scripts/page_truth.py`'s labelled photo set
 (`~/data/book-guard_binaries/page_truth/`).

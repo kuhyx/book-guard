@@ -34,19 +34,32 @@ Read README.md first. These are the invariants that are easy to break.
 
 ## Invariants
 
-- **No LLM reads page numbers, and the phone's number is trusted.** The
-  phone (Tesseract4Android) reads it upright by content and the reader confirms or
-  boxes it there; the PC takes that number as is -- no Tesseract re-read,
-  no plausibility check, no "unclear". Tesseract is only the fallback for a
-  photo that arrives with no number (desktop web upload, "Send anyway"):
-  chosen by plausibility, ambiguous is a rejection that asks for a box,
-  never a guess. A page photo must never wait on Claude.
+- **The phone's number is the only page number.** No LLM reads page
+  numbers, and the PC runs no OCR for one: `_inbox._record` takes the
+  sidecar `page` as is (Tesseract only turns the photo upright and
+  transcribes it for the grader). A page photo with no sidecar `page`
+  (desktop web upload, "Send anyway", a box alone) is rejected as
+  `needs number` (`_photos.NEEDS_NUMBER`), never guessed; it shows in the
+  phone's failed photos and the keypad re-sends it as a `type_page`
+  request. Only a zbar barcode still makes a number-less photo an ISBN
+  photo. The `box` request needs the phone's `page` too. `_reader.py`,
+  `_pagenum.py`, `_ocr.py` and `_pencil*.py` stay only for
+  `scripts/page_truth.py` and the goldens: never call them from the inbox.
+  **A corrected OCR becomes a test row**: when the sidecar's `ocr_page`
+  (omitted when the OCR offered nothing) differs from `page`,
+  `_page_truth.record_correction` logs an `ocr corrected` error and copies the
+  photo into `Paths.page_truth_dir` with a `manifest.json` row, so
+  `scripts/page_truth.py` fails until the reader is fixed. It runs inside
+  the inbox pass's `exclusive` lock (the manifest has no lock of its own;
+  atomic replace), is idempotent per photo, and a failure there only logs --
+  photos first.
   The one model allowed is the small local digit network for a *pencilled*
   number (`_pencil*.py`, weights `app/assets/pencil_digits.bin`, Dart port
   `app/lib/src/pencil_*.dart`, goldens `pencil_goldens.json`): no LLM, no
   network, never auto-accepted -- its answer only pre-fills the keypad the
-  user confirms with one tap, and it runs only when the printed-number reader
-  found nothing. Doubt is `None`, not a guess. After touching it re-run
+  user confirms with one tap. The phone runs it; the inbox no longer does
+  (a record's `pencil_page` stays in the cache and `state.json` for old
+  rows). Doubt is `None`, not a guess. After touching it re-run
   `scripts/page_truth.py` (rows with a `pencil` key; run a slice at a time:
   `... page_truth.py DIR 18:24`) and `python3 -m scripts.pencil_goldens`;
   retraining is `scripts/train_pencil.py` (chunks under 60 s).

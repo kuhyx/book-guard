@@ -27,10 +27,11 @@ import sys
 import time
 
 from book_guard._pagenum import Box, Context
+from book_guard._paths import REAL_PAGE_TRUTH
 from book_guard._pencil import read_pencil
 from book_guard._reader import read
 
-_DEFAULT_DIR = Path.home() / "data/book-guard_binaries/page_truth"
+_DEFAULT_DIR = REAL_PAGE_TRUTH
 
 
 def _int_or_none(raw: object) -> int | None:

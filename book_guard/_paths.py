@@ -20,6 +20,7 @@ from gatelock.night_lockdown import NIGHT_LOCKDOWN_STAMP
 from book_guard._share_paths import SharePaths
 
 _REAL_KEY: Final = Path("/etc/workout-locker/hmac.key")
+REAL_PAGE_TRUTH: Final = Path.home() / "data/book-guard_binaries/page_truth"
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,8 @@ class Paths(SharePaths):
         key_file: The HMAC key shared with the sibling lockers.
         morning_session: wake-alarm's signed morning (the 11:00 carrot).
         night_lockdown: night-lockdown's stamp; no re-arm after tonight's.
+        page_truth_dir: The labelled page photos ``scripts/page_truth.py``
+            checks the reader against (photos live outside the repo).
     """
 
     data_dir: Path
@@ -39,6 +42,7 @@ class Paths(SharePaths):
     key_file: Path
     morning_session: Path
     night_lockdown: Path
+    page_truth_dir: Path
 
     @property
     def ledger(self) -> Path:
@@ -117,6 +121,7 @@ def _default() -> Paths:
             key_file=_REAL_KEY,
             morning_session=Path(root) / "morning_session.json",
             night_lockdown=Path(root) / "locked_at_epoch",
+            page_truth_dir=Path(root) / "page_truth",
         )
     home = Path.home()
     return Paths(
@@ -125,6 +130,7 @@ def _default() -> Paths:
         key_file=_REAL_KEY,
         morning_session=MORNING_SESSION_FILE,
         night_lockdown=NIGHT_LOCKDOWN_STAMP,
+        page_truth_dir=REAL_PAGE_TRUTH,
     )
 
 

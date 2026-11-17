@@ -17,7 +17,7 @@ from book_guard.tests._flow_helpers import T0, rec, seed_photos
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from book_guard._pagenum import Box, Context
+    from book_guard._pagenum import Context
     from book_guard._paths import Paths
 
 _BOX = [10, 20, 30, 40]
@@ -33,9 +33,8 @@ def _rejected(paths: Paths, *, taken: bool = True) -> str:
     return record.name
 
 
-def _reader(reading: Reading, seen: list[Box | None]) -> object:
-    def read(_path: Path, _context: Context, box: Box | None) -> Reading:
-        seen.append(box)
+def _reader(reading: Reading) -> object:
+    def read(_path: Path, _context: Context) -> Reading:
         return reading
 
     return read
@@ -80,13 +79,12 @@ def test_box_turns_a_rejection_into_a_page(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     name = _rejected(bg_paths)
-    seen: list[Box | None] = []
     monkeypatch.setattr(
-        _reread, "read", _reader(Reading(PAGE, 7, None, "words", rotation=90), seen)
+        _reread, "read", _reader(Reading(PAGE, 7, None, "words", rotation=90))
     )
-    response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX})
+    request = {"photo": name, "box": _BOX, "page": 7}
+    response = _reread.box_photo(bg_paths, request)
     assert response == Response(ok=True, code="read", data={"page": 7})
-    assert seen == [(10, 20, 30, 40)]
     (record,) = _photos.load(bg_paths.photos).values()
     assert (record.kind, record.page, record.status) == (PAGE, 7, OK)
 
@@ -99,9 +97,9 @@ def test_box_still_unreadable(
     monkeypatch.setattr(
         _reread,
         "read",
-        _reader(Reading(OTHER, None, None, "", reason="no page number found"), []),
+        _reader(Reading(OTHER, None, None, "", reason="no page number found")),
     )
-    response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX})
+    response = _reread.box_photo(bg_paths, {"photo": name, "box": _BOX, "page": 7})
     assert response == Response(ok=False, code="no_page")
     assert "still no page number: no page number found" in caplog.text
     (record,) = _photos.load(bg_paths.photos).values()
@@ -114,7 +112,7 @@ def test_the_phones_page_in_a_box_request_is_the_hint(
     name = _rejected(bg_paths)
     hints: list[int | None] = []
 
-    def read(_path: Path, context: Context, _box: Box | None) -> Reading:
+    def read(_path: Path, context: Context) -> Reading:
         hints.append(context.hint)
         return Reading(PAGE, 51, None, "words")
 
@@ -125,19 +123,19 @@ def test_the_phones_page_in_a_box_request_is_the_hint(
 
 
 @pytest.mark.parametrize("page", [None, True, "51", 51.0])
-def test_a_box_request_without_a_proper_page_has_no_hint(
+def test_a_box_request_without_a_proper_page_reads_nothing(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, page: object
 ) -> None:
+    """The PC never reads the boxed number itself: nothing changes."""
     name = _rejected(bg_paths)
-    hints: list[int | None] = []
 
-    def read(_path: Path, context: Context, _box: Box | None) -> Reading:
-        hints.append(context.hint)
-        return Reading(OTHER, None, None, "", reason="no page number found")
+    def read(_path: Path, _context: Context) -> Reading:
+        raise AssertionError
 
     monkeypatch.setattr(_reread, "read", read)
     request: dict[str, object] = {"photo": name, "box": _BOX}
     if page is not None:
         request["page"] = page
-    _reread.box_photo(bg_paths, request)
-    assert hints == [None]
+    assert _reread.box_photo(bg_paths, request) == Response(ok=False, code="no_page")
+    (record,) = _photos.load(bg_paths.photos).values()
+    assert record.status == REJECTED

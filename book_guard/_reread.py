@@ -1,12 +1,12 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """The app's ``box`` request: read a filed photo again, inside a drawn box.
 
-For a photo the PC could not pin a page number on ("no page number found",
-"page number unclear (51 or 3)"). The reader boxes the number on the phone;
-the number the phone read in that box (``page``) is the page, taken as is.
-Only a request without one has the PC read the box itself. Only a photo
-that was *not* read as a page can be re-read: an accepted page may already
-be part of a credited session.
+For a photo that came without a page number (``needs number``). The reader
+boxes the number on the phone; the number the phone read in that box
+(``page``) is the page, taken as is. A request without one changes nothing:
+the PC never reads a page number itself. Only a photo that was *not* read as
+a page can be re-read: an accepted page may already be part of a credited
+session.
 
 The ``type_page`` request is for a page with no printed number (a chapter
 opener): the reader types it. It travels like the phone's own reading -- it
@@ -30,6 +30,7 @@ from book_guard._vision import OTHER, PAGE
 
 if TYPE_CHECKING:
     from book_guard._paths import Paths
+    from book_guard._vision import Reading
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -54,9 +55,9 @@ def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
         ledger = _ledger.load(paths.ledger, paths.key_file)
         context = context_for(name, record.taken, others, ledger)
         phone = request.get("page")
-        if isinstance(phone, int) and not isinstance(phone, bool):
-            context = replace(context, hint=phone)
-        reading = read(filed, context, box)
+        if not isinstance(phone, int) or isinstance(phone, bool):
+            return Response(ok=False, code="no_page")
+        reading = read(filed, replace(context, hint=phone))
         records[record.sha] = replace(
             record,
             kind=reading.kind,
@@ -67,6 +68,11 @@ def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
             pencil_page=reading.pencil_page,
         )
         _photos.save(paths.photos, records)
+    return _reply(name, reading)
+
+
+def _reply(name: str, reading: Reading) -> Response:
+    """The answer to a ``box`` request once the photo is read again."""
     if reading.page_number is None:
         _logger.info("box on %s: still no page number: %s", name, reading.reason)
         return Response(ok=False, code="no_page")

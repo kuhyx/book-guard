@@ -24,6 +24,8 @@ OK = "ok"
 REJECTED = "rejected"
 TYPED = "typed"
 """``PhotoRecord.page_source`` of a page number the reader typed in the app."""
+NEEDS_NUMBER = "needs number"
+"""``PhotoRecord.reason`` of a page photo that came without the phone's number."""
 
 
 _logger: Final = logging.getLogger(__name__)

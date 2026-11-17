@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from book_guard._pagenum import Box, Context
+    from book_guard._pagenum import Context
     from book_guard._paths import Paths
 
 
@@ -45,8 +45,8 @@ def _chapter_opener(paths: Paths, *, kind: str = OTHER, status: str = REJECTED) 
 
 def _reader(
     hints: list[int | None], text: str = "words"
-) -> Callable[[Path, Context, Box | None], Reading]:
-    def read(_path: Path, context: Context, _box: Box | None = None) -> Reading:
+) -> Callable[[Path, Context], Reading]:
+    def read(_path: Path, context: Context) -> Reading:
         hints.append(context.hint)
         return Reading(PAGE, context.hint, None, text)
 
@@ -170,10 +170,7 @@ def test_a_request_for_a_photo_still_in_the_inbox_waits_for_it(
     monkeypatch.setattr(_inbox, "open_photo", lambda _p: photo)
     monkeypatch.setattr(_inbox, "make_thumb", lambda *_a: None)
 
-    def unnumbered(_path: Path, _context: Context, _box: Box | None) -> Reading:
-        return Reading(OTHER, None, None, "text", reason="no page number found")
-
-    _inbox.process_inbox(bg_paths, reader=unnumbered, now=T0.timestamp() + 60)
+    _inbox.process_inbox(bg_paths, barcode=lambda _p: None, now=T0.timestamp() + 60)
     monkeypatch.setattr(_reread, "read", _reader([]))
     assert handle_requests(bg_paths, HANDLERS) == 1
     assert json.loads(reply.read_text())["code"] == "read"

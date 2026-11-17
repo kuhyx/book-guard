@@ -4,13 +4,15 @@
 The app names every upload after its button -- ``start_``, ``stop_``,
 ``check<N>_`` -- and may drop a sidecar ``<photo>.json`` *before* the photo:
 
-    {"page": 51, "box": [left, top, right, bottom]}
+    {"page": 51, "ocr_page": 31, "box": [left, top, right, bottom]}
 
-``page`` is what the phone's own OCR read (and the reader confirmed): it is
-the page, taken as is -- the PC does not re-read or second-guess it. ``box``
-is where the number is, in the stored file's pixels (before EXIF), from the
-phone's OCR or drawn by hand: with no ``page``, the PC reads that box
-itself.
+``page`` is what the phone's own OCR read (and the reader confirmed or
+corrected): it is the page, taken as is -- the PC does not re-read or
+second-guess it, and a photo without one is rejected (``needs number``).
+``ocr_page`` is what the OCR alone offered; it is left out when the OCR
+offered nothing, and when it differs from ``page`` the OCR was corrected
+(:mod:`book_guard._page_truth`). ``box`` is where the number is, in the
+stored file's pixels (before EXIF); the PC no longer reads it.
 """
 
 from __future__ import annotations
@@ -49,6 +51,7 @@ class Sidecar:
 
     hint: int | None = None
     box: Box | None = None
+    ocr_page: int | None = None
 
 
 def sidecar_path(photo: Path) -> Path:
@@ -66,6 +69,10 @@ def parse_box(raw: object) -> Box | None:
     return (left, top, right, bottom) if right > left and bottom > top else None
 
 
+def _int_or_none(raw: object) -> int | None:
+    return raw if isinstance(raw, int) and not isinstance(raw, bool) else None
+
+
 def read_sidecar(photo: Path) -> Sidecar:
     """``photo``'s note, or an empty one (missing, or not the expected shape)."""
     note = sidecar_path(photo)
@@ -78,9 +85,11 @@ def read_sidecar(photo: Path) -> Sidecar:
         return Sidecar()
     if not isinstance(raw, dict):
         return Sidecar()
-    hint = raw.get("page")
-    valid_hint = hint if isinstance(hint, int) and not isinstance(hint, bool) else None
-    return Sidecar(hint=valid_hint, box=parse_box(raw.get("box")))
+    return Sidecar(
+        hint=_int_or_none(raw.get("page")),
+        box=parse_box(raw.get("box")),
+        ocr_page=_int_or_none(raw.get("ocr_page")),
+    )
 
 
 def context_for(

@@ -75,6 +75,7 @@ def bg_paths(tmp_path: Path) -> Paths:
         key_file=key,
         morning_session=tmp_path / "morning_session.json",
         night_lockdown=tmp_path / "locked_at_epoch",
+        page_truth_dir=tmp_path / "page_truth",
     )
 
 
