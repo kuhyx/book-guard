@@ -39,6 +39,8 @@ MONTH: Final = "month"
 DAY: Final = "day"
 DEBT: Final = "debt"
 ESCAPE: Final = "escape"
+MOON: Final = "moon"
+END: Final = "end"
 
 GLYPH: Final = {
     BOOK: "📖",
@@ -57,6 +59,8 @@ GLYPH: Final = {
     DAY: "☀",
     DEBT: "▼",
     ESCAPE: "⎋",
+    MOON: "☾",
+    END: "⏻",
 }
 """Text-mode glyphs (terminal, toast) for every drawn icon."""
 

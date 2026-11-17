@@ -1,13 +1,9 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """The gate: lock the PC while the month's reading is behind the pace line.
 
-gatelock owns the surfaces, the grab, VT switching and arbitration; this
-module supplies the hooks and the loop that decides when to let go.
-
-Slow work -- reading the inbox (a Claude vision call per photo) and grading
-a summary -- runs on a worker thread, and the Tk thread only polls its
-future. A Tk callback that blocked on a model call would freeze the lock
-with the grab held, which on a hard lock is indistinguishable from a hang.
+gatelock owns the surfaces, grab and arbitration; this module supplies the
+hooks and the loop that decides when to let go. Slow work (vision calls,
+grading) runs on a worker thread: a blocking call would freeze the hard lock.
 """
 
 from __future__ import annotations
@@ -65,6 +61,8 @@ def _ignore(_result: object) -> None:
 class BookGuardLock:
     """A gatelock consumer that releases once reading is back on pace."""
 
+    _rank = RANK_BOOK_GUARD
+
     def __init__(self, paths: Paths, snap: Snapshot, *, production: bool) -> None:
         """Arm the lock. Demo mode (the default) uses a local grab."""
         assert_not_under_pytest("the book-guard lock")
@@ -81,14 +79,14 @@ class BookGuardLock:
                 kind="global" if production else "local", disable_vt=production
             ),
             app_name="book_guard",
-            rank=RANK_BOOK_GUARD,
+            rank=self._rank,
         )
         self.root = GateRoot()
         self.root.title("book_guard")
         self._vars = make_vars(self.root)
         arbiter = Arbiter(
             "book_guard",
-            RANK_BOOK_GUARD,
+            self._rank,
             grab=self._config.resolved_grab(),
             disable_vt=self._config.resolved_disable_vt(),
         )
@@ -157,10 +155,13 @@ class BookGuardLock:
         if not self._closed:
             self.root.after(_TICK_MS, self._tick)
 
+    def _released(self) -> bool:
+        return not self._snap.locked
+
     def _refresh(self) -> None:
         self._snap = snapshot(self._paths, today=self._snap.today)
         write_next_file(self._paths, self._snap)
-        if not self._snap.locked:
+        if self._released():
             _logger.info("released: %s", self._snap.reason)
             self.close()
             return
@@ -233,8 +234,7 @@ def run_gate(paths: Paths, *, production: bool, today: date | None = None) -> in
         return 0
     if production:
         # No X at start is a wait, not a TclError crash loop (~15,700 restarts,
-        # 2026-11-17). Waits with no clock, before deciding, so the verdict is
-        # the one after the display is up.
+        # 2026-11-17), and it comes before deciding: the verdict is the later one.
         wait_for_x_server()
     auto_grant(paths, today=today)
     snap = snapshot(paths, today=today)

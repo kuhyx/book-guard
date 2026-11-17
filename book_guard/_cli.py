@@ -27,6 +27,7 @@ from book_guard._books import current, register
 from book_guard._booktext import BookTextError
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._embed import EmbedderUnavailableError
+from book_guard._evening_lock import configure_evening, run_evening
 from book_guard._grading import quiz_one, register_isbn
 from book_guard._indexer import index_lock
 from book_guard._ledger import load
@@ -176,7 +177,8 @@ def _cmd_lock(args: argparse.Namespace) -> int:
     if args.today and args.production:
         _say("--today is for demos only", file=sys.stderr)
         return 2
-    return run_gate(paths(), production=args.production, today=args.today)
+    run = run_evening if args.evening else run_gate
+    return run(paths(), production=args.production, today=args.today)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -233,6 +235,7 @@ def _parser() -> argparse.ArgumentParser:
     _inclusive.configure(subs["backfill-inclusive"])
     _widen.configure(subs["retime"])
     subs["lock"].add_argument("--production", action="store_true")
+    configure_evening(subs["lock"])
     subs["lock"].add_argument(
         "--today", type=date.fromisoformat, help="demo: pretend date"
     )

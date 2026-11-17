@@ -175,6 +175,7 @@ def _hermetic(
     monkeypatch.delenv("BOOK_GUARD_ROOT", raising=False)
     # A real X probe would open a Tk root on whatever display the run has.
     monkeypatch.setattr("book_guard._lock.wait_for_x_server", lambda **_k: True)
+    monkeypatch.setattr("book_guard._evening_lock.wait_for_x_server", lambda **_k: True)
     # Lookup pacing must never really sleep in a test.
     monkeypatch.setattr("book_guard._lookup.time.sleep", lambda _s: None)
     # The fastembed CLASS is faked, not the factory, so _embed._embedder
