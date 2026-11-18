@@ -10,7 +10,9 @@
 #
 # `dart build cli`, not `dart compile exe`: the latter refuses any package
 # whose graph has native build hooks (flutter_secure_storage pulls some in).
-# Idempotent; heavy steps run under capped.sh.
+# Idempotent; heavy steps run under capped.sh. --skip-web installs the
+# app/build/web already built (`flutter build web --release`), so the web
+# build and the rest each fit a 60 s action.
 # ============================================================================
 
 set -euo pipefail
@@ -43,8 +45,12 @@ command -v fvm >/dev/null 2>&1 && SDK=(fvm)
 readonly SDK
 
 build() {
-    log "building the web app"
-    (cd "$APP_DIR" && run_capped "${SDK[@]}" flutter build web --release) >/dev/null || fail "flutter build web"
+    if [[ "${1:-}" == "--skip-web" ]]; then
+        [[ -s "${APP_DIR}/build/web/index.html" ]] || fail "--skip-web: no app/build/web"
+    else
+        log "building the web app"
+        (cd "$APP_DIR" && run_capped "${SDK[@]}" flutter build web --release) >/dev/null || fail "flutter build web"
+    fi
     log "building the wrapper"
     (cd "$APP_DIR" && run_capped "${SDK[@]}" dart build cli -t bin/book_guard_desktop.dart -o build/cli) \
         >/dev/null || fail "dart build cli"
@@ -82,7 +88,7 @@ EOF
 }
 
 main() {
-    build
+    build "$@"
     install_bundle
     install_entry
     log "done -- run: book-guard-desktop"
