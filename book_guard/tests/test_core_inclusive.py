@@ -9,6 +9,7 @@ import hashlib
 import pytest
 
 from book_guard import _sessions
+from book_guard._constants import RETAKE_SECONDS
 from book_guard._ebook_sessions import EbookRead
 from book_guard._pagenum import Choice, Context, choose
 from book_guard._photos import PhotoRecord
@@ -39,14 +40,14 @@ def test_same_page_is_one_page() -> None:
     assert session.state == NEEDS_QUIZ
 
 
-def test_same_page_still_needs_fifty_seconds() -> None:
+def test_same_page_still_needs_the_floor() -> None:
     assert Session(_p("a", 10, 0), _p("b", 10, 0.5), None).state == TOO_FAST
 
 
-def test_fifty_seconds_per_page_uses_inclusive_pages() -> None:
-    # 29 pages need 29 * 50 s = 24 min 10 s (28 pages would need 23 min 20 s).
-    assert Session(_p("a", 1, 0), _p("b", 29, 24), None).state == TOO_FAST
-    assert Session(_p("a", 1, 0), _p("b", 29, 25), None).state == NEEDS_QUIZ
+def test_the_floor_uses_inclusive_pages() -> None:
+    # 29 pages need 29 * 38 s = 18 min 22 s (28 pages would need 17 min 44 s).
+    assert Session(_p("a", 1, 0), _p("b", 29, 18), None).state == TOO_FAST
+    assert Session(_p("a", 1, 0), _p("b", 29, 18.5), None).state == NEEDS_QUIZ
 
 
 def test_missing_page_numbers_count_one() -> None:
@@ -151,3 +152,11 @@ def test_stop_page_may_equal_the_start_page(
     found: list[int], context: Context, expected: Choice
 ) -> None:
     assert choose(found, context) == expected
+
+
+def test_a_retake_stays_50_s_when_the_speed_floor_is_lower() -> None:
+    # 45 s on the same page: over the 38 s/page floor, still a retaken start.
+    photos = [_p("a", 50, 0), _p("b", 50, 0.75), _p("c", 60, 20)]
+    sessions = _sessions.build_sessions(photos)
+    assert [(s.start.name, s.end.name, s.pages) for s in sessions] == [("b", "c", 11)]
+    assert RETAKE_SECONDS == 50

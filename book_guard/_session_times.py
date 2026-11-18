@@ -4,7 +4,7 @@
 The photos' EXIF times are the session clock, but a start photo is sometimes
 taken well before the reading begins (2026-10-03: the p. 51 photo at 12:27,
 the reading from ~13:40). The reader may move the start *later* and the end
-*earlier* -- never outside the photos. Narrowing only makes the 50 s/page
+*earlier* -- never outside the photos. Narrowing only makes the 38 s/page
 rule stricter, so it can never earn anything; widening would let a flicked
 stretch pass as read, and is refused.
 

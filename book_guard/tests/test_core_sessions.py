@@ -40,11 +40,17 @@ def test_session_properties() -> None:
 
 
 def test_too_fast() -> None:
-    # 21 pages (both ends count) need 21 * 50 s = 17 min 30 s.
-    session = Session(_p("a", 10, 0), _p("b", 30, 17), None)
+    # 21 pages (both ends count) need 21 * 38 s = 13 min 18 s.
+    session = Session(_p("a", 10, 0), _p("b", 30, 13), None)
     assert session.state == TOO_FAST
-    enough = Session(_p("a", 10, 0), _p("b", 30, 18), None)
+    enough = Session(_p("a", 10, 0), _p("b", 30, 13.5), None)
     assert enough.state == NEEDS_QUIZ
+    # The 2026-11-18 session the floor was lowered for: p. 29-88 (60 pages)
+    # from 20:10:47 to 20:48:57, 2290 s = 38.2 s a page.
+    floor = Session(_p("a", 29, 0), _p("b", 88, 2290 / 60), None)
+    assert floor.state == NEEDS_QUIZ
+    under = Session(_p("a", 29, 0), _p("b", 88, 2279 / 60), None)
+    assert under.state == TOO_FAST
     # The real 2026-10-02 session: 45 pages in 43 minutes counts.
     real = Session(_p("a", 7, 0), _p("b", 51, 43), None)
     assert real.state == NEEDS_QUIZ

@@ -149,6 +149,11 @@ Read README.md first. These are the invariants that are easy to break.
   `quiz_one` credits it with `detail.graded == "0"`. `detail.grader` names
   who judged a graded row (`claude:<model>` / `local:<model>`). The MCP server and the
   app's request files are read-only / route through `_grading.quiz_one`.
+  The one other way is the owner's CLI `book-guard accept SESSION --reason`
+  (`_accept.py`): credits a needs-check/needs-quiz session as it stands via
+  `record_verdict`, `detail.grader == "manual"`, `graded == "0"`; it never
+  overrides the speed floor (`MIN_SECONDS_PER_PAGE`, 38 s since 2026-11-18;
+  the retake window is its own `RETAKE_SECONDS`, 50). No app/MCP route to it.
 - **A fail names what is missing** (1-3 topics, never the answers); a
   failed summary can be rewritten any number of times (`<sid>#2`, `#3`, ...
   until a credit row), each judged generously and only on those topics

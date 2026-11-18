@@ -17,7 +17,7 @@ Walking the photos in capture order:
 * a photo showing a pending session's check page, taken after that session
   ended, is that session's check photo;
 * otherwise it closes the open session if it shows the start page (at least
-  :data:`MIN_SECONDS_PER_PAGE` later -- sooner is a retaken start) or a later
+  :data:`RETAKE_SECONDS` later -- sooner is a retaken start) or a later
   page, within :data:`MAX_SESSION` of the start;
 * otherwise it opens a new session (a stale or backwards start is replaced).
 
@@ -31,7 +31,7 @@ from dataclasses import dataclass
 import hashlib
 from typing import TYPE_CHECKING, Final
 
-from book_guard._constants import MAX_SESSION, MIN_SECONDS_PER_PAGE
+from book_guard._constants import MAX_SESSION, MIN_SECONDS_PER_PAGE, RETAKE_SECONDS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -171,7 +171,7 @@ def _closes(start: PhotoRecord, photo: PhotoRecord, after: PhotoRecord | None) -
     low, high = int(start.page or 0), int(photo.page or 0)
     if high != low:
         return high > low
-    if (photo.taken - start.taken).total_seconds() < MIN_SECONDS_PER_PAGE:
+    if (photo.taken - start.taken).total_seconds() < RETAKE_SECONDS:
         return False
     return not (
         after is not None

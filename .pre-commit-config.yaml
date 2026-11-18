@@ -156,14 +156,17 @@ repos:
         files: ^app/(lib|test|bin)/.*\.dart$
       - id: app-test
         name: flutter test (app)
-        # -j 1: the whole pre-commit run sits in one 2 GiB capped.sh scope
-        # with no swap. Measured anon peak (2026-11-17): -j 2 1680 MiB, which
-        # with pre-commit's own share got the checks run OOM-killed; -j 1
-        # 1073 MiB (~2 min at the cap's CPU). Pinned by test_repo_hooks.py.
-        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter test -j 1'
+        # Only the tests the commit touches (changed tests + direct importers
+        # of changed lib files): the whole suite runs past the 60 s action
+        # cap. CI (app.yml) runs it all. The script runs -j 1: the whole
+        # pre-commit run sits in one 2 GiB capped.sh scope with no swap
+        # (anon peak 2026-11-17: -j 2 1680 MiB, -j 1 1073 MiB). Pinned by
+        # test_repo_hooks.py.
+        entry: scripts/app_test_changed.sh
         language: system
-        pass_filenames: false
-        files: ^app/(lib|test|bin)/.*\.dart$
+        pass_filenames: true
+        require_serial: true  # one flutter run, not one per file batch
+        files: ^app/((lib|test|bin)/.*\.dart|pubspec\.(yaml|lock)|analysis_options\.yaml)$
       - id: repo-contract
         name: repo contract (CLAUDE.md Commands + test_changed)
         entry: scripts/check_repo_contract.sh

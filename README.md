@@ -41,7 +41,7 @@ number on the phone: never accepted by itself. Claude (**Haiku**, unless
 `--model` is given for one run) only grades summaries and reads contents
 pages; while it is down they wait, and the app says since when.
 The EXIF capture times are
-the session clock: under 50 s per page is page-flipping and does not count (a
+the session clock: under 38 s per page is page-flipping and does not count (a
 stop on the start page less than 50 s after it is the start photo retaken).
 
 The grader reads the **book's own text** for the stretch when an ebook file
@@ -83,10 +83,10 @@ both and reads offline. Opening the reader starts a session, kept on the
 phone at once; leaving it (swipe right-to-left, back, Escape) queues an
 `ebook_session` request through the outbox, and the time is plain
 wall-clock in between (an app killed mid-read resumes the same session
-for 6 h). Leaving under a page, over 6 h, or under 50 s a page drops the
+for 6 h). Leaving under a page, over 6 h, or under 38 s a page drops the
 session on the phone instead. The PC re-estimates the pages with its own copy of the
 map and stores the session append-only (`ebook_sessions.json`); from then
-on it is a session like any other -- 50 s a page, 6 h at most, no check
+on it is a session like any other -- 38 s a page, 6 h at most, no check
 page, the summary graded on exactly the text that was on screen, credit
 and bonus as usual -- shown as "≈ p." everywhere, with `detail.source ==
 "ebook"` and `detail.estimated == "1"` on its ledger row. It cannot overlap
@@ -145,6 +145,8 @@ book-guard add 9780735211292 --file ~/Downloads/atomic.epub
 book-guard pages 320                   # the last page of *your* copy
 book-guard status                      # or: status --json
 book-guard quiz                        # write the pending summary
+book-guard accept SESSION --reason R   # credit it by hand, no check or summary
+                                       #   (signed, grader "manual"; never too fast)
 book-guard ask --week                  # any day's requirement: --date D, --month,
                                        #   --simulate=-20@2026-10-16 (display only)
 book-guard library                     # every book; --isbn X, --export md

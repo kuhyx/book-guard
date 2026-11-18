@@ -13,29 +13,30 @@ import sys
 from typing import TYPE_CHECKING, Final, TextIO
 
 from book_guard import (
+    _accept,
     _ask_cli,
     _ebook_cli,
     _error_report,
     _inclusive,
     _index_cli,
     _library_cli,
+    _quiz_cli,
     _widen,
 )
-from book_guard._actions import next_quiz, process
+from book_guard._actions import process
 from book_guard._attach import attach
 from book_guard._bonus import regrant
 from book_guard._books import current, register
 from book_guard._booktext import BookTextError
-from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._embed import EmbedderUnavailableError
 from book_guard._evening_lock import configure_evening, run_evening
-from book_guard._grading import quiz_one, register_isbn
+from book_guard._grading import register_isbn
 from book_guard._indexer import index_lock
 from book_guard._ledger import load
 from book_guard._lock import run_gate
 from book_guard._openlibrary import BookInfo, search_title
 from book_guard._paths import paths
-from book_guard._render import session_line, status_lines
+from book_guard._render import status_lines
 from book_guard._state import snapshot
 from book_guard._state_json import to_json
 
@@ -145,35 +146,6 @@ def _cmd_regrant(args: argparse.Namespace) -> int:
     return 0
 
 
-def _read_summary() -> str:
-    _say("Summary (3-5 sentences; finish with an empty line):")
-    lines: list[str] = []
-    for line in sys.stdin:
-        if not line.strip():
-            break
-        lines.append(line.rstrip("\n"))
-    return " ".join(lines)
-
-
-def _cmd_quiz(args: argparse.Namespace) -> int:
-    active = paths()
-    view = next_quiz(active, session_id=args.session)
-    if view is None:
-        _say("Nothing waiting for a summary.")
-        return 0
-    _say(
-        f"{view.book.label if view.book else 'Unregistered book'}: {session_line(view)}"
-    )
-    try:
-        verdict = quiz_one(active, view, _read_summary(), model=args.model)
-    except ClaudeUnavailableError as exc:
-        _logger.warning("grader unavailable: %s", exc)
-        _say(f"Grader unavailable ({exc}); the session stays open.", file=sys.stderr)
-        return 1
-    _say(("PASSED: " if verdict.passed else "FAILED: ") + verdict.feedback)
-    return 0 if verdict.passed else 1
-
-
 def _cmd_lock(args: argparse.Namespace) -> int:
     if args.today and args.production:
         _say("--today is for demos only", file=sys.stderr)
@@ -195,13 +167,14 @@ def _parser() -> argparse.ArgumentParser:
         ("index", "index book files dropped into Reading/books", _index_cli.cmd_index),
         ("ebook-map", "the in-app reader's page map", _ebook_cli.cmd_ebook_map),
         ("status", "show pace, sessions and what to do next", _cmd_status),
-        ("quiz", "write the summary for a finished session", _cmd_quiz),
+        ("quiz", "write the summary for a finished session", _quiz_cli.cmd_quiz),
         ("ask", "what any day asks: past, today, projected", _ask_cli.cmd_ask),
         ("library", "every book, its sessions and notes", _library_cli.cmd_library),
         ("regrant", "grant the day's bonus to credits that now earn it", _cmd_regrant),
         ("backfill-inclusive", "add the stop page to old sessions", _inclusive.cmd),
         ("lock", "run the gate (locks only when behind pace)", _cmd_lock),
         ("retime", "widen a session the app lost a photo of", _widen.cmd_retime),
+        ("accept", "credit a session by hand, without the grader", _accept.cmd_accept),
     ]
     subs = {}
     for name, help_text, handler in commands:
@@ -221,20 +194,14 @@ def _parser() -> argparse.ArgumentParser:
     subs["status"].add_argument(
         "--json", action="store_true", help="the app's state.json"
     )
-    subs["quiz"].add_argument(
-        "--session", help="grade this session id (default: oldest)"
-    )
-    subs["quiz"].add_argument(
-        "--model",
-        default=DEFAULT_MODEL,
-        help="grader for this run only (default: haiku)",
-    )
+    _quiz_cli.configure(subs["quiz"])
     _ask_cli.configure(subs["ask"])
     _library_cli.configure(subs["library"])
     subs["switch"].add_argument("isbn")
     subs["regrant"].add_argument("--dry-run", action="store_true")
     _inclusive.configure(subs["backfill-inclusive"])
     _widen.configure(subs["retime"])
+    _accept.configure(subs["accept"])
     subs["lock"].add_argument("--production", action="store_true")
     configure_evening(subs["lock"])
     subs["lock"].add_argument(

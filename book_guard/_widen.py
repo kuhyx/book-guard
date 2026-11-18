@@ -37,6 +37,14 @@ class WidenError(ValueError):
     """The correction was refused; the message says why."""
 
 
+def find_view(active: _paths.Paths, session_id: str) -> SessionView | None:
+    """The session with id ``session_id`` as it stands now, if there is one."""
+    return next(
+        (v for v in snapshot(active).sessions if v.session.session_id == session_id),
+        None,
+    )
+
+
 def _refusal(
     view: SessionView, ledger: _ledger.Ledger, start: datetime, end: datetime
 ) -> str:
@@ -72,17 +80,10 @@ def widen(
 
     Raises:
         WidenError: No such session, no reason, already graded or retimed,
-            or the new span is still under the 50 s/page rule.
+            or the new span is still under the 38 s/page rule.
     """
     with exclusive(active):
-        view = next(
-            (
-                v
-                for v in snapshot(active).sessions
-                if v.session.session_id == session_id
-            ),
-            None,
-        )
+        view = find_view(active, session_id)
         if view is None or not reason.strip():
             msg = "No such session." if view is None else "A reason is required."
             raise WidenError(msg)

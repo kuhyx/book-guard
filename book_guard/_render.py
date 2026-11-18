@@ -12,7 +12,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 from book_guard import _sick
-from book_guard._constants import DAILY_PASS_PAGES, WEEKEND_CAP_PAGES
+from book_guard._constants import (
+    DAILY_PASS_PAGES,
+    MIN_SECONDS_PER_PAGE,
+    WEEKEND_CAP_PAGES,
+)
 from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, OVERLAP
 
@@ -25,7 +29,7 @@ if TYPE_CHECKING:
 _STATUS_TEXT: Final = {
     NEEDS_CHECK: "photograph page {check}",
     NEEDS_QUIZ: "write the summary at the PC (book-guard quiz)",
-    TOO_FAST: "not counted: under 50 s per page",
+    TOO_FAST: f"not counted: under {MIN_SECONDS_PER_PAGE} s per page",
     CREDITED: "credited",
     OVERLAP: "not counted: read in the app at the same time",
 }

@@ -24,4 +24,10 @@ def test_app_tests_run_one_isolate_at_a_time() -> None:
     Measured 2026-11-17 (scope memory.stat anon): -j 2 1680 MiB, -j 1 1073 MiB.
     The checks run of pre-commit --all-files was killed (exit -15) in it.
     """
-    assert re.search(r"flutter test -j 1(\s|')", _entry("app-test"))
+    entry = _entry("app-test")
+    script = _CONFIG.parent / entry
+    command = script.read_text(encoding="utf-8") if script.is_file() else entry
+    assert re.search(
+        r"flutter test -j 1(\s|')", command.replace('"${FLUTTER[@]}"', "flutter")
+    )
+    assert "-j 2" not in command

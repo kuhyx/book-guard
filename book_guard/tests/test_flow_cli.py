@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from book_guard import _cli, _grading
+from book_guard import _cli, _grading, _quiz_cli
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._http import UnavailableError
 from book_guard._inbox import InboxResult
@@ -175,7 +175,7 @@ def test_quiz_grades(
         got.append((text, model))
         return Verdict(passed=passed, feedback="Noted.")
 
-    monkeypatch.setattr(_cli, "quiz_one", quiz_one)
+    monkeypatch.setattr(_quiz_cli, "quiz_one", quiz_one)
     monkeypatch.setattr(sys, "stdin", io.StringIO(stdin))
     assert _cli.main(["quiz", "--model", "sonnet"]) == code
     assert got == [(summary, "sonnet")]
@@ -194,7 +194,7 @@ def test_quiz_grader_down(
         msg = "offline"
         raise ClaudeUnavailableError(msg)
 
-    monkeypatch.setattr(_cli, "quiz_one", down)
+    monkeypatch.setattr(_quiz_cli, "quiz_one", down)
     monkeypatch.setattr(sys, "stdin", io.StringIO("text\n\n"))
     assert _cli.main(["quiz", "--session", "session:nope"]) == 0  # not waiting
     assert _cli.main(["quiz"]) == 1

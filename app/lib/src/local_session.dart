@@ -10,9 +10,9 @@ export 'package:book_guard_app/src/journal.dart';
 /// sha256 hex of a photo's bytes -- `book_guard/_photo.py` sha256_of.
 String photoSha(Uint8List bytes) => sha256.convert(bytes).toString();
 
-/// Seconds a page takes at the least; a stop on the start page sooner than
-/// this is the start photo retaken (`book_guard/_constants.py`).
-const minSecondsPerPage = 50;
+/// A stop on the start page sooner than this is the start photo retaken
+/// (`RETAKE_SECONDS` in `book_guard/_constants.py`).
+const retakeSeconds = 50;
 
 /// The check page from [startPage] to [endPage], both included, exactly as
 /// the PC names it (`book_guard/_sessions.py` check_page_for); null only
@@ -88,7 +88,7 @@ LocalView? localView(GuardState? state, List<JournalEntry> journal) {
       final start = open;
       final startPage = start.page;
       final seconds = e.takenAt.difference(start.takenAt).inSeconds;
-      final retaken = page == startPage && seconds < minSecondsPerPage;
+      final retaken = page == startPage && seconds < retakeSeconds;
       if (startPage != null && retaken) {
         // The same page that soon is the start photo taken again. (The PC
         // also looks at the photo after a later same-page stop; the buttons
