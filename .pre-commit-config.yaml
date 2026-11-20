@@ -63,11 +63,13 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+      # Changed files only: the whole tree took ~16 s of a commit's 60 s cap
+      # (jobs=1, see pyproject); --all-files / CI still lint everything.
       - id: pylint
         name: pylint (dev venv)
-        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --fail-under=10 book_guard scripts
+        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --fail-under=10
         language: system
-        pass_filenames: false
+        files: ^(book_guard|scripts)/.*\.py$
         types: [python]
       - id: pytest
         name: pytest (100% branch coverage)

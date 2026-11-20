@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test("the groups are the PC's, in modal order", () {
     expect(bookFormatGroups.map((g) => g.key), [
-      'calibre',
+      'ebook',
       'pdf',
       'djvu',
       'text',

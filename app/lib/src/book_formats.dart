@@ -9,7 +9,7 @@ class BookFormatGroup {
   /// Creates a group.
   const new(this.key, this.label, this.extensions);
 
-  /// The PC's group name (`calibre`, `pdf`, `djvu`, `text`).
+  /// The PC's group name (`ebook`, `pdf`, `djvu`, `text`).
   final String key;
 
   /// What the modal calls it.
@@ -21,10 +21,9 @@ class BookFormatGroup {
 
 /// The groups, in the order the modal lists them.
 const bookFormatGroups = <BookFormatGroup>[
-  BookFormatGroup('calibre', 'Ebooks (calibre)', [
-    'epub', 'kepub', 'mobi', 'azw', 'azw1', 'azw3', 'azw4', 'prc', 'pdb', //
-    'fb2', 'fbz', 'lit', 'lrf', 'rb', 'snb', 'tcr', 'pml', 'chm', 'rtf', //
-    'docx', 'odt', 'htmlz', 'txtz', 'cbz', 'cbr', 'cb7', 'cbc',
+  BookFormatGroup('ebook', 'Ebooks', [
+    'epub', 'kepub', 'mobi', 'azw', 'azw3', 'fb2', 'fbz', 'rtf', 'docx', //
+    'odt', 'htmlz', 'txtz',
   ]),
   BookFormatGroup('pdf', 'PDF', ['pdf']),
   BookFormatGroup('djvu', 'DjVu', ['djvu', 'djv']),

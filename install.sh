@@ -41,12 +41,13 @@ install_package() {
 }
 
 install_converters() {
-    # Book-file text extraction: calibre (ebook-convert: epub, mobi, azw3,
-    # fb2, docx, ...), poppler (pdftotext) and djvulibre (djvutxt).
+    # Book-file text extraction: pandoc (epub, fb2, docx, odt, rtf; the mobi
+    # Python package, a pyproject dependency, covers mobi/azw3), poppler
+    # (pdftotext) and djvulibre (djvutxt).
     # Photo reading without a model: tesseract + its Polish model (page
     # text) and zbar (ISBN barcodes).
     local missing=()
-    command -v ebook-convert >/dev/null || missing+=(calibre)
+    command -v pandoc >/dev/null || missing+=(pandoc-cli)
     command -v pdftotext >/dev/null || missing+=(poppler)
     command -v djvutxt >/dev/null || missing+=(djvulibre)
     command -v tesseract >/dev/null || missing+=(tesseract)

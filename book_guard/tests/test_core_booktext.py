@@ -3,36 +3,24 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import shutil
 import subprocess
+from typing import TYPE_CHECKING
 
 import pytest
 
 from book_guard import _booktext
-from book_guard._booktext import MIN_BOOK_CHARS, BookTextError
+from book_guard._booktext import BookTextError
+from book_guard.tests import _booktext_helpers as helpers
+from book_guard.tests._booktext_helpers import LONG
 
-_LONG = ("word " * (MIN_BOOK_CHARS // 4)).strip()
-
-
-class FakeRun:
-    """Stands in for ``_booktext._run``: records commands, returns text."""
-
-    def __init__(self, stdout: str = _LONG) -> None:
-        self.stdout = stdout
-        self.commands: list[list[str]] = []
-
-    def __call__(self, command: list[str]) -> str:
-        self.commands.append(command)
-        if command[0] == "ebook-convert":
-            Path(command[2]).write_text(self.stdout, encoding="utf-8")
-            return ""
-        return self.stdout
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
-def fake_run(monkeypatch: pytest.MonkeyPatch) -> FakeRun:
-    fake = FakeRun()
+def fake_run(monkeypatch: pytest.MonkeyPatch) -> helpers.FakeRun:
+    fake = helpers.FakeRun()
     monkeypatch.setattr(_booktext, "_run", fake)
     return fake
 
@@ -55,42 +43,57 @@ def test_no_extension_message(tmp_path: Path) -> None:
 
 def test_plain_text(tmp_path: Path) -> None:
     path = tmp_path / "book.TXT"
-    path.write_text(_LONG, encoding="utf-8")
-    assert _booktext.extract(path) == _LONG
+    path.write_text(LONG, encoding="utf-8")
+    assert _booktext.extract(path) == LONG
 
 
 def test_html(tmp_path: Path) -> None:
     path = tmp_path / "book.xhtml"
-    body = "".join(f"<p>{_LONG[:500]} &amp; more</p>" for _ in range(50))
-    path.write_text(f"<html><body>{body}</body></html>", encoding="utf-8")
+    body = "".join(f"<p>{LONG[:500]} &amp; more</p>" for _ in range(50))
+    head = "<head><STYLE>p {color: red}</STYLE><script>var hidden = 1;</script></head>"
+    path.write_text(f"<html>{head}<body>{body}</body></html>", encoding="utf-8")
     text = _booktext.extract(path)
+    assert "color: red" not in text
+    assert "hidden" not in text
     assert "<p>" not in text
     assert "& more" in text
 
 
-def test_pdf(tmp_path: Path, fake_run: FakeRun) -> None:
+def test_pdf(tmp_path: Path, fake_run: helpers.FakeRun) -> None:
     path = tmp_path / "book.pdf"
-    assert _booktext.extract(path) == _LONG
+    assert _booktext.extract(path) == LONG
     assert fake_run.commands == [["pdftotext", "-enc", "UTF-8", str(path), "-"]]
 
 
 @pytest.mark.parametrize("suffix", [".djvu", ".djv"])
-def test_djvu(tmp_path: Path, fake_run: FakeRun, suffix: str) -> None:
+def test_djvu(tmp_path: Path, fake_run: helpers.FakeRun, suffix: str) -> None:
     path = tmp_path / f"book{suffix}"
-    assert _booktext.extract(path) == _LONG
+    assert _booktext.extract(path) == LONG
     assert fake_run.commands == [["djvutxt", str(path)]]
 
 
-def test_calibre(tmp_path: Path, fake_run: FakeRun) -> None:
-    path = tmp_path / "book.epub"
-    assert _booktext.extract(path) == _LONG
-    command = fake_run.commands[0]
-    assert command[:2] == ["ebook-convert", str(path)]
-    assert command[2].endswith("book.txt")
-    assert not Path(command[2]).exists()  # temp dir cleaned up
+_PANDOC_FORMATS = {
+    ".epub": "epub",
+    ".kepub": "epub",
+    ".fb2": "fb2",
+    ".docx": "docx",
+    ".odt": "odt",
+    ".rtf": "rtf",
+}
 
 
-def test_too_short_is_refused(tmp_path: Path, fake_run: FakeRun) -> None:
+@pytest.mark.parametrize(("suffix", "reader"), _PANDOC_FORMATS.items())
+def test_pandoc(
+    tmp_path: Path, fake_run: helpers.FakeRun, suffix: str, reader: str
+) -> None:
+    path = tmp_path / f"book{suffix.upper()}"
+    assert _booktext.extract(path) == LONG
+    assert fake_run.commands == [
+        ["pandoc", "--sandbox", "-f", reader, "-t", "plain", "--wrap=none", str(path)]
+    ]
+
+
+def test_too_short_is_refused(tmp_path: Path, fake_run: helpers.FakeRun) -> None:
     fake_run.stdout = "a scanned pdf"
     with pytest.raises(BookTextError, match="only 13 characters"):
         _booktext.extract(tmp_path / "scan.pdf")
@@ -147,8 +150,8 @@ def test_run_failure(
     monkeypatch: pytest.MonkeyPatch, stdout: str, stderr: str, tail: str
 ) -> None:
     _with_tool(monkeypatch, subprocess.CompletedProcess([], 1, stdout, stderr))
-    with pytest.raises(BookTextError, match=f"ebook-convert failed: {tail}"):
-        _booktext._run(["ebook-convert", "a", "b"])
+    with pytest.raises(BookTextError, match=f"pandoc failed: {tail}"):
+        _booktext._run(["pandoc", "a", "b"])
 
 
 def test_run_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
