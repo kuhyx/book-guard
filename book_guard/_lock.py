@@ -105,12 +105,7 @@ class BookGuardLock:
     # -- gatelock hooks ---------------------------------------------------
 
     def build_surface(self, parent: tk.Misc, surface: SurfaceInfo) -> None:
-        """Paint one output; the input form goes on the primary one.
-
-        Index 0 gets it too: an X server with no RandR primary (Xvfb, some
-        single-monitor setups) would otherwise show a lock with no way to
-        answer it.
-        """
+        """Paint an output; the form goes on the primary, or index 0 if none (Xvfb)."""
         column = build_status(parent, self._vars)
         if surface.is_primary or surface.index == 0:
             self._inputs[surface.output_name] = build_inputs(
@@ -176,11 +171,10 @@ class BookGuardLock:
     def _typed(self, field: str) -> str:
         """The first non-empty text in ``field`` across the input forms."""
         for widgets in self._inputs.values():
-            text = (
-                widgets.summary.get("1.0", "end")
-                if field == "summary"
-                else widgets.escape.get()
-            ).strip()
+            if field == "summary":
+                text = widgets.summary.get("1.0", "end").strip()
+            else:
+                text = widgets.escape.get().strip()
             if text:
                 return text
         return ""
@@ -211,11 +205,10 @@ class BookGuardLock:
         error = escape_today(self._paths, self._typed("escape"))
         if error == ESCAPE_WRONG:
             self._vars.say(_pictos.NO, ESCAPE_PHRASE)
-            return
-        if error == ESCAPE_NO_ROOM:
+        elif error == ESCAPE_NO_ROOM:
             self._vars.say(_pictos.NO)
-            return
-        self._refresh()
+        else:
+            self._refresh()
 
     def close(self) -> None:
         """Release the lock. Idempotent."""
@@ -224,11 +217,7 @@ class BookGuardLock:
             self._lock.close()
 
     def run(self) -> None:
-        """Hand control to Tk until the lock releases.
-
-        The stall watch starts here, not at ``GateRoot()``: ``wait_for_turn``
-        sleeps outside Tk, and that queueing is not a frozen window.
-        """
+        """Run Tk until release; the stall watch starts after wait_for_turn's sleep."""
         if _error_report.SLOT.reporter is not None:
             watch_stalls(self.root, _error_report.SLOT.reporter)
         self._lock.run()
