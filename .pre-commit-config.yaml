@@ -71,6 +71,10 @@ repos:
         language: system
         files: ^(book_guard|scripts)/.*\.py$
         types: [python]
+        # One process: pre-commit's default fan-out ran up to 16 pylints
+        # that each re-infer the same imports; under capped.sh's CPU share
+        # --all-files passed 60 s, while one process lints the tree in ~9 s.
+        require_serial: true
       - id: pytest
         name: pytest (100% branch coverage)
         entry: .venv/bin/python -m pytest -p no:cacheprovider -q
