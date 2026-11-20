@@ -13,6 +13,7 @@ import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter/services.dart';
+import 'package:kuhy_credit/kuhy_credit.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Four icon tabs over one live snapshot: status, read, book, library.
@@ -194,6 +195,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ];
     return Scaffold(
       appBar: AppBar(
+        // The desktop build has no settings page, where the phone shows the
+        // credit, so its bar carries it instead.
+        leading: widget.settingsPage == null
+            ? const Center(
+                child: KuhyCredit(size: 32, below: true, alignStart: true),
+              )
+            : null,
         actions: [
           IconButton(
             icon: Badge(
