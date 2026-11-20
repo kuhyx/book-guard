@@ -6,6 +6,7 @@ import 'package:book_guard_app/src/screens/reading_settings.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
+import 'package:kuhy_credit/kuhy_credit.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The phone's dufs login (link, person and key fields) and, once
@@ -136,6 +137,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+        const SizedBox(height: AppSpacing.lg),
+        const Align(alignment: Alignment.centerLeft, child: KuhyCredit()),
       ],
     ),
   );
