@@ -105,6 +105,9 @@ def test_a_pencilled_237_over_a_chapter_heading_is_read() -> None:
     draw.rectangle((300, 255, 500, 272), fill=25)  # "Secularism"
     gray = np.asarray(image.filter(ImageFilter.GaussianBlur(1.0)))
     assert _number(gray) == 237
+    # The app's pencil_237_test.dart reads these very pixels.
+    with Image.open(FIXTURE.parent / "pencil_237.png") as fixture:
+        assert np.array_equal(np.asarray(fixture), gray)
 
 
 def test_print_dark_ink_is_no_pencil_and_a_faint_shadow_is_no_number() -> None:
