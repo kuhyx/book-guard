@@ -4,9 +4,10 @@
 #
 # The full app suite runs past the 60 s action cap, so the
 # pre-commit hook runs only what the commit touches: every changed test
-# file, plus every test that imports a changed lib/ or bin/ file directly.
-# A pubspec or analysis_options change, or a changed file no test imports,
-# runs the full suite. CI (.github/workflows/app.yml) always runs it all.
+# file, plus every test that imports a changed lib/ or bin/ file directly
+# (or, for a lib file no test imports, the tests of the lib files that
+# import it, up to 4 levels). A pubspec or analysis_options change, a bin/
+# change, or a lib file no test reaches, runs the full suite. CI (.github/workflows/app.yml) always runs it all.
 #
 # Usage: scripts/app_test_changed.sh FILE... (paths from the repo root, as
 # pre-commit passes them).
@@ -29,6 +30,43 @@ importers() {
         "${APP_DIR}/test" | sed "s|^${APP_DIR}/||" || true
 }
 
+# Lib files (relative to lib/) that import package:book_guard_app/<lib path>.
+lib_importers() {
+    local lib_path="$1"
+    grep -rlF --include='*.dart' "package:book_guard_app/${lib_path}'" \
+        "${APP_DIR}/lib" | sed "s|^${APP_DIR}/lib/||" || true
+}
+
+# Tests for a lib file: its direct importers, else (a widget no test pumps
+# alone) the tests of the lib files that import it, up to 4 levels. Empty
+# when none is found: the caller then runs the full suite.
+tests_for() {
+    local -a level=("$1") next=()
+    local -A seen=(["$1"]=1)
+    local depth p found up
+    for depth in 1 2 3 4; do
+        found=""
+        for p in "${level[@]}"; do
+            found+="$(importers "$p")"$'\n'
+        done
+        if [[ -n "${found//[[:space:]]/}" ]]; then
+            printf '%s' "$found" | sed '/^$/d'
+            return 0
+        fi
+        next=()
+        for p in "${level[@]}"; do
+            while IFS= read -r up; do
+                [[ -z "$up" || -n "${seen[$up]:-}" ]] && continue
+                seen["$up"]=1
+                next+=("$up")
+            done < <(lib_importers "$p")
+        done
+        [[ ${#next[@]} -eq 0 ]] && return 0
+        level=("${next[@]}")
+        : "$depth"
+    done
+}
+
 main() {
     local full=0 f rel found
     local -a tests=()
@@ -38,7 +76,7 @@ main() {
             app/pubspec.* | app/analysis_options.yaml) full=1 ;;
             app/test/*_test.dart) [[ -e "$f" ]] && tests+=("$rel") ;;
             app/lib/*.dart)
-                found="$(importers "${rel#lib/}")"
+                found="$(tests_for "${rel#lib/}")"
                 if [[ -z "$found" ]]; then full=1; else mapfile -t -O "${#tests[@]}" tests <<<"$found"; fi
                 ;;
             app/bin/*.dart) full=1 ;;

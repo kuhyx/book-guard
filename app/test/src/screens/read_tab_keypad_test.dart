@@ -63,7 +63,8 @@ void main() {
     await tester.tap(spoken('Send the typed page number'));
     await settle(tester, 10);
     expect(api.notes['start_IMG.jpg']?.page, 29);
-    expect(api.ocrs['start_IMG.jpg'], isNull);
+    // The pencil's number is what a reader offered: kept, so no correction.
+    expect(api.ocrs['start_IMG.jpg'], 29);
   });
 
   testWidgets('OCR read 2, the keypad corrects it: 29 is sent, ocr 2 kept', (

@@ -67,21 +67,24 @@ class ReviewButtons extends StatelessWidget {
 /// The keypad of the review screen, pre-filled with the chosen number [hit]
 /// (else a [pencil]led one). The result carries what the field holds, with
 /// the box kept only when that is the number it surrounds; null when
-/// cancelled.
+/// cancelled. Its `ocrPage` is the pre-fill (what a reader offered: the
+/// first scan, a drawn box or the pencil), else [ocr]: a changed pre-fill is
+/// an OCR correction the PC files as a page-truth row.
 Future<ReviewResult?> typeReview(
   BuildContext context, {
   required NumberHit? hit,
   required int? pencil,
   required int? ocr,
 }) async {
+  final prefill = hit?.value ?? pencil;
   final page = await showDialog<int>(
     context: context,
-    builder: (_) => TypePageDialog(initial: hit?.value ?? pencil),
+    builder: (_) => TypePageDialog(initial: prefill),
   );
   if (page == null) return null;
   return ReviewResult(
     page: page,
     box: hit != null && hit.value == page ? hit.box : null,
-    ocrPage: ocr,
+    ocrPage: prefill ?? ocr,
   );
 }

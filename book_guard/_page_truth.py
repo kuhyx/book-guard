@@ -8,9 +8,10 @@ was wrong on a real photo, so the photo is copied into the page-truth folder
 ``manifest.json``: ``scripts/page_truth.py`` then fails until the reader is
 fixed. The error log gets an ``ocr corrected`` line either way.
 
-Locking: no lock of its own. The one caller is the inbox pass, which already
-holds the book-guard write lock (:func:`book_guard._flock.exclusive`), so it
-is the manifest's only writer; the manifest is replaced atomically (temp file
+Locking: no lock of its own. The callers (the inbox pass, and ``type_page``
+for a keypad pre-fill the owner changed) already hold the book-guard write
+lock (:func:`book_guard._flock.exclusive`), so they are the manifest's only
+writers; the manifest is replaced atomically (temp file
 and rename), so ``page_truth.py`` never reads half of it. This is photos-first
 code: any failure is logged and swallowed, never raised into the photo pass.
 """
@@ -83,7 +84,22 @@ def note_ocr_miss(
     Logs ``ocr corrected`` and adds the manifest row; nothing for a photo
     whose ``ocr_page`` is absent or agrees with ``page``.
     """
-    ocr_page, page = note.ocr_page, note.hint
+    file_ocr_miss(paths, photo, sha, context, (note.ocr_page, note.hint))
+
+
+def file_ocr_miss(
+    paths: Paths,
+    photo: Path,
+    sha: str,
+    context: Context,
+    pages: tuple[int | None, int | None],
+) -> None:
+    """File ``photo`` as a page-truth row when ``pages`` (OCR, owner) differ.
+
+    The sidecar path (:func:`note_ocr_miss`) and the keypad's ``type_page``
+    (a changed pre-fill) both land here; the caller holds the write lock.
+    """
+    ocr_page, page = pages
     if ocr_page is None or page is None or ocr_page == page:
         return
     log_error(

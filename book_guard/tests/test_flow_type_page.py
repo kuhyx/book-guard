@@ -206,3 +206,28 @@ def test_a_credit_from_read_pages_has_no_page_source(bg_paths: Paths) -> None:
     assert entry is not None
     assert "page_source" not in entry.detail
     assert "typed_photos" not in entry.detail
+
+
+def test_a_changed_prefill_is_filed_as_an_ocr_correction(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The keypad was pre-filled with 234 (the phone's reader), the owner sent
+    # 237: the photo becomes a page_truth row, as a review-screen fix does.
+    name = _chapter_opener(bg_paths)
+    monkeypatch.setattr(_reread, "read", _reader([]))
+    body = {"photo": name, "page": 237, "ocr_page": 234}
+    assert _reread.type_page(bg_paths, body).ok
+    rows = json.loads((bg_paths.page_truth_dir / "manifest.json").read_text())
+    assert [(r["page"], r["ocr_page"]) for r in rows] == [(237, 234)]
+    assert "ocr corrected" in bg_paths.error_log.read_text()
+
+
+@pytest.mark.parametrize("ocr_page", [None, 237, "234", True])
+def test_a_kept_or_missing_prefill_files_nothing(
+    bg_paths: Paths, monkeypatch: pytest.MonkeyPatch, ocr_page: object
+) -> None:
+    name = _chapter_opener(bg_paths)
+    monkeypatch.setattr(_reread, "read", _reader([]))
+    body = {"photo": name, "page": 237, "ocr_page": ocr_page}
+    assert _reread.type_page(bg_paths, body).ok
+    assert not (bg_paths.page_truth_dir / "manifest.json").exists()

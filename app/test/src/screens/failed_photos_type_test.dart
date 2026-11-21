@@ -109,12 +109,12 @@ void main() {
     expect(api.sent, isEmpty);
   });
 
-  testWidgets('the keypad is numeric and keeps digits only', (tester) async {
+  testWidgets('the keypad is its own and keeps digits only', (tester) async {
     await pump(tester, photos: [_noNumber]);
     await tester.tap(spoken('Type the page number'));
     await settle(tester, 10);
     final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.keyboardType, TextInputType.number);
+    expect(field.keyboardType, TextInputType.none);
     await tester.enterText(find.byType(TextField), '1a2');
     expect(find.text('12'), findsOneWidget);
   });
@@ -223,6 +223,11 @@ void main() {
     await tester.enterText(find.byType(TextField), '613');
     await tester.tap(spoken('Send the typed page number'));
     await settle(tester, 10);
-    expect(api.sent.single.body, {'photo': 'start_a.jpg', 'page': 613});
+    // The changed pre-fill rides along: the PC files it as an OCR miss.
+    expect(api.sent.single.body, {
+      'photo': 'start_a.jpg',
+      'page': 613,
+      'ocr_page': 612,
+    });
   });
 }

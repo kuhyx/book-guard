@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from book_guard import _ledger, _photos
 from book_guard._flock import exclusive
+from book_guard._page_truth import file_ocr_miss
 from book_guard._photo_context import context_for, parse_box
 from book_guard._photos import OK, REJECTED, TYPED
 from book_guard._reader import read
@@ -130,5 +131,10 @@ def type_page(paths: Paths, request: dict[str, Any]) -> Response:
             page_source=TYPED,
         )
         _photos.save(paths.photos, records)
+        # The keypad's pre-fill (the phone's reader) changed by the owner is
+        # an OCR miss on a real photo, as on the review screen.
+        ocr_page = request.get("ocr_page")
+        if isinstance(ocr_page, int) and not isinstance(ocr_page, bool):
+            file_ocr_miss(paths, filed, record.sha, context, (ocr_page, page))
     _logger.info("typed page %d for %s", page, name)
     return Response(ok=True, code="read", data={"page": page})
