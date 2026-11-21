@@ -53,6 +53,10 @@ Read README.md first. These are the invariants that are easy to break.
   the inbox pass's `exclusive` lock (the manifest has no lock of its own;
   atomic replace), is idempotent per photo, and a failure there only logs --
   photos first.
+  The keypad dialog has its own digit keys (never the system keyboard,
+  which once dropped a digit); its pre-fill is always editable, and a sent
+  number that differs from it travels as `ocr_page` (review screen and
+  `type_page` alike), so a changed pre-fill is a page-truth row.
   The one model allowed is the small local digit network for a *pencilled*
   number (`_pencil*.py`, weights `app/assets/pencil_digits.bin`, Dart port
   `app/lib/src/pencil_*.dart`, goldens `pencil_goldens.json`): no LLM, no
@@ -63,6 +67,13 @@ Read README.md first. These are the invariants that are easy to break.
   `scripts/page_truth.py` (rows with a `pencil` key; run a slice at a time:
   `... page_truth.py DIR 18:24`) and `python3 -m scripts.pencil_goldens`;
   retraining is `scripts/train_pencil.py` (chunks under 60 s).
+- **One session at a time** (`app/lib/src/next_step.dart`): the Read tab
+  offers exactly one step -- the oldest unfinished session's check photo or
+  summary, else the stop, else the start -- never a new start while one is
+  unfinished. While a photo or summary is checked it shows the stage glyph
+  in a spinner, no button. The Status tab tiles only open sessions
+  (`needs-check-photo`, `needs-quiz`); credited and failed ones sit behind
+  the all-sessions tile.
 - **The app is offline-first.** Every upload goes through its outbox; it
   must keep working (photos, page numbers, check page, summary queued) with
   the PC and the network both gone. App data lives in its support folder
@@ -151,9 +162,11 @@ Read README.md first. These are the invariants that are easy to break.
   app's request files are read-only / route through `_grading.quiz_one`.
   The one other way is the owner's CLI `book-guard accept SESSION --reason`
   (`_accept.py`): credits a needs-check/needs-quiz session as it stands via
-  `record_verdict`, `detail.grader == "manual"`, `graded == "0"`; it never
+  `record_verdict`, `detail.grader == "manual"`, `graded == "0"`; it
   overrides the speed floor (`MIN_SECONDS_PER_PAGE`, 38 s since 2026-11-18;
-  the retake window is its own `RETAKE_SECONDS`, 50). No app/MCP route to it.
+  the retake window is its own `RETAKE_SECONDS`, 50) only with
+  `--ignore-floor`, which marks the row `detail.floor == "waived"`. No
+  app/MCP route to either.
 - **A fail names what is missing** (1-3 topics, never the answers); a
   failed summary can be rewritten any number of times (`<sid>#2`, `#3`, ...
   until a credit row), each judged generously and only on those topics

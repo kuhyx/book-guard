@@ -77,3 +77,29 @@ def test_too_fast_is_still_refused_by_the_cli(
     assert snapshot(bg_paths).sessions[0].status == TOO_FAST
     assert main(["accept", sid, "--reason", "r"]) == 1
     assert "too fast" in capsys.readouterr().err
+
+
+def test_ignore_floor_credits_a_too_fast_session_marked_waived(
+    bg_paths: Paths,
+) -> None:
+    sid = _seed(bg_paths, 600)
+    assert snapshot(bg_paths).sessions[0].status == TOO_FAST
+    entry = _accept.accept(bg_paths, sid, "owner grant", ignore_floor=True)
+    assert (entry.kind, entry.amount) == ("credit", 60)
+    (row,) = load(bg_paths.ledger, bg_paths.key_file).verdicts()[sid]
+    assert row.detail["floor"] == "waived"
+    assert row.detail["grader"] == "manual"
+    assert snapshot(bg_paths).sessions[0].status == CREDITED
+
+
+def test_ignore_floor_on_a_session_above_it_waives_nothing(bg_paths: Paths) -> None:
+    sid = _seed(bg_paths)
+    _accept.accept(bg_paths, sid, "r", ignore_floor=True)
+    (row,) = load(bg_paths.ledger, bg_paths.key_file).verdicts()[sid]
+    assert "floor" not in row.detail
+
+
+def test_cli_ignore_floor(bg_paths: Paths, capsys: pytest.CaptureFixture[str]) -> None:
+    sid = _seed(bg_paths, 600)
+    assert main(["accept", sid, "--reason", "r", "--ignore-floor"]) == 0
+    assert "accepted p. 29-88: 60 pages (speed floor waived)" in capsys.readouterr().out

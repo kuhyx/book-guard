@@ -55,6 +55,8 @@ class Verdict:
     """Who judged it: ``claude:<model>`` or ``local:<model>``."""
     votes: tuple[bool, ...] = ()
     """Each grading call's pass/fail, in order."""
+    floor_waived: bool = False
+    """The owner's ``accept --ignore-floor`` credited a too-fast session."""
 
 
 def grade(
@@ -208,6 +210,8 @@ def record_verdict(
                 "end_offset": str(session.ebook.end_offset),
             },
         )
+    if verdict.floor_waived:
+        entry = replace(entry, detail={**entry.detail, "floor": "waived"})
     if verdict.passed and earns(session.pages, session.minutes, ledger, entry):
         entry = replace(entry, detail={**entry.detail, "bonus": "1"})
     _ledger.append(paths.ledger, paths.key_file, entry)

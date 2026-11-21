@@ -7,9 +7,10 @@ session is credited as it stands, waiting for its check photo or its
 summary, through the normal :func:`book_guard._quiz.record_verdict` (so the
 day's bonus and inclusive counting apply as usual), marked
 ``detail.graded == "0"`` and ``detail.grader == "manual"``. The app and the
-request files cannot reach it. A too-fast session is still refused: the
-speed floor is the one thing a hand credit does not override (``retime``
-widens a session the phone lost a photo of).
+request files cannot reach it. A too-fast session is refused unless the
+owner also passes ``--ignore-floor`` (CLI only): the row then carries
+``detail.floor == "waived"`` (``retime`` widens a session the phone lost a
+photo of).
 """
 
 from __future__ import annotations
@@ -41,25 +42,30 @@ class AcceptError(ValueError):
     """The credit was refused; the message says why."""
 
 
-def accept(active: _paths.Paths, session_id: str, reason: str) -> Entry:
-    """Credit ``session_id`` by hand.
+def accept(
+    active: _paths.Paths, session_id: str, reason: str, *, ignore_floor: bool = False
+) -> Entry:
+    """Credit ``session_id`` by hand; ``ignore_floor`` waives the speed floor.
 
     Raises:
-        AcceptError: No such session, no reason, too fast, or already credited.
+        AcceptError: No such session, no reason, too fast (without
+            ``ignore_floor``), or already credited.
     """
     with exclusive(active):
         view = find_view(active, session_id)
         if view is None or not reason.strip():
             msg = "No such session." if view is None else "A reason is required."
             raise AcceptError(msg)
-        if view.status == TOO_FAST:
-            msg = "This session is too fast to count."
+        too_fast = view.status == TOO_FAST
+        if too_fast and not ignore_floor:
+            msg = "This session is too fast to count (--ignore-floor waives it)."
             raise AcceptError(msg)
         verdict = Verdict(
             passed=True,
             feedback=f"accepted by hand: {reason.strip()}",
             ungraded=True,
             grader=MANUAL,
+            floor_waived=too_fast,
         )
         # None: a credit row already stands (record_verdict checks the ledger).
         entry = record_verdict(active, view.book, view.session, verdict, "")
@@ -74,19 +80,27 @@ def configure(parser: argparse.ArgumentParser) -> None:
     """The ``accept`` subcommand's arguments."""
     parser.add_argument("session")
     parser.add_argument("--reason", required=True, help="kept in the ledger")
+    parser.add_argument(
+        "--ignore-floor",
+        action="store_true",
+        help="credit a too-fast session too (marked floor=waived)",
+    )
 
 
 def cmd_accept(args: argparse.Namespace) -> int:
     """``book-guard accept``: credit one session without the grader, signed."""
     try:
-        entry = accept(_paths.paths(), args.session, args.reason)
+        entry = accept(
+            _paths.paths(), args.session, args.reason, ignore_floor=args.ignore_floor
+        )
     except AcceptError as exc:
         _logger.warning("accept refused: %s", exc)
         sys.stderr.write(f"{exc}\n")
         return 1
     detail = entry.detail
+    waived = " (speed floor waived)" if detail.get("floor") == "waived" else ""
     sys.stdout.write(
         f"accepted p. {detail['start_page']}-{detail['end_page']}: "
-        f"{entry.amount} pages\n"
+        f"{entry.amount} pages{waived}\n"
     )
     return 0
