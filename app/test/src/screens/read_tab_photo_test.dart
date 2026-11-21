@@ -72,7 +72,8 @@ void main() {
   testWidgets('desktop, mid-session: stop photo from a file', (tester) async {
     await pump(
       tester,
-      state: sampleState(),
+      // Reading, nothing else unfinished: the stop is the one step.
+      state: sampleState({'sessions': const <Object>[]}),
       desktop: true,
       photo: _photo('p.jpg'),
     );
@@ -130,8 +131,9 @@ void main() {
     );
     await tapAndType(tester, spoken('Start reading'));
     expect(cueWith(Icons.cloud_upload), findsOneWidget);
-    final button = tester.widget<FilledButton>(buttonSpoken('Start reading'));
-    expect(button.onPressed, isNull);
+    // Being checked: the camera in a spinner, no button at all.
+    expect(busyBar(), findsOneWidget);
+    expect(buttonSpoken('Start reading'), findsNothing);
     read.complete(reading(name: 'start_s.jpg', page: 3));
     await settle(tester);
     expect(cueOf(CueKind.ok), findsOneWidget);

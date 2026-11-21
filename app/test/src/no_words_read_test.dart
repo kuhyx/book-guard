@@ -116,7 +116,7 @@ void main() {
       api.uploadError = shareDown();
       await showTab(
         tester,
-        tab(state: sampleState(), desktop: true),
+        tab(state: sampleState({'sessions': const <Object>[]}), desktop: true),
         scroll: false,
       );
       await tapAndType(tester, spoken('Stop reading'));
@@ -171,9 +171,7 @@ void main() {
       expectNoWords(tester, content: readContent);
     });
 
-    testWidgets('with the grader, an outage and the bonus bolt', (
-      tester,
-    ) async {
+    testWidgets('with the grader and an outage', (tester) async {
       await api.markGrading('session:a-b');
       final state = GuardState.fromJson({
         'claude_down_since': DateTime.now().toIso8601String(),
@@ -194,6 +192,23 @@ void main() {
         ),
       );
       expect(find.byType(GraderNoteChip), findsOneWidget);
+      // With the grader: the pen in a spinner, not the form.
+      expect(busyBar(), findsOneWidget);
+      expectNoWords(tester, content: readContent);
+    });
+
+    testWidgets('the bonus bolt on the form', (tester) async {
+      await showTab(
+        tester,
+        panel(
+          session(),
+          pace: Pace.fromJson(const {
+            'today_required': 30,
+            'pages_today': 0,
+            'bonus_today': false,
+          }),
+        ),
+      );
       expect(spoken('gaming bonus'), findsOneWidget);
       expectNoWords(tester, content: readContent);
     });

@@ -55,17 +55,11 @@ void main() {
   ) async {
     await openHome(tester, 'read');
     expectNoVerticalScroll(tester);
-    // Start or stop, whichever the journal leaves open.
-    expectTappable(
-      tester,
-      find.byWidgetPredicate(
-        (w) =>
-            w is Icon &&
-            (w.semanticLabel == 'Start reading' ||
-                w.semanticLabel == 'Stop reading'),
-      ),
-    );
+    // One session at a time: its summary is the one step, no start or stop.
     expect(find.byType(SummaryPanel), findsOneWidget);
+    expectTappable(tester, spoken('Submit summary'));
+    expect(spoken('Start reading'), findsNothing);
+    expect(spoken('Stop reading'), findsNothing);
     // The photos live on their own screen, not a page of this tab.
     expect(find.byType(PhotoGallery), findsNothing);
     expectTappable(tester, spoken('photos'));

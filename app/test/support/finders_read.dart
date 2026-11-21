@@ -6,6 +6,7 @@ import 'package:book_guard_app/src/screens/photo_review.dart';
 import 'package:book_guard_app/src/screens/photo_status.dart';
 import 'package:book_guard_app/src/screens/pulse_glyph.dart';
 import 'package:book_guard_app/src/screens/reject_glyph.dart';
+import 'package:book_guard_app/src/screens/wait_glyph.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -65,12 +66,9 @@ Finder chosenPage(int page) => find.descendant(
 /// The pulsing viewfinder that asks for a box.
 Finder pulse() => find.byType(PulseGlyph);
 
-/// The indeterminate bar of a summary with the grader (the length bar has
-/// a value; this one has none).
-Finder busyBar() => find.byWidgetPredicate(
-  (w) => w is LinearProgressIndicator && w.value == null,
-  description: 'busy bar',
-);
+/// A step being checked: the stage glyph in a spinner, no button (a summary
+/// with the grader, a photo on its way).
+Finder busyBar() => find.byType(WaitGlyph);
 
 /// Holds [finder] down long enough for a `HoldButton` ring to confirm.
 Future<void> hold(WidgetTester tester, Finder finder) async {

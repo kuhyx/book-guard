@@ -18,6 +18,7 @@ class ReadSessionPage extends StatelessWidget {
     required this.waiting,
     required this.reading,
     required this.quiz,
+    required this.ebook,
     required this.status,
     required this.onChanged,
     required this.buttons,
@@ -36,8 +37,12 @@ class ReadSessionPage extends StatelessWidget {
   /// The open paper session's start page, if one is open.
   final int? reading;
 
-  /// Sessions waiting for a summary; the first gets the panel.
+  /// The session whose summary is the one next step (at most one).
   final List<SessionInfo> quiz;
+
+  /// Whether the e-book can be opened: only when no paper session is
+  /// open or unfinished (one session at a time).
+  final bool ebook;
 
   /// The last photo's fate, if any.
   final PhotoStatus? status;
@@ -57,12 +62,13 @@ class ReadSessionPage extends StatelessWidget {
         SessionPrompt(waiting: waiting),
         const SizedBox(height: AppSpacing.md),
         buttons,
-        EbookEntry(
-          api: api,
-          state: state,
-          paperStart: reading,
-          onChanged: onChanged,
-        ),
+        if (ebook)
+          EbookEntry(
+            api: api,
+            state: state,
+            paperStart: reading,
+            onChanged: onChanged,
+          ),
         if (status case final status?) ...[
           const SizedBox(height: AppSpacing.sm),
           Align(

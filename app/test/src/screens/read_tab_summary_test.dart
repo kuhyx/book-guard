@@ -19,11 +19,17 @@ void main() {
     changed = 0;
   });
 
+  // One session at a time: only the session waiting for its summary, so the
+  // summary is the tab's one step.
   Future<void> pump(WidgetTester tester) => pumpTab(
     tester,
     ReadTab(
       api: api,
-      state: sampleState(),
+      state: sampleState({
+        'sessions': [
+          {'id': 'session:c-d', 'status': 'needs-quiz', 'start_page': '21'},
+        ],
+      }),
       desktop: false,
       onChanged: () async => changed++,
       photoSource: ({required camera}) async => null,
@@ -67,9 +73,9 @@ void main() {
     );
     await submit(tester, '  Kaladin trains.  ');
     await tester.pump();
+    // With the grader: the pen in a spinner, no button.
     expect(busyBar(), findsOneWidget);
-    final button = tester.widget<FilledButton>(buttonSpoken('Submit summary'));
-    expect(button.onPressed, isNull);
+    expect(buttonSpoken('Submit summary'), findsNothing);
 
     answer.complete(const GuardResponse(ok: true, passed: true));
     await settle(tester);
@@ -120,10 +126,10 @@ void main() {
     await pump(tester);
     await submit(tester, 'text');
     await settle(tester);
-    expect(cueOf(CueKind.warn), findsOneWidget);
+    // Still with the grader: the spinner, neither a tick nor a cross.
+    expect(busyBar(), findsOneWidget);
     expect(cueOf(CueKind.ok), findsNothing);
     expect(cueOf(CueKind.error), findsNothing);
-    expect(find.text('text'), findsOneWidget);
   });
 
   testWidgets('a send failure shows an error and keeps grading text', (

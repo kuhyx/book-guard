@@ -37,12 +37,12 @@ void main() {
       tester,
       state: sampleState(),
       error: const DavException('Reading/state.json', 0),
-      waiting: 3,
+      waiting: 4,
     );
     expect(find.byIcon(Icons.cloud_off), findsOneWidget);
     expect(find.textContaining('26.09'), findsOneWidget);
     expect(find.byIcon(Icons.outbox), findsOneWidget);
-    expect(find.text('3'), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
     expectNoWords(tester);
   });
 
@@ -75,17 +75,18 @@ void main() {
     expect(find.byIcon(Icons.photo_camera), findsWidgets);
     expect(find.text('42'), findsOneWidget);
 
-    // Newest first: the unknown status is a question mark.
-    final mystery = tester.getRect(find.byIcon(Icons.help_outline));
-    final first = tester.getRect(iconLabeled('photograph the check page'));
-    expect(mystery.top, lessThan(first.top));
-    expect(find.text('5-9'), findsOneWidget);
-    expect(find.byIcon(Icons.edit), findsWidgets);
+    // Only what is still to do gets a tile, newest first: a credited or an
+    // unknown session is history, behind the all-sessions tile.
+    final summary = tester.getRect(iconLabeled('write the summary'));
+    final check = tester.getRect(iconLabeled('photograph the check page'));
+    expect(summary.top, lessThanOrEqualTo(check.top));
+    expect(find.byIcon(Icons.help_outline), findsNothing);
+    expect(find.text('5-9'), findsNothing);
+    expect(iconLabeled('credited'), findsNothing);
     expect(find.text('21-0'), findsOneWidget);
     expect(find.text('1-20'), findsOneWidget);
     expect(find.text('30'), findsWidgets);
-    expect(iconLabeled('credited'), findsOneWidget);
-    expect(iconLabeled('write the summary'), findsOneWidget);
+    expect(iconLabeled('all sessions'), findsOneWidget);
   });
 
   testWidgets('an unlocked month on pace, nothing to do', (tester) async {

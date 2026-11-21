@@ -50,22 +50,22 @@ void main() {
     expect(field(tester).controller?.text, 'Xi in Shaanxi');
   });
 
-  testWidgets('while the grader has it the text is locked; back later, it '
-      'says so', (tester) async {
+  testWidgets('while the grader has it only the spinner shows, also when '
+      'back later', (tester) async {
     final answer = Completer<GuardResponse>();
     api.onSend = (_) => answer.future;
     await pump(tester);
     await tester.enterText(find.byType(TextField), 'x' * 160);
     await tester.tap(spoken('Submit summary'));
     await tester.pump();
-    expect(field(tester).enabled, isFalse);
+    // With the grader: the pen in a spinner, nothing to type or tap.
     expect(busyBar(), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
     await tester.pumpWidget(const SizedBox()); // leave the tab
     await pump(tester);
-    // Back later: the hourglass chip with the time it went out.
-    expect(cueWith(Icons.hourglass_top), findsOneWidget);
-    expect(field(tester).enabled, isFalse);
-    expect(field(tester).controller?.text, 'x' * 160);
+    // Back later: still the spinner, still nothing to tap.
+    expect(busyBar(), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
     answer.complete(const GuardResponse(ok: true, code: 'passed'));
     await settle(tester);
   });
@@ -124,7 +124,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'x' * 160);
     await tester.tap(spoken('Submit summary'));
     await settle(tester);
-    expect(field(tester).enabled, isFalse, reason: 'with the grader');
+    expect(find.byType(TextField), findsNothing, reason: 'with the grader');
     // The PC fails it later: the home screen settles the marker and
     // rebuilds the panel with the session's retry.
     final failed = SessionInfo.fromJson({

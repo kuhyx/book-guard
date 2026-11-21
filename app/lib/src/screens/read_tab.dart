@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
+import 'package:book_guard_app/src/next_step.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/photo_delivery.dart';
 import 'package:book_guard_app/src/screens/photo_status.dart';
@@ -69,7 +70,6 @@ class ReadTab extends StatefulWidget {
 
 class _ReadTabState extends State<ReadTab> {
   bool _busy = false;
-
   PhotoStatus? _photoStatus;
 
   int? get _openStart {
@@ -205,7 +205,6 @@ class _ReadTabState extends State<ReadTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_busy) const LinearProgressIndicator(),
         Align(
           alignment: Alignment.centerRight,
           child: PhotosButton(
@@ -221,21 +220,31 @@ class _ReadTabState extends State<ReadTab> {
     );
   }
 
-  Widget _session(BuildContext context) => ReadSessionPage(
-    api: widget.api,
-    state: widget.state,
-    waiting: widget.local?.waiting ?? 0,
-    reading: _openStart,
-    quiz: _quiz,
-    status: _photoStatus,
-    onChanged: widget.onChanged,
-    buttons: SessionButtons(
-      reading: _openStart,
-      desktop: widget.desktop,
-      captures: widget.captures,
+  Widget _session(BuildContext context) {
+    // One session at a time: the oldest unfinished session's one step.
+    final step = nextStep(
+      openStart: _openStart,
       checks: _checks,
-      onPhoto: _busy ? null : _photo,
-      onResume: _busy ? null : _resume,
-    ),
-  );
+      quiz: _quiz,
+      captures: widget.captures,
+    );
+    return ReadSessionPage(
+      api: widget.api,
+      state: widget.state,
+      waiting: widget.local?.waiting ?? 0,
+      reading: _openStart,
+      quiz: [if (step.kind == StepKind.summary) ?step.session],
+      ebook: step.kind == StepKind.start,
+      status: _photoStatus,
+      onChanged: widget.onChanged,
+      buttons: SessionButtons(
+        step: step,
+        busy: _busy,
+        reading: _openStart,
+        desktop: widget.desktop,
+        onPhoto: _photo,
+        onResume: _resume,
+      ),
+    );
+  }
 }

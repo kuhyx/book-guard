@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/screens/fit_sheet.dart';
@@ -11,9 +13,14 @@ import 'package:book_guard_app/src/screens/todo_rows.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// How many of the newest sessions get a tile of their own; the rest wait
-/// behind the all-sessions tile.
+/// How many of the newest open sessions get a tile of their own; the rest
+/// wait behind the all-sessions tile.
 const recentSessions = 6;
+
+/// Whether [session] still waits on the reader (its check photo or its
+/// summary, a failed one to rewrite included).
+bool isOpen(SessionInfo session) =>
+    session.status == 'needs-check-photo' || session.status == 'needs-quiz';
 
 /// The pace card; a tap opens the week, month and simulation cells in a
 /// sheet, so the tab itself never scrolls.
@@ -64,11 +71,14 @@ class StatusTiles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sessions = state.sessions.reversed.toList();
+    // The main screen lists what is still to do: a credited or a failed
+    // session is history (the sheet, the Library), never a tile.
+    final open = sessions.where(isOpen).toList();
     final tiles = <Widget>[
       for (final t in state.todo) _TodoTile(t),
-      for (final s in sessions.take(recentSessions))
+      for (final s in open.take(recentSessions))
         _SessionTile(session: s, api: api),
-      if (sessions.length > recentSessions)
+      if (sessions.length > min(open.length, recentSessions))
         _AllSessionsTile(sessions: sessions, api: api),
     ];
     return FitGrid(

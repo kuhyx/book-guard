@@ -1,35 +1,37 @@
 import 'package:book_guard_app/src/capture.dart';
-import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/next_step.dart';
 import 'package:book_guard_app/src/screens/photo_mark.dart';
+import 'package:book_guard_app/src/screens/wait_glyph.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// The Read tab's photo buttons: start or stop, finish a photo stored and
-/// never sent, and one per check page the PC asks for.
+/// The Read tab's one photo button for the [step] ([nextStep]): start or
+/// stop, the check page, or finishing that step's photo stored and never
+/// sent. A summary step has no photo button (the summary panel is the step).
 class SessionButtons extends StatelessWidget {
-  /// Creates the row.
+  /// Creates the button.
   const new({
+    required this.step,
+    required this.busy,
     required this.reading,
     required this.desktop,
-    required this.captures,
-    required this.checks,
     required this.onPhoto,
     required this.onResume,
     super.key,
   });
+
+  /// The one next step.
+  final NextStep step;
+
+  /// A photo is on its way: its glyph in a spinner instead of any button.
+  final bool busy;
 
   /// The page reading started at, or null when not reading.
   final int? reading;
 
   /// Desktop: a file instead of the camera.
   final bool desktop;
-
-  /// Photos back from the camera that were never sent.
-  final List<Capture> captures;
-
-  /// Sessions whose check page is still to be photographed.
-  final List<SessionInfo> checks;
 
   /// Takes a photo for a label (`start`, `stop`, `check<N>`); null while
   /// busy.
@@ -45,52 +47,65 @@ class SessionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (photo, resume) = (onPhoto, onResume);
-    final since = reading;
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: [
-        // Camera (file on the desktop) + play to start; + stop and the page
-        // reading began at to stop.
-        GlyphButton(
+    if (busy) {
+      return const Center(
+        child: WaitGlyph(
+          Icons.photo_camera,
+          semanticLabel: 'checking the photo',
+        ),
+      );
+    }
+    final label = step.label;
+    if (label == null) return const SizedBox.shrink();
+    if (step.capture case final c?) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: GlyphButton(
           filled: true,
-          icon: desktop ? Icons.upload_file : Icons.photo_camera,
-          semanticLabel: since == null ? 'Start reading' : 'Stop reading',
-          onPressed: photo == null
-              ? null
-              : () => photo(since == null ? 'start' : 'stop'),
+          icon: Icons.restore,
+          semanticLabel: 'Finish the stored photo',
+          onPressed: resume == null ? null : () => resume(c),
           badge: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(since == null ? Icons.play_arrow : Icons.stop),
-              if (since != null) Text('$since'),
+              LabelMark(c.label),
+              const SizedBox(width: AppSpacing.sm),
+              Text(_clock(c.takenAt.toLocal())),
             ],
           ),
         ),
-        for (final c in captures)
-          GlyphButton(
-            icon: Icons.restore,
-            semanticLabel: 'Finish the stored photo',
-            onPressed: resume == null ? null : () => resume(c),
-            badge: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LabelMark(c.label),
-                const SizedBox(width: AppSpacing.sm),
-                Text(_clock(c.takenAt.toLocal())),
-              ],
-            ),
+      );
+    }
+    final onPressed = photo == null ? null : () => photo(label);
+    final since = reading;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: switch (step.kind) {
+        StepKind.check => GlyphButton(
+          filled: true,
+          icon: Icons.fact_check,
+          semanticLabel: 'Photograph the check page',
+          onPressed: onPressed,
+          badge: Text('${step.session?.checkPage}'),
+        ),
+        // Camera (file on the desktop) + play to start; + stop and the page
+        // reading began at to stop.
+        _ => GlyphButton(
+          filled: true,
+          icon: desktop ? Icons.upload_file : Icons.photo_camera,
+          semanticLabel: step.kind == StepKind.start
+              ? 'Start reading'
+              : 'Stop reading',
+          onPressed: onPressed,
+          badge: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(step.kind == StepKind.start ? Icons.play_arrow : Icons.stop),
+              if (step.kind == StepKind.stop && since != null) Text('$since'),
+            ],
           ),
-        for (final s in checks)
-          GlyphButton(
-            icon: Icons.fact_check,
-            semanticLabel: 'Photograph the check page',
-            onPressed: photo == null
-                ? null
-                : () => photo('check${s.checkPage}'),
-            badge: Text('${s.checkPage}'),
-          ),
-      ],
+        ),
+      },
     );
   }
 }

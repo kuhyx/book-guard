@@ -6,6 +6,7 @@ import 'package:book_guard_app/src/screens/grader_note.dart';
 import 'package:book_guard_app/src/screens/session_times.dart';
 import 'package:book_guard_app/src/screens/summary_section.dart';
 import 'package:book_guard_app/src/screens/summary_verdict.dart';
+import 'package:book_guard_app/src/screens/wait_glyph.dart';
 import 'package:book_guard_app/src/summary_store.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:design_system/design_system.dart';
@@ -176,6 +177,19 @@ class _SummaryPanelState extends State<SummaryPanel> {
       waiting: waiting,
       now: lapsed != null && lapsed.isAfter(now) ? lapsed : now,
     );
+    // With the grader: nothing to do but wait -- the pen in a spinner, no
+    // button (the outage note stays: why it takes long).
+    if (waiting && !_failedSend) {
+      return Column(
+        children: [
+          if (grader != null) GraderNoteChip(grader),
+          const SizedBox(height: AppSpacing.md),
+          const Center(
+            child: WaitGlyph(Icons.edit, semanticLabel: 'with the grader'),
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -203,26 +217,6 @@ class _SummaryPanelState extends State<SummaryPanel> {
           ),
           onSubmit: sentAt == null ? _submit : null,
         ),
-        if (waiting && submitted)
-          const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.sm),
-            child: LinearProgressIndicator(),
-          ),
-        if (sentAt != null && waiting && !submitted)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: StatusCue(
-                const Cue(
-                  CueKind.info,
-                  icon: Icons.hourglass_top,
-                  semanticLabel: 'with the grader',
-                ),
-                badge: Text(hhmm(sentAt)),
-              ),
-            ),
-          ),
         if (reply != null)
           SummaryVerdict.reply(reply, pages: widget.session.pages),
         if (_failedSend)

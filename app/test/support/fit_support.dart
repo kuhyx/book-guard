@@ -46,12 +46,8 @@ Map<String, dynamic> busyJson() => {
         'end_page': i * 20 + 20,
         'pages': 20,
         'minutes': 30,
-        // The newest waits for its summary, the one before for a check.
-        'status': switch (i) {
-          11 => 'needs-quiz',
-          10 => 'needs-check-photo',
-          _ => 'credited',
-        },
+        // One session at a time: the newest waits for its summary.
+        'status': i == 11 ? 'needs-quiz' : 'credited',
         'check_page': i * 20 + 5,
         'detail': 'credited $i',
       },

@@ -64,10 +64,10 @@ void main() {
       find.descendant(of: find.byType(PhotoMark), matching: find.text('7')),
       findsOneWidget,
     );
-    // And back to the session.
+    // And back to the session: its one step, the oldest session's check.
     await tester.tap(spoken('back'));
     await tester.pumpAndSettle();
-    expect(spoken('Stop reading'), findsOneWidget);
+    expect(spoken('Photograph the check page'), findsOneWidget);
   });
 
   testWidgets('a cancelled pick uploads nothing but still refreshes', (
