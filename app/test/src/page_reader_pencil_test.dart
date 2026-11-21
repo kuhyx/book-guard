@@ -70,24 +70,44 @@ void main() {
     expect(scan.pencilPage, isNull);
   });
 
-  test(
-    'a page whose printed number was found is not asked for pencil',
-    () async {
-      answer(
-        (psm) => psm == 3
-            ? [
-                ..._prose(),
-                [_word('19', 150, 200, 170, 216, 0.95)],
-              ]
-            : [
-                [_word('19', 5, 5, 45, 40, 0.9)],
-              ],
-      );
-      final scan = (await reader.scan(pencilCaseJpeg('pencil_612').$1))!;
-      expect(scan.hits.first.value, 19);
-      expect(scan.pencilPage, isNull);
-    },
+  /// Tesseract's whole-page read finds [number] in the margin (where the
+  /// pencil is) and the crop re-read agrees.
+  void tesseractReads(String number) => answer(
+    (psm) => psm == 3
+        ? [
+            ..._prose(),
+            [_word(number, 150, 200, 170, 216, 0.95)],
+          ]
+        : [
+            [_word(number, 5, 5, 45, 40, 0.9)],
+          ],
   );
+
+  // 2026-11-21: Tesseract read a pencilled 237 as 234 and offered it as a
+  // one-tap hit; the digit net never ran because a hit existed.
+  test('a pencil Tesseract misreads is no hit: the net pre-fills', () async {
+    tesseractReads('671'); // what Tesseract makes of the pencilled 612
+    final scan = (await reader.scan(pencilCaseJpeg('pencil_612').$1))!;
+    expect(scan.hits, isEmpty);
+    expect(scan.previewHits, isEmpty);
+    expect(scan.pencilPage, 612);
+  });
+
+  test('a hit the pencil reading agrees with stays a hit', () async {
+    tesseractReads('612');
+    final scan = (await reader.scan(pencilCaseJpeg('pencil_612').$1))!;
+    expect(scan.hits.map((h) => h.value), everyElement(612));
+    expect(scan.hits, isNotEmpty);
+    expect(scan.previewHits, hasLength(scan.hits.length));
+    expect(scan.pencilPage, 612);
+  });
+
+  test('a printed number on a page with no pencil stays a hit', () async {
+    tesseractReads('19');
+    final scan = (await reader.scan(pencilCaseJpeg('blank_margin').$1))!;
+    expect(scan.hits.first.value, 19);
+    expect(scan.pencilPage, isNull);
+  });
 
   test('a page with too few sure words is not asked either', () async {
     answer(

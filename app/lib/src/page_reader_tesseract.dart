@@ -121,12 +121,13 @@ class TesseractPageReader implements PageReader {
     }
   }
 
-  /// [scan] with a pencilled number kept, where the printed reader found no
-  /// number at all: only a suggestion for the keypad, never a hit. Any
-  /// failure here leaves the scan as it was.
+  /// [scan] with a pencilled number kept: only a suggestion for the
+  /// keypad, never a hit. It runs even where Tesseract found a number, which
+  /// may be its misreading of the pencil ([PageScan.withPencil] drops a hit
+  /// the pencil contradicts). Any failure here leaves the scan as it was.
   Future<PageScan?> _withPencil(PageScan? scan) async {
     final body = scan?.pencilBody;
-    if (scan == null || scan.hits.isNotEmpty || body == null) return scan;
+    if (scan == null || body == null) return scan;
     try {
       final net = _net ??= await loadPencilNetBytes();
       return scan.withPencil(await pencilFromPreview(net, scan.preview, body));

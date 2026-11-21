@@ -79,6 +79,34 @@ def test_two_different_numbers_are_ambiguous_and_the_same_twice_is_one() -> None
     assert _number(_page(*_one(150, 100), *_one(150, 800))) == 1
 
 
+def _two(x: int, y: int) -> list[list[tuple[int, int]]]:
+    return [[(x - 9, y + 8), (x - 3, y), (x + 7, y + 1), (x + 9, y + 12),
+             (x - 10, y + 40), (x + 11, y + 40)]]  # fmt: skip
+
+
+def _three(x: int, y: int) -> list[list[tuple[int, int]]]:
+    return [
+        [(x - 9, y + 3), (x + 6, y), (x + 3, y + 18), (x + 11, y + 30),
+         (x + 1, y + 40), (x - 10, y + 36)],
+        [(x - 2, y + 18), (x + 3, y + 18)],
+    ]  # fmt: skip
+
+
+def test_a_pencilled_237_over_a_chapter_heading_is_read() -> None:
+    # 2026-11-21: a chapter opener ("14 / Secularism", no printed page
+    # number) with 237 pencilled at the top right; Tesseract read it as 234
+    # (the original photo was never sent). The printed "14" is no pencil.
+    image = Image.new("L", (800, 1000), 200)
+    draw = ImageDraw.Draw(image)
+    for points in (*_two(560, 100), *_three(584, 100), *_seven(608, 100)):
+        draw.line(points, fill=140, width=3)
+    draw.rectangle((380, 200, 392, 240), fill=25)  # the printed heading "14"
+    draw.rectangle((402, 200, 424, 240), fill=25)
+    draw.rectangle((300, 255, 500, 272), fill=25)  # "Secularism"
+    gray = np.asarray(image.filter(ImageFilter.GaussianBlur(1.0)))
+    assert _number(gray) == 237
+
+
 def test_print_dark_ink_is_no_pencil_and_a_faint_shadow_is_no_number() -> None:
     assert _number(_page(*_one(150, 800), ink=60)) is None
     assert _number(_page(*_one(150, 800), ink=178)) is None

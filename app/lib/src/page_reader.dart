@@ -54,24 +54,33 @@ class PageScan {
   /// frame of reference); null where the turn is unsure.
   final PencilBody? pencilBody;
 
-  /// A number pencilled in the margin, read where the page offered no
-  /// printed one: only a pre-fill for the keypad, never a hit.
+  /// A number pencilled in the margin: only a pre-fill for the keypad,
+  /// never a hit.
   final int? pencilPage;
 
-  /// This scan with [page] as its pencilled number.
-  PageScan withPencil(int? page) => PageScan(
-    turn: turn,
-    hits: hits,
-    previewHits: previewHits,
-    preview: preview,
-    previewWidth: previewWidth,
-    previewHeight: previewHeight,
-    toStoredBox: toStoredBox,
-    toDecodedBox: toDecodedBox,
-    millis: millis,
-    pencilBody: pencilBody,
-    pencilPage: page,
-  );
+  /// This scan with [page] as its pencilled number. A hit that says
+  /// another number is dropped: Tesseract reads no handwriting (a pencilled
+  /// 237 came back a one-tap 234 on 2026-11-21), so the pencil only
+  /// pre-fills the keypad. A hit that agrees with it stays.
+  PageScan withPencil(int? page) {
+    final keep = [
+      for (final (i, hit) in hits.indexed)
+        if (page == null || hit.value == page) i,
+    ];
+    return PageScan(
+      turn: turn,
+      hits: [for (final i in keep) hits[i]],
+      previewHits: [for (final i in keep) previewHits[i]],
+      preview: preview,
+      previewWidth: previewWidth,
+      previewHeight: previewHeight,
+      toStoredBox: toStoredBox,
+      toDecodedBox: toDecodedBox,
+      millis: millis,
+      pencilBody: pencilBody,
+      pencilPage: page,
+    );
+  }
 }
 
 /// Reads page numbers on the device. Null where there is no on-device OCR

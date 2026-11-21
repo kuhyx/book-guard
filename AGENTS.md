@@ -61,7 +61,9 @@ Read README.md first. These are the invariants that are easy to break.
   number (`_pencil*.py`, weights `app/assets/pencil_digits.bin`, Dart port
   `app/lib/src/pencil_*.dart`, goldens `pencil_goldens.json`): no LLM, no
   network, never auto-accepted -- its answer only pre-fills the keypad the
-  user confirms with one tap. The phone runs it; the inbox no longer does
+  user confirms with one tap. It runs even when Tesseract found a number,
+  and a Tesseract hit it contradicts is dropped (a pencilled 237 once came
+  back a one-tap 234; `PageScan.withPencil`). The phone runs it; the inbox no longer does
   (a record's `pencil_page` stays in the cache and `state.json` for old
   rows). Doubt is `None`, not a guess. After touching it re-run
   `scripts/page_truth.py` (rows with a `pencil` key; run a slice at a time:
