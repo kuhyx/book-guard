@@ -3,6 +3,7 @@ name: app
 # The Flutter client: analyzer with fatal infos, tests, and the web build the
 # desktop wrapper serves. Three parallel jobs rather than one serial one: in
 # series they took 112 s on a warm cache, past the one-minute budget.
+# Tests run as slices (6) to keep each job under 60 s (the action cap).
 on:
   push:
     branches: [main]
@@ -15,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [analyze, test, web]
+        task: [analyze, test-1, test-2, test-3, test-4, test-5, test-6, web]
     name: flutter (${{ matrix.task }})
     defaults:
       run:
@@ -31,7 +32,10 @@ jobs:
         run: |
           flutter analyze --fatal-infos
           dart format --output=none --set-exit-if-changed lib test bin
-      - if: matrix.task == 'test'
-        run: flutter test --coverage
       - if: matrix.task == 'web'
         run: flutter build web --release
+      - if: matrix.task != 'analyze' && matrix.task != 'web'
+        run: |
+          SLICE="${{ matrix.task }}"
+          SLICE_NUM="${SLICE#test-}"
+          ../scripts/app_test_all.sh "${SLICE_NUM}/6"
