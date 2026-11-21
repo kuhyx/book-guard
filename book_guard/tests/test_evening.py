@@ -98,7 +98,7 @@ def test_unpaid_production_run_locks_at_rank_150(
     asked = fake_wait(monkeypatch, answers=True)
     assert run_evening(bg_paths, production=True, today=LOCKED_DAY) == 0
     assert asked == [{"timeout_s": 10.0}]
-    assert _evening.RANK_EVENING == 150 > RANK_BOOK_GUARD
+    assert _evening.RANK_EVENING == 150 < RANK_BOOK_GUARD
     assert seen.events[0].startswith("arbiter book_guard 150 ")
     assert seen.configs[0].rank == 150
     assert "LOCKED" in bg_paths.next_file.read_text(encoding="utf-8")

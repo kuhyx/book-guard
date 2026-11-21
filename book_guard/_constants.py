@@ -108,9 +108,9 @@ ESCAPE_PHRASE: Final = (
     "against this month"
 )
 
-RANK_BOOK_GUARD: Final = 125
-"""gatelock arbitration rank: below leetcode-guard (150), above diet-guard
-(100). A literal, like leetcode-guard's, so no gatelock release is needed."""
+RANK_BOOK_GUARD: Final = 175
+"""gatelock arbitration rank: right below the workout lock (200), above every
+other guard (``DOCS-lock-order.md``). A literal, so no gatelock release."""
 
 POLL_INTERVAL_MS: Final = 30_000
 """How often the lock re-reads the inbox and the ledger."""
