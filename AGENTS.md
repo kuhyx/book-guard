@@ -31,6 +31,10 @@ Read README.md first. These are the invariants that are easy to break.
   stale one).
 - Heavy commands run under `~/.claude/scripts/capped.sh`; indexing a book
   needs `CAP_MEM=4G`.
+- Never run a bare `flutter build apk` (release or debug); use
+  `scripts/build_apk.sh aot|aot-debug` then `apk|apk-debug` (with
+  `native`/`native-debug` between them after a dependency change), each call
+  under 60 s.
 
 ## Invariants
 
