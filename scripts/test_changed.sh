@@ -16,8 +16,8 @@ while IFS= read -r f; do
 done < <({ git diff --name-only HEAD 2>/dev/null || true; git ls-files --others --exclude-standard; } | sort -u)
 
 readonly PY=".venv/bin/python"
-py_full=0 py_touched=0 app_full=0 app_touched=0
-py_tests=() app_tests=()
+py_full=0 py_touched=0 app_touched=0
+py_tests=() app_files=()
 
 # book_guard/_quiz.py -> book_guard/tests/test_core_quiz.py (or test_/test_flow_).
 map_py() {
@@ -41,9 +41,8 @@ for f in "${CHANGED[@]}"; do
             map_py "$(basename "$f" .py)"
             if [[ ${#MAPPED[@]} -gt 0 ]]; then py_tests+=("${MAPPED[@]}"); else py_full=1; fi
             ;;
-        app/pubspec.* | app/analysis_options.yaml) app_full=1; app_touched=1 ;;
-        app/test/*_test.dart) app_touched=1; app_tests+=("${f#app/}") ;;
-        app/lib/*.dart | app/bin/*.dart) app_touched=1; app_full=1 ;;
+        app/pubspec.* | app/analysis_options.yaml | app/test/*_test.dart | app/lib/*.dart | app/bin/*.dart)
+            app_touched=1; app_files+=("$f") ;;
     esac
 done
 
@@ -63,14 +62,9 @@ if [[ $py_touched -eq 1 ]]; then
     fi
 fi
 if [[ $app_touched -eq 1 ]]; then
-    if [[ $app_full -eq 1 || ${#app_tests[@]} -eq 0 ]]; then
-        echo "app: running full suite"
-        scripts/app_test_all.sh || rc=1  # slices: no run holds a slot 60 s
-    else
-        mapfile -t uniq_app < <(printf '%s\n' "${app_tests[@]}" | sort -u)
-        echo "app: ${#uniq_app[@]} test file(s)"
-        (cd app && flutter test -j 1 --reporter=compact "${uniq_app[@]}") || rc=1
-    fi
+    # The commit gate's mapping: changed tests plus the importers of changed
+    # lib files; the full suite (in slices) only where nothing maps.
+    scripts/app_test_changed.sh "${app_files[@]}" || rc=1
 fi
 [[ $rc -eq 0 ]] && echo "test-changed: pass" || echo "test-changed: FAIL"
 exit $rc
