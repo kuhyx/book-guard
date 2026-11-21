@@ -217,7 +217,7 @@ the Flutter client in `app/`. The gate runs as a live systemd daemon from this
 tree: never restart it from a test run.
 
 - run: `BOOK_GUARD_ROOT=.demo .venv/bin/python -m book_guard --help` | sandbox CLI; the daemon is the systemd units (`install.sh`)
-- test: `.venv/bin/python -m pytest -q && (cd app && flutter test -j 1 --reporter=compact)`
+- test: `.venv/bin/python -m pytest -q && scripts/app_test_all.sh` | app suite in slices; one slice per call: `scripts/app_test_all.sh 1/6` .. `6/6`
 - test-changed: `scripts/test_changed.sh`
 - lint: `ruff check . && (cd app && flutter analyze --fatal-infos)`
 - coverage: `.venv/bin/python -m pytest -q --cov-report=lcov:coverage.lcov`

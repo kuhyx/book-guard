@@ -65,7 +65,7 @@ fi
 if [[ $app_touched -eq 1 ]]; then
     if [[ $app_full -eq 1 || ${#app_tests[@]} -eq 0 ]]; then
         echo "app: running full suite"
-        (cd app && flutter test -j 1 --reporter=compact) || rc=1
+        scripts/app_test_all.sh || rc=1  # slices: no run holds a slot 60 s
     else
         mapfile -t uniq_app < <(printf '%s\n' "${app_tests[@]}" | sort -u)
         echo "app: ${#uniq_app[@]} test file(s)"

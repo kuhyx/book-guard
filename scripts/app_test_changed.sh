@@ -86,7 +86,7 @@ main() {
     cd "$APP_DIR"
     if [[ $full -eq 1 ]]; then
         echo "app: full suite"
-        exec "${FLUTTER[@]}" test -j 1 --reporter=compact
+        exec "${REPO_DIR}/scripts/app_test_all.sh"
     fi
     if [[ ${#tests[@]} -eq 0 ]]; then
         echo "app: no tests touched"
