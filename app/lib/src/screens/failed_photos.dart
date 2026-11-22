@@ -7,10 +7,10 @@ import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photo.dart';
+import 'package:book_guard_app/src/screens/failed_photo_actions.dart';
 import 'package:book_guard_app/src/screens/failed_photo_card.dart';
 import 'package:book_guard_app/src/screens/failed_photo_view.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
-import 'package:book_guard_app/src/screens/report_dialog.dart';
 import 'package:book_guard_app/src/screens/type_page_dialog.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:book_guard_app/src/ui/hold_button.dart';
@@ -126,33 +126,29 @@ class _FailedPhotosState extends State<FailedPhotos> {
     unawaited(widget.onChanged());
   }
 
+  Future<void> _keep(FailedPhoto failed) async {
+    final bytes = await _photo(failed.entry.name);
+    if (bytes == null || !mounted) return;
+    if (!await keepLatePhoto(
+      context,
+      widget.api,
+      widget.reader,
+      failed,
+      bytes,
+    )) {
+      return;
+    }
+    await _dismiss([failed]);
+    await widget.onChanged();
+  }
+
   Future<void> _report(FailedPhoto failed) async {
     final bytes = await _photo(failed.entry.name);
     if (bytes == null || !mounted) return;
-    final answer = await showDialog<(int?, String)>(
-      context: context,
-      builder: (_) => ReportDialog(reason: failed.reason),
-    );
-    if (answer == null) return;
-    final (said, note) = answer;
-    final entry = failed.entry;
-    await widget.api.reportPhoto(
-      name: entry.name,
-      bytes: bytes,
-      detail: {
-        'label': entry.label,
-        'taken_at': entry.takenAt.toIso8601String(),
-        'phone_page': entry.page,
-        'pc_status': failed.pc?.status,
-        'pc_reason': failed.pc?.reason,
-        'failure': failed.reason,
-        'actual_page': said,
-        'comment': note,
-      },
-    );
+    if (!await reportFailedPhoto(context, widget.api, failed, bytes)) return;
     await widget.api.flush();
     if (!mounted) return;
-    setState(() => _reported.add(entry.name));
+    setState(() => _reported.add(failed.entry.name));
     showCue(
       context,
       const Cue(
@@ -230,11 +226,14 @@ class _FailedPhotosState extends State<FailedPhotos> {
         failed: f,
         bytes: bytes,
         reported: (snap.data?.$2 ?? false) || _reported.contains(f.entry.name),
-        onBox: f.pc != null && widget.reader != null ? () => _box(f) : null,
+        onBox: f.pc != null && widget.reader != null && !f.late
+            ? () => _box(f)
+            : null,
         // No number from the phone or the PC (it may not have the photo yet).
-        onType: f.entry.page == null && f.pc?.page == null
+        onType: f.entry.page == null && f.pc?.page == null && !f.late
             ? () => unawaited(_type(f))
             : null,
+        onKeep: f.late && bytes != null ? () => unawaited(_keep(f)) : null,
         onReport: bytes == null ? null : () => _report(f),
         onDismiss: () => _dismiss([f]),
         onOpen: () => openFailedPhoto(

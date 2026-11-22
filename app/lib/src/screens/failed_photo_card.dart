@@ -21,6 +21,7 @@ class FailedPhotoCard extends StatelessWidget {
     this.onType,
     this.onReport,
     this.onOpen,
+    this.onKeep,
   });
 
   /// The photo and why it failed.
@@ -47,6 +48,9 @@ class FailedPhotoCard extends StatelessWidget {
 
   /// Hides the card on this device.
   final VoidCallback onDismiss;
+
+  /// Re-send it as a kept page photo (a late photo's only way back).
+  final VoidCallback? onKeep;
 
   @override
   Widget build(BuildContext context) {
@@ -103,13 +107,21 @@ class FailedPhotoCard extends StatelessWidget {
                           semanticLabel: 'Type the page number',
                           onPressed: onType,
                         ),
-                      GlyphButton(
-                        icon: reported ? Icons.flag : Icons.outlined_flag,
-                        semanticLabel: reported
-                            ? 'Reported'
-                            : 'This should not fail',
-                        onPressed: reported ? null : onReport,
-                      ),
+                      if (onKeep case final onKeep?)
+                        GlyphButton(
+                          icon: Icons.bookmark_add,
+                          semanticLabel: 'Keep as a page photo',
+                          filled: true,
+                          onPressed: onKeep,
+                        ),
+                      if (!failed.late)
+                        GlyphButton(
+                          icon: reported ? Icons.flag : Icons.outlined_flag,
+                          semanticLabel: reported
+                              ? 'Reported'
+                              : 'This should not fail',
+                          onPressed: reported ? null : onReport,
+                        ),
                       GlyphButton(
                         icon: Icons.close,
                         semanticLabel: 'Dismiss',

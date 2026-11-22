@@ -17,6 +17,10 @@ const phoneFoundNone = 'the phone found no page number';
 /// The reason of a box that held no number.
 const noNumberReason = 'no page number found';
 
+/// The PC's reason for a photo uploaded over 7 days after it was taken: it
+/// may only be kept as a page photo (off every session) or dropped.
+const lateUploadReason = 'uploaded more than 7 days after it was taken';
+
 const Color _violet = Color(0xFF8E6BC9);
 const Color _blue = Color(0xFF4F8FD6);
 const Color _teal = Color(0xFF3AA6A0);

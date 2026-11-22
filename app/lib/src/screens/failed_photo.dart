@@ -20,6 +20,10 @@ class FailedPhoto {
   /// A pencilled number to pre-fill the keypad with (the phone's reading,
   /// else the PC's): a suggestion, never a page.
   int? get pencil => entry.pencilPage ?? pc?.pencilPage;
+
+  /// Rejected as uploaded too late: never re-numbered for a session, only
+  /// kept as a page photo or dropped (the 26-day-old start of 2026-11-22).
+  bool get late => pc?.reason.startsWith(lateUploadReason) ?? false;
 }
 
 /// The photos taken here that failed: the PC rejected them, or the phone
