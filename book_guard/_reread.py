@@ -17,23 +17,44 @@ and the record keeps ``page_source = "typed"`` so the credit can be audited.
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Final
 
 from book_guard import _ledger, _photos
+from book_guard._constants import MAX_UPLOAD_DELAY
 from book_guard._flock import exclusive
 from book_guard._page_truth import file_ocr_miss
 from book_guard._photo_context import context_for, parse_box
-from book_guard._photos import OK, REJECTED, TYPED
+from book_guard._photos import KEPT_PREFIX, OK, REJECTED, TYPED
 from book_guard._reader import read
 from book_guard._requests import DeferredError, Response
 from book_guard._vision import OTHER, PAGE
 
 if TYPE_CHECKING:
     from book_guard._paths import Paths
+    from book_guard._photos import PhotoRecord
     from book_guard._vision import Reading
 
 _logger: Final = logging.getLogger(__name__)
+
+
+def _too_late(record: PhotoRecord) -> bool:
+    """Uploaded more than 7 days after it was taken, so never a session page.
+
+    A start the phone kept for 26 days was rejected for it (2026-11-22); a
+    number typed or boxed for it later must not re-file it as a page. A
+    ``kept_`` photo is filed off every session, so it may be late.
+    """
+    late = datetime.fromisoformat(record.uploaded_at) - record.taken > MAX_UPLOAD_DELAY
+    return late and not record.name.startswith(KEPT_PREFIX)
+
+
+def _no_photo(record: PhotoRecord | None) -> Response:
+    """No such photo (or no capture time), or one :func:`_too_late` to use."""
+    if record is None or not record.taken_at:
+        return Response(ok=False, code="no_photo")
+    return Response(ok=False, code="refused")
 
 
 def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
@@ -45,8 +66,8 @@ def box_photo(paths: Paths, request: dict[str, Any]) -> Response:
     with exclusive(paths):
         records = _photos.load(paths.photos)
         record = next((r for r in records.values() if r.name == name), None)
-        if record is None or not record.taken_at:
-            return Response(ok=False, code="no_photo")
+        if record is None or not record.taken_at or _too_late(record):
+            return _no_photo(record)
         if record.kind == PAGE and record.status == OK:
             return Response(ok=False, code="already_read", data={"page": record.page})
         filed = paths.processed / f"{record.sha[:12]}-{record.name}"
@@ -108,8 +129,8 @@ def type_page(paths: Paths, request: dict[str, Any]) -> Response:
             # reader was down): wait for the photo, never refuse the number.
             msg = f"{name} is not read yet"
             raise DeferredError(msg)
-        if record is None or not record.taken_at:
-            return Response(ok=False, code="no_photo")
+        if record is None or not record.taken_at or _too_late(record):
+            return _no_photo(record)
         if record.page is not None:
             return Response(ok=False, code="already_read", data={"page": record.page})
         if record.kind not in {PAGE, OTHER}:
