@@ -101,7 +101,7 @@ Future<ReviewResult?> _keypadOnly(BuildContext context) async {
 /// to the keypad. A number that differs from the first one OCR offered is
 /// logged as a correction.
 Future<ReviewResult?> reviewPhoto(
-  BuildContext context, {
+  NavigatorState navigator, {
   required PageReader? reader,
   required Uint8List bytes,
   required String fileName,
@@ -109,7 +109,7 @@ Future<ReviewResult?> reviewPhoto(
   required ErrorLog errors,
   String? attempt,
 }) async {
-  if (reader == null) return await _keypadOnly(context);
+  if (reader == null) return await _keypadOnly(navigator.context);
   final scan = await reader.scan(bytes, context: pageContext);
   // What the phone read, before anyone confirms it: the step a photo was
   // once lost after (2026-10-23, "Page 252?" and then gone).
@@ -118,12 +118,12 @@ Future<ReviewResult?> reviewPhoto(
     'hits': scan == null ? null : [for (final h in scan.hits) h.value],
     'turn': ?scan?.turn, // which way up it read the page (a 9 vs a 6)
   });
-  if (!context.mounted) return null;
+  if (!navigator.mounted) return null; // the app itself went away
   if (scan == null) {
     unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));
-    return await _keypadOnly(context);
+    return await _keypadOnly(navigator.context);
   }
-  final result = await Navigator.of(context).push<ReviewResult>(
+  final result = await navigator.push<ReviewResult>(
     MaterialPageRoute(
       builder: (_) => PhotoReview(
         bytes: bytes,

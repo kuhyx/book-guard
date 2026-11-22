@@ -6,11 +6,11 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/next_step.dart';
 import 'package:book_guard_app/src/page_reader.dart';
-import 'package:book_guard_app/src/screens/photo_delivery.dart';
 import 'package:book_guard_app/src/screens/photo_status.dart';
 import 'package:book_guard_app/src/screens/photos_screen.dart';
 import 'package:book_guard_app/src/screens/read_pages.dart';
 import 'package:book_guard_app/src/screens/read_support.dart';
+import 'package:book_guard_app/src/screens/send_capture.dart';
 import 'package:book_guard_app/src/screens/session_buttons.dart';
 import 'package:book_guard_app/src/ui/cues.dart';
 import 'package:material_ui/material_ui.dart';
@@ -35,6 +35,7 @@ class ReadTab extends StatefulWidget {
     this.local,
     this.journal = const [],
     this.captures = const [],
+    this.clock = DateTime.now,
   });
 
   /// The PC.
@@ -63,6 +64,9 @@ class ReadTab extends StatefulWidget {
 
   /// Photos back from the camera that were never sent.
   final List<Capture> captures;
+
+  /// Now; replaced in tests.
+  final DateTime Function() clock;
 
   @override
   State<ReadTab> createState() => _ReadTabState();
@@ -101,11 +105,12 @@ class _ReadTabState extends State<ReadTab> {
     }
   }
 
-  /// Takes a photo, stores it on the device at once, then reads it, lets
-  /// the reader confirm or box the number and queues it; waits for the
-  /// PC's verdict only if the PC is reachable -- a photo must never just
-  /// vanish. Every step is a lifecycle event for the PC's log.
+  /// Takes a photo, stores it on the device at once, then reviews and
+  /// queues it ([sendCapture]) -- a photo must never just vanish.
   Future<void> _photo(String label) => _run('photo', () async {
+    // Before any await: the review goes on the root navigator even when
+    // this tab is gone by the time the photo is read.
+    final navigator = Navigator.of(context, rootNavigator: true);
     final api = widget.api;
     final id = api.newId();
     await api.captures.launching(id, label);
@@ -123,78 +128,37 @@ class _ReadTabState extends State<ReadTab> {
       'file': file.name,
       'bytes': bytes.length,
     });
-    await _send(capture, bytes);
+    await _send(navigator, capture, bytes);
   });
 
   /// Finishes a photo stored earlier and never sent.
   Future<void> _resume(Capture capture) => _run('photo', () async {
+    final navigator = Navigator.of(context, rootNavigator: true);
     final bytes = await widget.api.captures.bytes(capture);
     if (bytes == null) return; // sent meanwhile
     await widget.api.errors.event('photo', 'resumed', {'attempt': capture.id});
-    await _send(capture, bytes);
+    await _send(navigator, capture, bytes);
   });
 
-  Future<void> _send(Capture capture, Uint8List bytes) async {
-    final api = widget.api;
-    final attempt = {'attempt': capture.id};
-    if (!mounted) return;
-    if (widget.reader != null) _show(PhotoStatus.reading);
-    final review = await reviewPhoto(
-      context,
-      reader: widget.reader,
-      bytes: bytes,
-      fileName: capture.fileName,
-      pageContext: pageContextFor(
-        capture.label,
-        widget.state,
-        widget.journal,
-        _openStart,
-      ),
-      errors: api.errors,
-      attempt: capture.id,
-    );
-    if (review == null) {
-      // Back, or the screen went away: the photo stays on the phone.
-      await api.errors.event('photo', 'review-left', attempt);
-      return _show(PhotoStatus.kept);
-    }
-    if (review.retake) {
-      await api.captures.drop(capture);
-      await api.errors.event('photo', 'discarded', attempt);
-      return _show(PhotoStatus.discarded);
-    }
-    // Every result but a retake carries a number; without one, keep the photo.
-    final page = review.page;
-    if (page == null) {
-      await api.errors.event('photo', 'review-left', attempt);
-      return _show(PhotoStatus.kept);
-    }
-    await api.errors.event('photo', 'reviewed', {
-      ...attempt,
-      'page': page,
-      'boxed': review.box != null,
-    });
-    final name = await api.queuePhoto(
+  Future<void> _send(
+    NavigatorState navigator,
+    Capture capture,
+    Uint8List bytes,
+  ) => sendCapture(
+    api: widget.api,
+    navigator: navigator,
+    capture: capture,
+    bytes: bytes,
+    reader: widget.reader,
+    pageContext: pageContextFor(
       capture.label,
-      capture.fileName,
-      bytes,
-      page: page,
-      box: review.box,
-      ocrPage: review.ocrPage,
-      isbn: widget.state?.book?.isbn,
-    );
-    await api.captures.drop(capture);
-    await api.errors.event('photo', 'queued', {...attempt, 'photo': name});
-    final sent = await deliverPhoto(
-      api,
-      name: name,
-      attempt: capture.id,
-      page: page,
-      onSent: _show,
-    );
-    if (!mounted) return;
-    _show(sent.status);
-  }
+      widget.state,
+      widget.journal,
+      _openStart,
+    ),
+    isbn: widget.state?.book?.isbn,
+    show: _show,
+  );
 
   void _show(PhotoStatus status) {
     if (mounted) setState(() => _photoStatus = status);
@@ -227,6 +191,7 @@ class _ReadTabState extends State<ReadTab> {
       checks: _checks,
       quiz: _quiz,
       captures: widget.captures,
+      now: widget.clock(),
     );
     return ReadSessionPage(
       api: widget.api,

@@ -6,9 +6,10 @@ import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// The Read tab's one photo button for the [step] ([nextStep]): start or
-/// stop, the check page, or finishing that step's photo stored and never
-/// sent. A summary step has no photo button (the summary panel is the step).
+/// The Read tab's photo button for the [step] ([nextStep]): start or
+/// stop, or the check page -- always the camera -- and, beside it,
+/// finishing that step's photo stored and never sent. A summary step has
+/// no photo button (the summary panel is the step).
 class SessionButtons extends StatelessWidget {
   /// Creates the button.
   const new({
@@ -57,55 +58,58 @@ class SessionButtons extends StatelessWidget {
     }
     final label = step.label;
     if (label == null) return const SizedBox.shrink();
-    if (step.capture case final c?) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: GlyphButton(
-          filled: true,
-          icon: Icons.restore,
-          semanticLabel: 'Finish the stored photo',
-          onPressed: resume == null ? null : () => resume(c),
-          badge: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LabelMark(c.label),
-              const SizedBox(width: AppSpacing.sm),
-              Text(_clock(c.takenAt.toLocal())),
-            ],
-          ),
-        ),
-      );
-    }
     final onPressed = photo == null ? null : () => photo(label);
     final since = reading;
+    // The camera is always there; a fresh stored photo sits beside it.
+    final camera = switch (step.kind) {
+      StepKind.check => GlyphButton(
+        filled: true,
+        icon: Icons.fact_check,
+        semanticLabel: 'Photograph the check page',
+        onPressed: onPressed,
+        badge: Text('${step.session?.checkPage}'),
+      ),
+      // Camera (file on the desktop) + play to start; + stop and the page
+      // reading began at to stop.
+      _ => GlyphButton(
+        filled: true,
+        icon: desktop ? Icons.upload_file : Icons.photo_camera,
+        semanticLabel: step.kind == StepKind.start
+            ? 'Start reading'
+            : 'Stop reading',
+        onPressed: onPressed,
+        badge: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(step.kind == StepKind.start ? Icons.play_arrow : Icons.stop),
+            if (step.kind == StepKind.stop && since != null) Text('$since'),
+          ],
+        ),
+      ),
+    };
     return Align(
       alignment: Alignment.centerLeft,
-      child: switch (step.kind) {
-        StepKind.check => GlyphButton(
-          filled: true,
-          icon: Icons.fact_check,
-          semanticLabel: 'Photograph the check page',
-          onPressed: onPressed,
-          badge: Text('${step.session?.checkPage}'),
-        ),
-        // Camera (file on the desktop) + play to start; + stop and the page
-        // reading began at to stop.
-        _ => GlyphButton(
-          filled: true,
-          icon: desktop ? Icons.upload_file : Icons.photo_camera,
-          semanticLabel: step.kind == StepKind.start
-              ? 'Start reading'
-              : 'Stop reading',
-          onPressed: onPressed,
-          badge: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(step.kind == StepKind.start ? Icons.play_arrow : Icons.stop),
-              if (step.kind == StepKind.stop && since != null) Text('$since'),
-            ],
-          ),
-        ),
-      },
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          camera,
+          if (step.capture case final c?)
+            GlyphButton(
+              icon: Icons.restore,
+              semanticLabel: 'Finish the stored photo',
+              onPressed: resume == null ? null : () => resume(c),
+              badge: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LabelMark(c.label),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(_clock(c.takenAt.toLocal())),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

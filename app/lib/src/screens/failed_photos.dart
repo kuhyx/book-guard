@@ -58,7 +58,6 @@ class FailedPhotos extends StatefulWidget {
 class _FailedPhotosState extends State<FailedPhotos> {
   final _bytes = <String, Uint8List?>{};
   final _reported = <String>{};
-
   final _loads = <String, Future<(Uint8List?, bool)>>{};
 
   /// Names hidden on this device; null until read from the store.
@@ -82,12 +81,13 @@ class _FailedPhotosState extends State<FailedPhotos> {
 
   Future<void> _box(FailedPhoto failed) async {
     final reader = widget.reader;
+    final navigator = Navigator.of(context, rootNavigator: true);
     final bytes = await _photo(failed.entry.name);
-    if (reader == null || bytes == null || !mounted) return;
+    if (reader == null || bytes == null) return;
     final scan = await reader.scan(bytes);
-    if (scan == null || !mounted) return;
+    if (scan == null || !navigator.mounted) return;
     final label = failed.entry.label;
-    final result = await Navigator.of(context).push<ReviewResult>(
+    final result = await navigator.push<ReviewResult>(
       MaterialPageRoute(
         builder: (_) => PhotoReview(
           bytes: bytes,

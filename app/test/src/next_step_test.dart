@@ -29,15 +29,30 @@ Capture _capture(String label) => Capture(
   takenAt: DateTime.utc(2026, 11, 21, 15),
 );
 
+/// An hour after the test captures were taken.
+final _now = DateTime.utc(2026, 11, 21, 16);
+
 void main() {
   test('nothing open: the start photo', () {
-    final step = nextStep(openStart: null, checks: [], quiz: [], captures: []);
+    final step = nextStep(
+      openStart: null,
+      checks: [],
+      quiz: [],
+      captures: [],
+      now: _now,
+    );
     expect(step.kind, StepKind.start);
     expect(step.label, 'start');
   });
 
   test('reading: the stop photo, never a start', () {
-    final step = nextStep(openStart: 59, checks: [], quiz: [], captures: []);
+    final step = nextStep(
+      openStart: 59,
+      checks: [],
+      quiz: [],
+      captures: [],
+      now: _now,
+    );
     expect(step.kind, StepKind.stop);
     expect(step.label, 'stop');
   });
@@ -51,6 +66,7 @@ void main() {
       ],
       quiz: [_session('c', status: 'needs-quiz', day: 19)],
       captures: [],
+      now: _now,
     );
     // The oldest unfinished session first: c (day 19) waits for its summary.
     expect(step.kind, StepKind.summary);
@@ -66,6 +82,7 @@ void main() {
       ],
       quiz: [_session('c', status: 'needs-quiz', day: 22)],
       captures: [],
+      now: _now,
     );
     expect(step.kind, StepKind.check);
     expect(step.session?.id, 'a');
@@ -78,6 +95,7 @@ void main() {
       checks: [_session('a', check: 237, status: 'needs-check-photo')],
       quiz: [],
       captures: [_capture('stop'), _capture('check237')],
+      now: _now,
     );
     expect(step.kind, StepKind.check);
     expect(step.capture?.label, 'check237');
@@ -89,8 +107,37 @@ void main() {
       checks: [],
       quiz: [],
       captures: [_capture('check237')],
+      now: _now,
     );
     expect(step.kind, StepKind.start);
     expect(step.capture, isNull);
+  });
+
+  test('a stored photo 12 h or older never stands in for the camera', () {
+    // 2026-11-22: a start photo of 2026-10-27 hid the camera for 26 days.
+    final old = Capture(
+      id: 'old',
+      label: 'start',
+      fileName: 'old.jpg',
+      takenAt: DateTime.utc(2026, 10, 27, 19, 15),
+    );
+    final step = nextStep(
+      openStart: null,
+      checks: [],
+      quiz: [],
+      captures: [old],
+      now: DateTime.utc(2026, 11, 22, 10, 30),
+    );
+    expect(step.kind, StepKind.start);
+    expect(step.capture, isNull);
+    final edge = nextStep(
+      openStart: null,
+      checks: [],
+      quiz: [],
+      captures: [_capture('start')],
+      now: DateTime.utc(2026, 11, 22, 3),
+    );
+    expect(edge.capture, isNull);
+    expect(staleCaptures([old, _capture('stop')], _now), [old]);
   });
 }

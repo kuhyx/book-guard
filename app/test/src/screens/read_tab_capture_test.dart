@@ -37,6 +37,7 @@ void main() {
     WidgetTester tester, {
     List<Capture> captures = const [],
     XFile? photo,
+    DateTime Function() clock = DateTime.now,
   }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -50,6 +51,7 @@ void main() {
         onChanged: () async {},
         reader: reader,
         captures: captures,
+        clock: clock,
         photoSource: ({required camera}) async => photo,
       ),
     );
@@ -123,7 +125,11 @@ void main() {
       fileName: 'IMG.jpg',
       takenAt: DateTime(2026, 10, 23, 10, 6),
     );
-    await pump(tester, captures: [gone]);
+    await pump(
+      tester,
+      captures: [gone],
+      clock: () => DateTime(2026, 10, 23, 11),
+    );
     expect(find.text('10:06'), findsOneWidget);
     await tapVisible(tester, find.byIcon(Icons.restore));
     await settle(tester, 10);
