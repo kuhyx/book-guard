@@ -57,17 +57,21 @@ repos:
     hooks:
       # The dev venv (scripts/setup_dev.sh) has every runtime dependency, so
       # mypy runs strict with no disabled error codes.
+      # A shared cache (XDG_CACHE_HOME/mypy/book-guard) makes a fresh worktree
+      # hit the cache (~0.2 s) instead of a cold ~10 s run.
       - id: mypy
         name: mypy (strict, dev venv)
-        entry: .venv/bin/python -m mypy book_guard scripts
+        entry: bash -c '.venv/bin/python -m mypy --cache-dir "${XDG_CACHE_HOME:-$HOME/.cache}/mypy/book-guard" book_guard scripts'
         language: system
         pass_filenames: false
         types: [python]
       # Changed files only: the whole tree took ~16 s of a commit's 60 s cap
       # (jobs=1, see pyproject); --all-files / CI still lint everything.
+      # --disable=duplicate-code: compares only files passed; commit/PR runs are
+      # partial anyway and cost ~5 s of the 60 s cap (whole-tree run is CI).
       - id: pylint
         name: pylint (dev venv)
-        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --fail-under=10
+        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --fail-under=10 --disable=duplicate-code
         language: system
         files: ^(book_guard|scripts)/.*\.py$
         types: [python]
@@ -75,9 +79,13 @@ repos:
         # that each re-infer the same imports; under capped.sh's CPU share
         # --all-files passed 60 s, while one process lints the tree in ~9 s.
         require_serial: true
+      # Two workers fit capped.sh's CPU share (16 s -> 13.5 s); more workers are
+      # slower under the CPU % cap.
+      # An old .venv without pytest-xdist falls back to one process.
       - id: pytest
         name: pytest (100% branch coverage)
-        entry: .venv/bin/python -m pytest -p no:cacheprovider -q
+        entry: |
+          bash -c 'if .venv/bin/python -c "import xdist" 2>/dev/null; then exec .venv/bin/python -m pytest -p no:cacheprovider -q -n 2; else echo "pytest-xdist missing (run scripts/setup_dev.sh): serial run" >&2; exec .venv/bin/python -m pytest -p no:cacheprovider -q; fi'
         language: system
         pass_filenames: false
         types: [python]

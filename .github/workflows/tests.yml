@@ -64,3 +64,6 @@ jobs:
         run: |
           .venv/bin/python -m pip install --quiet pre-commit
           SKIP=app-analyze,app-format,app-test,dependency-freshness .venv/bin/pre-commit run --all-files
+      - if: matrix.task == 'pre-commit'
+        name: pylint duplicate-code (whole tree)
+        run: .venv/bin/python -m pylint --rcfile=pyproject.toml --disable=all --enable=duplicate-code book_guard scripts
