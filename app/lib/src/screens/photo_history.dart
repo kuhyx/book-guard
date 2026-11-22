@@ -4,6 +4,7 @@ import 'package:book_guard_app/src/journal.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/failed_photos.dart';
 import 'package:book_guard_app/src/screens/photo_gallery.dart';
+import 'package:book_guard_app/src/screens/stale_captures.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -49,6 +50,9 @@ class PhotoHistory extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Stored start/stop photos too old to be one (12 h): keep or
+          // delete, never a session photo.
+          StaleCaptures(api: api, reader: reader, onChanged: onChanged),
           FailedPhotos(
             api: api,
             state: state,

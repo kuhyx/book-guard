@@ -26,6 +26,10 @@ TYPED = "typed"
 """``PhotoRecord.page_source`` of a page number the reader typed in the app."""
 NEEDS_NUMBER = "needs number"
 """``PhotoRecord.reason`` of a page photo that came without the phone's number."""
+KEPT: Final = "kept"
+"""``PhotoRecord.kind`` of a page photo kept off every session: the phone's
+stale start/stop photo (over 12 h stored) sent as ``kept_<file>``."""
+KEPT_PREFIX: Final = "kept_"
 MANUAL_START_NAME: Final = "manual-start"
 """The name of a start no photo shows (``book-guard start``, ``_manual_pages``)."""
 

@@ -14,7 +14,14 @@ from typing import TYPE_CHECKING
 from book_guard import _page_truth
 from book_guard._constants import MAX_UPLOAD_DELAY
 from book_guard._photo_context import context_for, read_sidecar
-from book_guard._photos import NEEDS_NUMBER, OK, REJECTED, PhotoRecord
+from book_guard._photos import (
+    KEPT,
+    KEPT_PREFIX,
+    NEEDS_NUMBER,
+    OK,
+    REJECTED,
+    PhotoRecord,
+)
 from book_guard._vision import ISBN
 
 if TYPE_CHECKING:
@@ -102,7 +109,8 @@ def classify(
     """
     if photo.taken_at is None:
         return rejected(photo, path, uploaded, "no EXIF capture time"), 0
-    if uploaded - photo.taken_at > MAX_UPLOAD_DELAY:
+    kept = path.name.startswith(KEPT_PREFIX)
+    if uploaded - photo.taken_at > MAX_UPLOAD_DELAY and not kept:
         reason = "uploaded more than 7 days after it was taken"
         return rejected(photo, path, uploaded, reason), 0
     note = read_sidecar(path)
@@ -127,4 +135,7 @@ def classify(
         reason=reading.reason,
         pencil_page=reading.pencil_page,
     )
+    if kept and record.kind == "page":
+        # Never session evidence, so its age does not matter either.
+        record = replace(record, kind=KEPT)
     return record, reading.rotation

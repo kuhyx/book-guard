@@ -39,7 +39,7 @@ app does derive pace, for the week/month/any-day/simulation views, offline.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Final
 
 import freedays
@@ -50,7 +50,7 @@ from book_guard._bookindex import index_path
 from book_guard._errlog import claude_outage
 from book_guard._ledger import load as load_ledger
 from book_guard._pace_inputs import pace_inputs
-from book_guard._photos import MANUAL_START_NAME
+from book_guard._photos import MANUAL_START_NAME, PhotoRecord
 from book_guard._render import todo_lines
 from book_guard._session_files import file_name
 from book_guard._sessions import NEEDS_QUIZ
@@ -62,6 +62,7 @@ if TYPE_CHECKING:
 
 SCHEMA: Final = 1
 _GALLERY: Final = 40
+_LATE_WINDOW: Final = timedelta(days=2)
 
 
 def _session(view: SessionView) -> dict[str, Any]:
@@ -122,6 +123,17 @@ def _chapter(snap: Snapshot) -> dict[str, Any] | None:
     return {"number": number, "of": len(snap.book.chapters), "title": chapter.title}
 
 
+def _late(records: list[PhotoRecord]) -> list[PhotoRecord]:
+    """Photos uploaded in the last :data:`_LATE_WINDOW` though taken earlier.
+
+    The gallery is the newest by capture time; a photo sent long after it
+    was taken (a stale stored one, rejected) must still be listed, or the
+    phone takes it for one the PC never read.
+    """
+    since = datetime.now(tz=UTC) - _LATE_WINDOW
+    return [r for r in records if datetime.fromisoformat(r.uploaded_at) >= since]
+
+
 def _photos(paths: Paths) -> list[dict[str, Any]]:
     """The newest photos, for the gallery: where to fetch them, what they were."""
     records = sorted(
@@ -141,7 +153,7 @@ def _photos(paths: Paths) -> list[dict[str, Any]]:
             "pencil_page": r.pencil_page,
             "taken_at": r.taken_at or r.uploaded_at,
         }
-        for r in records[:_GALLERY]
+        for r in [*records[:_GALLERY], *_late(records[_GALLERY:])]
     ]
 
 

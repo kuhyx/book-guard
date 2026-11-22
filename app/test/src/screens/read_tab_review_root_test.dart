@@ -4,6 +4,7 @@ import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
+import 'package:book_guard_app/src/screens/scanning_review.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../support/fake_api.dart';
 import '../../support/fake_reader.dart';
 import '../../support/finders_read.dart';
+import '../../support/keypad.dart';
 import '../../support/states.dart';
 
 final _bytes = Uint8List.fromList([0xff, 0xd8, 0xff]);
@@ -72,5 +74,32 @@ void main() {
     await tester.tap(spoken('Send the page number'));
     await settle(tester, 20);
     expect(api.notes['start_IMG.jpg']?.page, 252);
+  });
+
+  testWidgets('the review opens before the scan lands, the keypad works', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final api = FakeApi();
+    await pumpTab(
+      tester,
+      ReadTab(
+        api: api,
+        state: readingState(),
+        desktop: false,
+        onChanged: () async {},
+        reader: _SlowReader(), // never lands
+        photoSource: ({required camera}) async =>
+            XFile.fromData(_bytes, path: '/DCIM/IMG.jpg'),
+      ),
+    );
+    await tapVisible(tester, spoken('Start reading'));
+    await settle(tester, 10);
+    expect(find.byType(ScanningReview), findsOneWidget);
+    await typeOnKeypad(tester, 260);
+    await settle(tester, 20);
+    expect(api.notes['start_IMG.jpg']?.page, 260);
   });
 }

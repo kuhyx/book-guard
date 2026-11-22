@@ -7,6 +7,7 @@ import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/photo_review.dart';
+import 'package:book_guard_app/src/screens/scanning_review.dart';
 import 'package:book_guard_app/src/screens/type_page_dialog.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
@@ -94,12 +95,13 @@ Future<ReviewResult?> _keypadOnly(BuildContext context) async {
   return page == null ? null : ReviewResult(page: page);
 }
 
-/// Reads the photo on the device and lets the reader confirm, box or type
-/// the number. The result carries a number, or is null when they backed out
-/// (the photo stays on the phone), or is a retake: nothing is sent without a
-/// number. No reader (desktop) or an unreadable image (logged) goes straight
-/// to the keypad. A number that differs from the first one OCR offered is
-/// logged as a correction.
+/// Opens the review at once on [navigator] (the app's root) and reads the
+/// photo meanwhile ([ScanningReview]): the reader confirms, boxes or types
+/// the number. The result carries a number, or is null when they backed
+/// out (the photo stays on the phone), or is a retake: nothing is sent
+/// without a number. No reader (desktop) goes straight to the keypad; an
+/// unreadable image (logged) opens it on the photo. A number that differs
+/// from the first one OCR offered is logged as a correction.
 Future<ReviewResult?> reviewPhoto(
   NavigatorState navigator, {
   required PageReader? reader,
@@ -110,22 +112,24 @@ Future<ReviewResult?> reviewPhoto(
   String? attempt,
 }) async {
   if (reader == null) return await _keypadOnly(navigator.context);
-  final scan = await reader.scan(bytes, context: pageContext);
-  // What the phone read, before anyone confirms it: the step a photo was
-  // once lost after (2026-10-23, "Page 252?" and then gone).
-  await errors.event('photo', 'scanned', {
-    'attempt': ?attempt,
-    'hits': scan == null ? null : [for (final h in scan.hits) h.value],
-    'turn': ?scan?.turn, // which way up it read the page (a 9 vs a 6)
+  final scan = reader.scan(bytes, context: pageContext).then((scan) async {
+    // What the phone read, before anyone confirms it: the step a photo was
+    // once lost after (2026-10-23, "Page 252?" and then gone).
+    await errors.event('photo', 'scanned', {
+      'attempt': ?attempt,
+      'hits': scan == null ? null : [for (final h in scan.hits) h.value],
+      'turn': ?scan?.turn, // which way up it read the page (a 9 vs a 6)
+      'millis': ?scan?.millis,
+    });
+    if (scan == null) {
+      unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));
+    }
+    return scan;
   });
-  if (!navigator.mounted) return null; // the app itself went away
-  if (scan == null) {
-    unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));
-    return await _keypadOnly(navigator.context);
-  }
+  // Open at once: the photo and the keypad while the number is read.
   final result = await navigator.push<ReviewResult>(
     MaterialPageRoute(
-      builder: (_) => PhotoReview(
+      builder: (_) => ScanningReview(
         bytes: bytes,
         scan: scan,
         reader: reader,
