@@ -112,6 +112,7 @@ Future<ReviewResult?> reviewPhoto(
   String? attempt,
 }) async {
   if (reader == null) return await _keypadOnly(navigator.context);
+  final watch = Stopwatch()..start();
   final scan = reader.scan(bytes, context: pageContext).then((scan) async {
     // What the phone read, before anyone confirms it: the step a photo was
     // once lost after (2026-10-23, "Page 252?" and then gone).
@@ -119,7 +120,7 @@ Future<ReviewResult?> reviewPhoto(
       'attempt': ?attempt,
       'hits': scan == null ? null : [for (final h in scan.hits) h.value],
       'turn': ?scan?.turn, // which way up it read the page (a 9 vs a 6)
-      'millis': ?scan?.millis,
+      'millis': watch.elapsedMilliseconds, // the whole read, the 1.5 s goal
     });
     if (scan == null) {
       unawaited(errors.log('reader', 'unreadable image', {'photo': fileName}));

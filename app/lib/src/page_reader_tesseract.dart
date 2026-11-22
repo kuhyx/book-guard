@@ -92,6 +92,18 @@ class TesseractPageReader implements PageReader {
     return withoutRepeats(found);
   }
 
+  /// Milliseconds each stage of the last [scan] took (for page_truth runs).
+  final stages = <String, int>{};
+
+  Future<T> _timed<T>(String stage, Future<T> Function() run) async {
+    final watch = Stopwatch()..start();
+    try {
+      return await run();
+    } finally {
+      stages[stage] = (stages[stage] ?? 0) + watch.elapsedMilliseconds;
+    }
+  }
+
   // Which model reads: the small fast one, or the full one (`scan` falls
   // back to it when the fast one finds no number the photo can use).
   var _model = 'fast';
@@ -101,6 +113,7 @@ class TesseractPageReader implements PageReader {
     Uint8List bytes, {
     PageContext context = const PageContext(),
   }) async {
+    stages.clear();
     _model = 'fast';
     final first = await _scan(bytes);
     if (first == null || _usable(first, context)) {
@@ -130,7 +143,12 @@ class TesseractPageReader implements PageReader {
     if (scan == null || body == null) return scan;
     try {
       final net = _net ??= await loadPencilNetBytes();
-      return scan.withPencil(await pencilFromPreview(net, scan.preview, body));
+      return scan.withPencil(
+        await _timed(
+          'pencil',
+          () => pencilFromPreview(net, scan.preview, body),
+        ),
+      );
     } on Exception {
       return scan;
     }
@@ -147,7 +165,10 @@ class TesseractPageReader implements PageReader {
     final watch = Stopwatch()..start();
     final Prepared prepared;
     try {
-      prepared = await Isolate.run(() => preparePage(bytes));
+      prepared = await _timed(
+        'prep',
+        () => Isolate.run(() => preparePage(bytes)),
+      );
     } on Exception {
       return null;
     }
@@ -155,7 +176,10 @@ class TesseractPageReader implements PageReader {
     var bestTurn = 0;
     var bestLines = <SeenLine>[];
     for (final (i, turn) in _turns.indexed) {
-      final lines = await _lines(prepared.inks[i], '$turn');
+      final lines = await _timed(
+        '${_model}_ocr$turn',
+        () => _lines(prepared.inks[i], '$turn'),
+      );
       final score = wideWords(sureWords(lines));
       if (score > best) {
         (best, bestTurn, bestLines) = (score, turn, lines);
@@ -175,7 +199,10 @@ class TesseractPageReader implements PageReader {
     final height = sideways ? prepared.width : prepared.height;
     var numbers = numberLines(bestLines, height);
     if (numbers.isEmpty) {
-      numbers = numberLines(await _edgeLines(bytes, bestTurn, width), height);
+      numbers = numberLines(
+        await _timed('edge', () => _edgeLines(bytes, bestTurn, width)),
+        height,
+      );
     }
     // The whole page is read at 1600 px, where a 151 can read as 161: each
     // number is read again from its own full-resolution crop. A crop fixes or
@@ -185,11 +212,14 @@ class TesseractPageReader implements PageReader {
         (
           _notShorter(
             number,
-            await _readCrop(
-              bytes,
-              toDecodedBox(line.box),
-              bestTurn,
-              glyph: false,
+            await _timed(
+              'crops',
+              () => _readCrop(
+                bytes,
+                toDecodedBox(line.box),
+                bestTurn,
+                glyph: false,
+              ),
             ),
           ),
           line,

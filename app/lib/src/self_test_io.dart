@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
+import 'package:book_guard_app/src/page_reader_tesseract.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -42,6 +43,7 @@ Future<void> runSelfTestIfAsked(PageReader? reader) async {
       near: given['near'] as int?,
       lastPage: given['last_page'] as int?,
     );
+    final watch = Stopwatch()..start();
     final scan = await reader.scan(
       await File('${dir.path}/${row['file']}').readAsBytes(),
       context: context,
@@ -65,6 +67,8 @@ Future<void> runSelfTestIfAsked(PageReader? reader) async {
           },
       ],
       'millis': scan?.millis,
+      'total_ms': watch.elapsedMilliseconds,
+      if (reader case final TesseractPageReader t) 'stages': {...t.stages},
     };
     debugPrint('page_truth ${jsonEncode(result)}');
     results.add(result);
