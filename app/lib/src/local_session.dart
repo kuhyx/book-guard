@@ -75,6 +75,19 @@ LocalView? localView(GuardState? state, List<JournalEntry> journal) {
       }
     }
   }
+  final pcSha = state?.openStartSha;
+  final pcAt = state?.openStartAt;
+  if (open == null && pcStart != null && pcSha != null && pcAt != null) {
+    // A start the phone never took (`book-guard start`, another device):
+    // the PC's hash and time, so a stop pairs here as the PC will pair it.
+    open = JournalEntry(
+      name: '',
+      label: 'start',
+      sha: pcSha,
+      takenAt: pcAt,
+      page: pcStart,
+    );
+  }
   var openPage = open?.page ?? pcStart;
   // Start from what the PC already asks for; pending photos then answer
   // those or add sessions of their own.

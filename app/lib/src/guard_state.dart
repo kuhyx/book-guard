@@ -24,6 +24,8 @@ class GuardState {
     required this.sessions,
     required this.openStart,
     required this.generatedAt,
+    this.openStartSha,
+    this.openStartAt,
     this.photos = const [],
     this.claudeDownSince,
     this.claudeDownUntil,
@@ -47,6 +49,12 @@ class GuardState {
           if (s is Map<String, dynamic>) SessionInfo.fromJson(s),
       ],
       openStart: start is Map<String, dynamic> ? _int(start['page']) : null,
+      openStartSha: start is Map<String, dynamic> && start['sha'] is String
+          ? start['sha'] as String
+          : null,
+      openStartAt: start is Map<String, dynamic>
+          ? DateTime.tryParse('${start['taken_at']}')
+          : null,
       generatedAt: DateTime.tryParse('${json['generated_at']}'),
       claudeDownSince: DateTime.tryParse('${json['claude_down_since']}'),
       claudeDownUntil: DateTime.tryParse('${json['claude_down_until']}'),
@@ -79,6 +87,13 @@ class GuardState {
 
   /// The page of a start photo still waiting for its end photo.
   final int? openStart;
+
+  /// The PC's key for that start (a photo's sha256, or a manual start's):
+  /// a stop taken offline pairs with it (`checkPageFor`).
+  final String? openStartSha;
+
+  /// When that start was taken (or set from the PC's CLI).
+  final DateTime? openStartAt;
 
   /// When the PC wrote this snapshot.
   final DateTime? generatedAt;
