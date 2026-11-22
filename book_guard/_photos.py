@@ -26,6 +26,8 @@ TYPED = "typed"
 """``PhotoRecord.page_source`` of a page number the reader typed in the app."""
 NEEDS_NUMBER = "needs number"
 """``PhotoRecord.reason`` of a page photo that came without the phone's number."""
+MANUAL_START_NAME: Final = "manual-start"
+"""The name of a start no photo shows (``book-guard start``, ``_manual_pages``)."""
 
 
 _logger: Final = logging.getLogger(__name__)

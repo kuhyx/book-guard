@@ -179,6 +179,14 @@ Read README.md first. These are the invariants that are easy to break.
   (`_prompt.py`). The grader never fails on what it cannot verify against
   the text it was given (often just three photographed pages). Re-run
   `scripts/grader_suite.py` after touching it.
+- **A start without a photo is CLI-only** (`book-guard start --page N --at
+  ISO --reason`, `_manual_start.py`): a signed `start:` row, read back as a
+  text-less page record by `_manual_pages.pages` -- every session builder
+  input goes through it, never bare `usable_pages`. `--at` today, not
+  future, after the last stop; `--page` above it; refused while a start is
+  open. Judged as any session from the stop on; its verdict row carries
+  `detail.start == "manual"`. The next real photo of the same page replaces
+  it (`manual start replaced` in the error log). No app/MCP route.
 - **The PC never deletes the record**: the ledger, `Reading/processed/`,
   `Reading/thumbs/`, `Reading/sessions/`, `notes.json`, `ebook_sessions.json`
   and `summaries.json` (full summaries; the ledger row keeps `summary[:1000]`)

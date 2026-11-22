@@ -35,6 +35,7 @@ from book_guard._bookindex import index_path, load
 from book_guard._books import book_at, current
 from book_guard._ebook_map import PageMap, build_map
 from book_guard._ebook_text import served_text
+from book_guard._manual_pages import pages as manual_pages
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -125,7 +126,7 @@ def refresh(paths: Paths) -> bool:
     if book is None or index_file is None or not index_file.exists():
         return False
     photos = _photographed(
-        ledger, _photos.usable_pages(_photos.load(paths.photos)), book.isbn
+        ledger, manual_pages(ledger, _photos.load(paths.photos)), book.isbn
     )
     stat = index_file.stat()
     inputs = _sha(

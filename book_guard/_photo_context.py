@@ -25,8 +25,8 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard._books import book_at
 from book_guard._ebook_overlap import breaks
+from book_guard._manual_pages import pages as manual_pages
 from book_guard._pagenum import Box, Context
-from book_guard._photos import usable_pages
 from book_guard._sessions import build_sessions, open_start
 
 if TYPE_CHECKING:
@@ -111,7 +111,7 @@ def context_for(
         return Context(last_page=last_page)
     if label.group(2):
         return Context(expected=int(label.group(2)), last_page=last_page)
-    pages = usable_pages(records)
+    pages = manual_pages(ledger, records)
     closing = breaks(app, ledger)
     if label.group(1) == "stop":
         start = open_start(pages, closing)

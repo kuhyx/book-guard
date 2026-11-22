@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from book_guard import _ledger, _photos
 from book_guard._books import all_books, book_at, switch_times
+from book_guard._manual_pages import pages as manual_pages
 from book_guard._sessions import TOO_FAST, build_sessions
 
 if TYPE_CHECKING:
@@ -70,8 +71,8 @@ def paper_conflict(paths: Paths, span: Span, starts: list[datetime]) -> str | No
     A flipped-through paper session (too fast) never counts, so it is no
     clash; an open start photo is none either (see the module docstring).
     """
-    pages = _photos.usable_pages(_photos.load(paths.photos))
     ledger = _ledger.load(paths.ledger, paths.key_file)
+    pages = manual_pages(ledger, _photos.load(paths.photos))
     for s in build_sessions(pages, session_breaks(starts, ledger)):
         if s.state != TOO_FAST and overlaps(span, (s.start.taken, s.end.taken)):
             return (

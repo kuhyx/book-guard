@@ -20,6 +20,7 @@ from book_guard import (
     _inclusive,
     _index_cli,
     _library_cli,
+    _manual_start,
     _quiz_cli,
     _widen,
 )
@@ -175,6 +176,7 @@ def _parser() -> argparse.ArgumentParser:
         ("lock", "run the gate (locks only when behind pace)", _cmd_lock),
         ("retime", "widen a session the app lost a photo of", _widen.cmd_retime),
         ("accept", "credit a session by hand, without the grader", _accept.cmd_accept),
+        ("start", "open a session without a start photo", _manual_start.cmd_start),
     ]
     subs = {}
     for name, help_text, handler in commands:
@@ -202,6 +204,7 @@ def _parser() -> argparse.ArgumentParser:
     _inclusive.configure(subs["backfill-inclusive"])
     _widen.configure(subs["retime"])
     _accept.configure(subs["accept"])
+    _manual_start.configure(subs["start"])
     subs["lock"].add_argument("--production", action="store_true")
     configure_evening(subs["lock"])
     subs["lock"].add_argument(

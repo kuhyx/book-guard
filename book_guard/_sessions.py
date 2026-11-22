@@ -32,6 +32,7 @@ import hashlib
 from typing import TYPE_CHECKING, Final
 
 from book_guard._constants import MAX_SESSION, MIN_SECONDS_PER_PAGE, RETAKE_SECONDS
+from book_guard._photos import MANUAL_START_NAME
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -133,7 +134,9 @@ class Session:
         """The photos whose transcribed text the grader sees (none in-app)."""
         if self.ebook is not None:
             return []
-        return [p for p in (self.start, self.check, self.end) if p is not None]
+        # A manual start (``book-guard start``) shows no page.
+        photos = (self.start, self.check, self.end)
+        return [p for p in photos if p is not None and p.name != MANUAL_START_NAME]
 
 
 def check_page_for(start: PhotoRecord, end: PhotoRecord) -> int | None:

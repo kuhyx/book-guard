@@ -50,6 +50,7 @@ from book_guard._bookindex import index_path
 from book_guard._errlog import claude_outage
 from book_guard._ledger import load as load_ledger
 from book_guard._pace_inputs import pace_inputs
+from book_guard._photos import MANUAL_START_NAME
 from book_guard._render import todo_lines
 from book_guard._session_files import file_name
 from book_guard._sessions import NEEDS_QUIZ
@@ -195,7 +196,13 @@ def to_json(paths: Paths, snap: Snapshot) -> dict[str, Any]:
         },
         "open_start": None
         if start is None
-        else {"page": start.page, "taken_at": start.taken.isoformat()},
+        else {
+            "page": start.page,
+            "taken_at": start.taken.isoformat(),
+            # The phone pairs its stop with this start offline (checkPageFor).
+            "sha": start.sha,
+            "manual": start.name == MANUAL_START_NAME,
+        },
         "todo": todo_lines(snap),
         "sessions": [_session(v) for v in snap.sessions],
         "escapes_left": snap.escapes_left,

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import freedays
 
-from book_guard import _ebook_sessions, _ledger, _photos, _sick
+from book_guard import _ebook_sessions, _ledger, _manual_pages, _photos, _sick
 from book_guard._books import Book, current
 from book_guard._constants import (
     DAILY_PASS_PAGES,
@@ -110,7 +110,7 @@ def _session_views(
     verdicts = ledger.verdicts()
     signed = widened(ledger)
     views = []
-    paper = build_sessions(_photos.usable_pages(records), breaks(app, ledger))
+    paper = build_sessions(_manual_pages.pages(ledger, records), breaks(app, ledger))
     for session in sorted([*paper, *app], key=lambda s: s.end.taken):
         apply_times(session, times)
         apply_widened(session, signed)
@@ -196,7 +196,7 @@ def _reading(
     records = _photos.load(paths.photos)
     app = _ebook_sessions.sessions(paths)
     views = _session_views(ledger, records, load_times(paths.session_times), app)
-    return views, open_start(_photos.usable_pages(records), breaks(app, ledger))
+    return views, open_start(_manual_pages.pages(ledger, records), breaks(app, ledger))
 
 
 def snapshot(

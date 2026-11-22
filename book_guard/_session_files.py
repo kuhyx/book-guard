@@ -16,6 +16,7 @@ import re
 from typing import TYPE_CHECKING, Any, Final
 
 from book_guard._atomic_json import write_json
+from book_guard._photos import MANUAL_START_NAME
 from book_guard._summaries import full_text
 from book_guard._summaries import load as load_summaries
 from book_guard._thumbs import thumb_name
@@ -40,8 +41,8 @@ def photo_ref(role: str, record: PhotoRecord | None) -> dict[str, Any] | None:
 
     Shared with the library, which lists the same photos.
     """
-    if record is None or record.kind == "ebook":
-        return None  # an in-app session's ends are taps, not photos
+    if record is None or record.kind == "ebook" or record.name == MANUAL_START_NAME:
+        return None  # an in-app session's ends are taps; a manual start, a row
     return {
         "role": role,
         "page": record.page,

@@ -36,6 +36,7 @@ from book_guard._claude import ClaudeUnavailableError
 from book_guard._constants import UPLOAD_SETTLE_SECONDS
 from book_guard._errlog import log_error
 from book_guard._inbox_record import Pass, classify, contents_record
+from book_guard._manual_pages import log_replacement
 from book_guard._ocr import barcode_isbn
 from book_guard._photo import open_photo
 from book_guard._photo_context import sidecar_path
@@ -158,6 +159,7 @@ def process_inbox(
                 rotation=rotation,
             )
         _file_away(path, paths, photo.sha, rotation)
+        log_replacement(paths, known.ledger, known.records, record)
         result.read.append(record)
         if record.kind == ISBN and record.isbn:
             result.new_isbns.append(record.isbn)

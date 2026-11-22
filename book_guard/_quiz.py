@@ -20,7 +20,7 @@ from book_guard._bonus import earns, qualifies
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
 from book_guard._inclusive import COUNTING, INCLUSIVE
 from book_guard._ledger import CREDIT, REJECT, Entry
-from book_guard._photos import TYPED
+from book_guard._photos import MANUAL_START_NAME, TYPED
 from book_guard._prompt import (
     LOCAL_REMINDER,
     SYSTEM,
@@ -188,6 +188,9 @@ def record_verdict(
         )
         if photo is not None and photo.page_source == TYPED
     ]
+    if session.start.name == MANUAL_START_NAME:
+        # Opened by ``book-guard start``: no start photo shows it.
+        entry = replace(entry, detail={**entry.detail, "start": "manual"})
     if typed:
         # A page the reader typed (no number printed on it): auditable here.
         entry = replace(

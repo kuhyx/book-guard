@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
+from book_guard._photos import MANUAL_START_NAME
 from book_guard._prompt_ebook import ebook_prompt
 from book_guard._prompt_parts import (
     ANSWER,
@@ -84,7 +85,7 @@ def build_prompt(
             ("check", session.check),
             ("stop", session.end),
         )
-        if p is not None
+        if p is not None and p.name != MANUAL_START_NAME
     )
     if context.span:
         lines += [
