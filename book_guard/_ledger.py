@@ -22,6 +22,9 @@ Kinds:
 * ``ease`` -- ``ease:<day>``: ``amount`` pages come off that day's number (from
   the resplit; ``detail.reason`` says why). The pages are not forgiven: the
   next morning's split owes them to the days left. One per day. Worth nothing.
+* ``progress`` -- ``progress:<day>:<done>:<target>``: how many of the day's
+  target pages are read (``_progress.py``). Worth nothing and read by no
+  decision here; a later ``earned_time`` pays the reading bonus from it.
 
 Tamper-evident, not tamper-proof: the key is world-readable, exactly as for
 the sibling lockers.
@@ -52,6 +55,7 @@ REJECT: Final = "reject"
 ESCAPE: Final = "escape"
 ESCAPE_UNDONE: Final = "unescape"
 EASE: Final = "ease"
+PROGRESS: Final = "progress"
 
 _DEVICE: Final = socket.gethostname()
 

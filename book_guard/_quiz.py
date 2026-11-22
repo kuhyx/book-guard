@@ -12,10 +12,11 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
+from datetime import date
 import logging
 from typing import TYPE_CHECKING, Final
 
-from book_guard import _errlog, _ledger, _local, _paths
+from book_guard import _errlog, _ledger, _local, _paths, _progress
 from book_guard._bonus import earns, qualifies
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError, ask
 from book_guard._inclusive import COUNTING, INCLUSIVE
@@ -218,4 +219,8 @@ def record_verdict(
     if verdict.passed and earns(session.pages, session.minutes, ledger, entry):
         entry = replace(entry, detail={**entry.detail, "bonus": "1"})
     _ledger.append(paths.ledger, paths.key_file, entry)
+    if entry.amount > 0:
+        # After the credit is on disk, inside the caller's lock: a failure
+        # there is logged and never costs the credit.
+        _progress.record(paths, date.fromisoformat(entry.day))
     return entry

@@ -113,6 +113,10 @@ Read README.md first. These are the invariants that are easy to break.
   judged at credit time. Consumers cannot judge pace, so a rule change
   reaches old rows only via `regrant` (zero-page `bonus:<id>` row).
   Changing that contract means changing both consumers in the same session.
+- **Progress rows are inert** (`_progress.py`): each credit writes a signed
+  `progress:<day>:<done>:<target>` row (`amount` 0) for a later `earned_time`
+  to pay the bonus in proportion. Nothing here may read one -- decision,
+  balance and debt come from `credit` rows; a failed write only logs.
 - **Quotas** (`_quotas.py`, `_plan.py`): from the switch Tue-Thu 15, Mon/Fri
   30, Sat/Sun 50, weekends capped at 60. From `RESPLIT_DATE` (2026-10-18)
   **one number a day**: each morning re-splits what is left of the month by
