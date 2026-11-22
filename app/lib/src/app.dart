@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:book_guard_app/src/capture_stage.dart';
 import 'package:book_guard_app/src/dav_client.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/local_store.dart';
@@ -86,6 +87,10 @@ class _BookGuardAppState extends State<BookGuardApp> {
             store: await (widget.storeFactory ?? createLocalStore)(),
             host: widget.desktop ? 'desktop' : 'phone',
           );
+    // Photos a live check staged over adb (none on the desktop build).
+    if (api != null && !widget.desktop) {
+      await api.stageCaptures(takeStagedCaptures);
+    }
     if (!mounted) return;
     setState(() {
       _api = api;
@@ -115,7 +120,6 @@ class _BookGuardAppState extends State<BookGuardApp> {
               desktop: widget.desktop,
               reader: widget.pageReader,
               lostPhoto: widget.desktop ? null : retrieveLostPhoto,
-              stagedCaptures: widget.desktop ? null : takeStagedCaptures,
               // The Navigator lives below MaterialApp, so HomeScreen pushes
               // this page with its own context.
               settingsPage: widget.desktop

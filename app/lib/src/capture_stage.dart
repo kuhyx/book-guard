@@ -31,14 +31,15 @@ List<({String file, String label, DateTime at})> parseStageManifest(
 
 /// Live checks stage a stored photo of any age (the 26-day-old start photo
 /// of 2026-10-27 hid the camera button): it is kept like a camera photo,
-/// with the time it was staged with.
+/// with the time it was staged with, and a pending camera launch is left
+/// for the recovery to answer.
 extension CaptureStaging on GuardApi {
   /// Keeps every photo [staged] hands over, logged as `staged`.
   Future<void> stageCaptures(StagedCaptures? staged) async {
     if (staged == null) return;
     for (final (i, photo) in (await staged()).indexed) {
       final id = 'staged-${photo.at.millisecondsSinceEpoch}-$i';
-      await captures.keep(
+      await captures.add(
         id,
         photo.label,
         photo.name,

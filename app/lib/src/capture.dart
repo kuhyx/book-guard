@@ -88,6 +88,20 @@ class Captures {
     Uint8List bytes, {
     DateTime? at,
   }) async {
+    final capture = await add(id, label, fileName, bytes, at: at);
+    await landed();
+    return capture;
+  }
+
+  /// Stores a photo as a capture without answering a camera launch (a
+  /// photo staged over adb).
+  Future<Capture> add(
+    String id,
+    String label,
+    String fileName,
+    Uint8List bytes, {
+    DateTime? at,
+  }) async {
     final capture = Capture(
       id: id,
       label: label,
@@ -97,7 +111,6 @@ class Captures {
     await store.write('$_dir$id.bin', bytes);
     // The note goes last: a capture only exists once both parts do.
     await store.write('$_dir$id.json', _bytes(jsonEncode(capture.toJson())));
-    await landed();
     return capture;
   }
 

@@ -36,6 +36,22 @@ void main() {
     expect(await api.captures.pending(), hasLength(1));
   });
 
+  test('staging leaves a camera launch for the recovery to answer', () async {
+    final api = GuardApi(FakeShare().dav(), store: MemoryStore());
+    await api.captures.launching('a1', 'stop');
+    await api.stageCaptures(
+      () async => [
+        (
+          label: 'start',
+          at: DateTime.utc(2026, 10, 27),
+          name: 'old.jpg',
+          bytes: Uint8List.fromList([1]),
+        ),
+      ],
+    );
+    expect(await api.captures.launched(), (id: 'a1', label: 'stop'));
+  });
+
   test('the adb manifest names each photo, its label and time', () {
     final rows = parseStageManifest(
       jsonEncode([
