@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:book_guard_app/src/page_reader_tesseract.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,7 +26,6 @@ List<List<Map<String, Object>>> _prose() => [
 /// pencilled one is kept as a suggestion for the keypad, never as a hit.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  late Directory cache;
   late TesseractPageReader reader;
 
   void answer(Object? Function(int psm) reply) {
@@ -40,14 +37,12 @@ void main() {
   }
 
   setUp(() {
-    cache = Directory.systemTemp.createTempSync('pencil_test');
-    reader = TesseractPageReader(cacheDir: () async => cache);
+    reader = TesseractPageReader();
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
-    cache.deleteSync(recursive: true);
   });
 
   test(

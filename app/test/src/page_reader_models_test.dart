@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader_tesseract.dart';
 import 'package:flutter/services.dart';
@@ -29,7 +27,6 @@ List<List<Map<String, Object>>> _prose() => [
 /// opinion (`TesseractPageReader`).
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  late Directory cache;
   late List<Map<Object?, Object?>> calls;
   late TesseractPageReader reader;
 
@@ -43,15 +40,13 @@ void main() {
   }
 
   setUp(() {
-    cache = Directory.systemTemp.createTempSync('tess_models_test');
     calls = [];
-    reader = TesseractPageReader(cacheDir: () async => cache);
+    reader = TesseractPageReader();
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
-    cache.deleteSync(recursive: true);
   });
 
   final photo = img.encodeJpg(img.Image(width: 200, height: 100));

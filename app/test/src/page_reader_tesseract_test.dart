@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:book_guard_app/src/page_reader.dart' as api;
 import 'package:book_guard_app/src/page_reader_tesseract.dart';
 import 'package:flutter/services.dart';
@@ -27,7 +25,6 @@ List<List<Map<String, Object>>> _prose() => [
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  late Directory cache;
   late List<Map<Object?, Object?>> calls;
   late TesseractPageReader reader;
 
@@ -35,22 +32,29 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {
           final args = (call.arguments as Map).cast<Object?, Object?>();
-          expect(File(args['path']! as String).existsSync(), isTrue);
+          expect(args['jpeg'], isA<Uint8List>());
           calls.add(args);
           return reply(args['psm']! as int, calls.length);
         });
   }
 
+  void answerArgs(Object? Function(Map<Object?, Object?> args) reply) {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          final args = (call.arguments as Map).cast<Object?, Object?>();
+          calls.add(args);
+          return reply(args);
+        });
+  }
+
   setUp(() {
-    cache = Directory.systemTemp.createTempSync('tess_test');
     calls = [];
-    reader = TesseractPageReader(cacheDir: () async => cache);
+    reader = TesseractPageReader();
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
-    cache.deleteSync(recursive: true);
   });
 
   final photo = img.encodeJpg(img.Image(width: 200, height: 100));
@@ -66,9 +70,9 @@ void main() {
   test(
     'the turn with the most upright words wins; its number is a hit',
     () async {
-      // Calls 1-4 are the four turns of the whole page; turn 90 (call 2) reads.
-      answer((psm, call) {
-        if (call != 2) return <Object?>[];
+      // Turn 0 reads nothing, so the other three are read at once; 90 reads.
+      answerArgs((args) {
+        if (args['tag'] != '90') return <Object?>[];
         return [
           ..._prose(),
           [_word('19', 60, 180, 80, 196, 0.95)],
@@ -88,11 +92,10 @@ void main() {
       ));
       expect(scan.preview, isNotEmpty);
       expect(scan.millis, greaterThanOrEqualTo(0));
-      expect(cache.listSync(), isEmpty);
     },
   );
 
-  test('an upright page is not read in the other turns', () async {
+  test('an upright first turn is read alone', () async {
     answer(
       (psm, call) => [
         [
@@ -105,7 +108,7 @@ void main() {
     expect(scan.turn, 0);
     expect(
       calls.where((c) => c['psm'] == 3 && c['model'] == 'fast'),
-      hasLength(1),
+      hasLength(1), // sure on turn 0: the other three are never read
     );
   });
 
