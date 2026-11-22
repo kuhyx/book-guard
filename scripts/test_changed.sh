@@ -4,7 +4,8 @@
 # Run only the tests related to files changed vs HEAD (staged, unstaged and
 # untracked). Quiet: failures plus a one-line summary. Python (book_guard/,
 # pytest from .venv, coverage gate off for the subset) and Flutter (app/).
-# Each side falls back to its full suite when a change cannot be mapped.
+# Python falls back to its full suite when a change cannot be mapped; the
+# app side runs at most GATE_MAX files (scripts/app_test_changed.sh).
 # ============================================================================
 
 set -euo pipefail
@@ -63,7 +64,7 @@ if [[ $py_touched -eq 1 ]]; then
 fi
 if [[ $app_touched -eq 1 ]]; then
     # The commit gate's mapping: changed tests plus the importers of changed
-    # lib files; the full suite (in slices) only where nothing maps.
+    # lib files, capped at its GATE_MAX files (CI app.yml runs them all).
     scripts/app_test_changed.sh "${app_files[@]}" || rc=1
 fi
 [[ $rc -eq 0 ]] && echo "test-changed: pass" || echo "test-changed: FAIL"

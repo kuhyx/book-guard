@@ -162,9 +162,10 @@ repos:
         files: ^app/(lib|test|bin)/.*\.dart$
       - id: app-test
         name: flutter test (app)
-        # Only the tests the commit touches (changed tests + direct importers
-        # of changed lib files): the whole suite runs past the 60 s action
-        # cap. CI (app.yml) runs it all. The script runs -j 1: the whole
+        # At most 6 test files (scripts/app_test_changed.sh GATE_MAX): changed
+        # tests first, then direct importers of changed lib files; a pubspec
+        # or --all-files run takes an even spread of 6. CI (app.yml) runs the
+        # whole suite. The script runs -j 1: the whole
         # pre-commit run sits in one 2 GiB capped.sh scope with no swap
         # (anon peak 2026-11-17: -j 2 1680 MiB, -j 1 1073 MiB). Pinned by
         # test_repo_hooks.py.
