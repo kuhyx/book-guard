@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:book_guard_app/src/capture_stage.dart';
 import 'package:book_guard_app/src/page_number.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/page_reader_tesseract.dart';
@@ -74,4 +75,33 @@ Future<void> runSelfTestIfAsked(PageReader? reader) async {
     results.add(result);
   }
   await File('${dir.path}/results.json').writeAsString(jsonEncode(results));
+}
+
+/// Stored photos staged over adb for a live check, taken once:
+///
+///     adb push p473.jpg .../files/stage_capture/
+///     adb push manifest.json .../files/stage_capture/  # [{file, label, taken_at}]
+///
+/// then launch the app. The folder is emptied as it is read.
+Future<List<StagedCapture>> takeStagedCaptures() async {
+  if (!Platform.isAndroid) return const [];
+  final base = await getExternalStorageDirectory();
+  if (base == null) return const [];
+  final dir = Directory('${base.path}/stage_capture');
+  final manifest = File('${dir.path}/manifest.json');
+  if (!manifest.existsSync()) return const [];
+  final rows = parseStageManifest(await manifest.readAsString());
+  await manifest.delete();
+  final staged = <StagedCapture>[];
+  for (final row in rows) {
+    final file = File('${dir.path}/${row.file}');
+    staged.add((
+      label: row.label,
+      at: row.at,
+      name: row.file,
+      bytes: await file.readAsBytes(),
+    ));
+    await file.delete();
+  }
+  return staged;
 }

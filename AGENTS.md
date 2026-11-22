@@ -24,6 +24,10 @@ Read README.md first. These are the invariants that are easy to break.
   `adb push` it to `/sdcard/Android/data/com.kuhy.book_guard_app/files/page_truth/`,
   `touch .../run` (chmod 666), launch the app, read `page_truth {...}` lines
   from logcat (the app's own files are not adb-readable).
+- A stored photo of any age (a stale start, say) is staged the same way:
+  `adb push` the JPEG and a `manifest.json` (`[{file, label, taken_at}]`) to
+  `.../files/stage_capture/`, then launch the app; it keeps each as a camera
+  capture with that time and empties the folder (`capture_stage.dart`).
 - `python -m scripts.pace_goldens` writes `app/test/fixtures/pace_goldens.json`,
   the answers the app's Dart port of the plan must match. Re-run it after
   touching `_quotas.py`, `_plan.py`, `_pace*.py` or `_ask.py`, and commit

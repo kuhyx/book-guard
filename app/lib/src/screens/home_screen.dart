@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:book_guard_app/src/capture_stage.dart';
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
@@ -20,9 +21,8 @@ import 'package:material_ui/material_ui.dart';
 ///
 /// The snapshot is refetched every [refreshEvery] and after every action,
 /// because the PC changes it on its own (a photo read, a check page named).
-/// Each refresh first sends whatever the outbox holds. With the PC out of
-/// reach the last snapshot stays on screen, overlaid with the photos taken
-/// since, and the app keeps working.
+/// Each refresh first sends the outbox. With the PC out of reach the last
+/// snapshot stays, overlaid with the photos taken since.
 class HomeScreen extends StatefulWidget {
   /// Creates the screen.
   const new({
@@ -33,11 +33,14 @@ class HomeScreen extends StatefulWidget {
     this.refreshEvery = const Duration(seconds: 10),
     this.reader,
     this.lostPhoto,
+    this.stagedCaptures,
   });
 
-  /// The photo Android kept when it stopped the app while the camera was
-  /// open; null on the desktop.
+  /// The photo Android kept when it killed the app mid-camera; null: desktop.
   final LostPhoto? lostPhoto;
+
+  /// Photos staged over adb (live checks), kept after [lostPhoto]'s.
+  final StagedCaptures? stagedCaptures;
 
   /// On-device page reading; null on the desktop.
   final PageReader? reader;
@@ -75,8 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _timer = Timer.periodic(widget.refreshEvery, (_) => refresh());
   }
 
-  /// Leaving the app mid-photo is how a photo got lost once: the log says
-  /// when it happened.
+  /// Leaving the app mid-photo lost a photo once: the log says when.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
@@ -85,10 +87,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Shows the last snapshot at once, then asks the PC.
+  /// Shows the last snapshot at once, then asks the PC. Staging comes after
+  /// the recovery: keeping a photo answers a pending camera launch.
   Future<void> _start() async {
     try {
       await widget.api.recoverCamera(widget.lostPhoto);
+      await widget.api.stageCaptures(widget.stagedCaptures);
     } on Exception catch (error) {
       await widget.api.errors.log('camera', '$error');
     }

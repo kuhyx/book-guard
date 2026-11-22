@@ -1,3 +1,4 @@
+import 'package:book_guard_app/src/capture_stage.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/self_test_none.dart'
     if (dart.library.io) 'package:book_guard_app/src/self_test_io.dart'
@@ -7,3 +8,7 @@ import 'package:book_guard_app/src/self_test_none.dart'
 /// `self_test_io.dart`); a no-op everywhere else.
 Future<void> runSelfTestIfAsked(PageReader? reader) =>
     platform.runSelfTestIfAsked(reader);
+
+/// Stored photos a live check staged over adb (see `self_test_io.dart`).
+Future<List<StagedCapture>> takeStagedCaptures() =>
+    platform.takeStagedCaptures();
