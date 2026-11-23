@@ -121,9 +121,15 @@ void main() {
     expect(find.text('settings page'), findsOneWidget);
   });
 
-  testWidgets('the bar paints no title and no tooltip', (tester) async {
+  testWidgets('the bar paints no title and no long tooltip', (tester) async {
     await pump(tester);
     expectNoWords(tester);
+  });
+
+  testWidgets('the bar names its unclear icons in one word', (tester) async {
+    await pump(tester, settingsPage: () => const Scaffold());
+    expect(find.byTooltip('Diagnostics'), findsOneWidget);
+    expect(find.byTooltip('Connection'), findsOneWidget);
   });
 
   testWidgets('a fetch finishing after close is dropped', (tester) async {

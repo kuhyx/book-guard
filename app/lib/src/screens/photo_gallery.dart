@@ -84,6 +84,7 @@ class _PhotoGalleryState extends State<PhotoGallery> {
         _verdict(context, photo),
         _when(photo.takenAt),
         IconButton(
+          tooltip: 'Zoom',
           icon: const Icon(Icons.zoom_in, semanticLabel: 'full size'),
           onPressed: () => _open(photo),
         ),

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'no_words.dart';
+
 /// Any letter in any script. Icons paint a private-use codepoint (category
 /// Co), digits are Nd and `·`, `+`, `:` are punctuation, so all of those pass.
 final _letter = RegExp(r'\p{L}', unicode: true);
@@ -25,7 +27,7 @@ List<String> paintedStrings(Finder scope) {
   return out;
 }
 
-/// Asserts [scope] paints no word and no tooltip (long-press paints it),
+/// Asserts [scope] paints no word and no tooltip longer than one word,
 /// and that each icon in [spoken] sits in a control with a spoken label.
 ///
 /// Fails closed: a scope that matches nothing is an error, not a pass.
@@ -39,11 +41,13 @@ void expectNoLetters(
   expect(strings, isNotEmpty, reason: 'nothing painted: wrong scope?');
   final words = strings.where(_letter.hasMatch).toList();
   expect(words, isEmpty, reason: 'painted words: $words');
-  expect(
-    find.descendant(of: scope, matching: find.byType(Tooltip)),
-    findsNothing,
-    reason: 'a tooltip paints its message on long-press',
-  );
+  final longTips = [
+    for (final tip in tester.widgetList<Tooltip>(
+      find.descendant(of: scope, matching: find.byType(Tooltip)),
+    ))
+      if (!oneWordTip(tip.message ?? '')) tip.message ?? '',
+  ];
+  expect(longTips, isEmpty, reason: 'tooltips over one word: $longTips');
   final handle = tester.ensureSemantics();
   for (final icon in spoken) {
     final control = find.descendant(of: scope, matching: find.byIcon(icon));

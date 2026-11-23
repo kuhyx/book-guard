@@ -5,6 +5,7 @@ import 'package:book_guard_app/src/guard_state.dart';
 import 'package:book_guard_app/src/local_session.dart';
 import 'package:book_guard_app/src/page_reader.dart';
 import 'package:book_guard_app/src/screens/book_tab.dart';
+import 'package:book_guard_app/src/screens/diagnostics_button.dart';
 import 'package:book_guard_app/src/screens/home_nav_bar.dart';
 import 'package:book_guard_app/src/screens/late_cue.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
@@ -203,23 +204,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               )
             : null,
         actions: [
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _waiting > 0,
-              label: Text('$_waiting'),
-              child: const Icon(
-                Icons.bug_report_outlined,
-                semanticLabel: 'copy diagnostics',
-              ),
-            ),
-            onPressed: _copyDiagnostics,
-          ),
+          DiagnosticsButton(waiting: _waiting, onPressed: _copyDiagnostics),
           IconButton(
             icon: const Icon(Icons.refresh, semanticLabel: 'refresh'),
             onPressed: refresh,
           ),
           if (widget.settingsPage != null)
             IconButton(
+              tooltip: 'Connection',
               icon: const Icon(Icons.settings, semanticLabel: 'connection'),
               onPressed: _openSettings,
             ),

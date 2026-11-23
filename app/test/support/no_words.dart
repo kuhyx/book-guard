@@ -1,13 +1,22 @@
 /// The zero-text guard: nothing painted on screen holds a word, except the
 /// content nodes a test names (book titles, authors, grader topics, typed
-/// text). Numbers, dates and symbols are fine; tooltips count as painted
-/// (a long-press shows them).
+/// text). Numbers, dates and symbols are fine. A tooltip of one word that
+/// names its icon is allowed; any longer tooltip counts as painted (a
+/// long-press shows it).
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 final _word = RegExp('[A-Za-z]{2,}');
+
+/// kuhy's rule since 2026-11-22: a tooltip may name its icon in one word
+/// (letters and hyphens, at most 20 characters). An empty one paints nothing.
+final _oneWordTip = RegExp(r'^[A-Za-z][A-Za-z-]{0,19}$');
+
+/// True when a tooltip [message] is allowed on a zero-text screen.
+bool oneWordTip(String message) =>
+    message.isEmpty || _oneWordTip.hasMatch(message);
 
 /// Every painted string on screen that still holds a word once each of
 /// [content] is cut out of it. Typed field values ([EditableText]) are the
@@ -27,7 +36,7 @@ List<String> paintedWords(
           .isEmpty)
         (element.widget as RichText).text.toPlainText(),
     for (final tip in tester.widgetList<Tooltip>(find.byType(Tooltip)))
-      tip.message ?? '',
+      if (!oneWordTip(tip.message ?? '')) tip.message ?? '',
   ];
   return [
     for (final text in painted)
