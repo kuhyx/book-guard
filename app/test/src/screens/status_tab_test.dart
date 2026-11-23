@@ -139,7 +139,7 @@ void main() {
     ];
     expect({for (final s in known) iconFor(s)}, hasLength(known.length));
     expect(iconFor('odd'), Icons.help_outline);
-    expect(spokenLabel('too-fast'), contains('38 s'));
+    expect(spokenLabel('too-fast'), contains('35 s'));
     expect(spokenLabel('odd'), 'odd');
     expect(
       statusText(sampleState().sessions.first),

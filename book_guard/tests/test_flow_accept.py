@@ -44,7 +44,7 @@ def test_accept_credits_without_check_page_or_summary(bg_paths: Paths) -> None:
     [
         (2290, "nope", "r", "No such session."),
         (2290, None, "  ", "A reason is required."),
-        (2279, None, "r", "too fast"),
+        (2099, None, "r", "too fast"),
     ],
 )
 def test_refusals(

@@ -5,7 +5,7 @@ When the app cannot take the start photo (2026-11-22: a 26-day-old stored
 photo hid the camera button), the owner opens the session from the CLI,
 with a reason, as a signed ``start:`` ledger row. Nothing the app, the MCP
 server or a file edit can write reaches it. From the stop photo on the
-session is judged as any other (the clock runs from ``--at``, the 38 s/page
+session is judged as any other (the clock runs from ``--at``, the 35 s/page
 floor, the check page, the grader); its credit row carries
 ``detail.start == "manual"``. How the row becomes a start record:
 :mod:`book_guard._manual_pages`.

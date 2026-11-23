@@ -45,9 +45,9 @@ def test_same_page_still_needs_the_floor() -> None:
 
 
 def test_the_floor_uses_inclusive_pages() -> None:
-    # 29 pages need 29 * 38 s = 18 min 22 s (28 pages would need 17 min 44 s).
-    assert Session(_p("a", 1, 0), _p("b", 29, 18), None).state == TOO_FAST
-    assert Session(_p("a", 1, 0), _p("b", 29, 18.5), None).state == NEEDS_QUIZ
+    # 29 pages need 29 * 35 s = 16 min 55 s (28 pages would need 16 min 20 s).
+    assert Session(_p("a", 1, 0), _p("b", 29, 16.5), None).state == TOO_FAST
+    assert Session(_p("a", 1, 0), _p("b", 29, 17), None).state == NEEDS_QUIZ
 
 
 def test_missing_page_numbers_count_one() -> None:
@@ -155,7 +155,7 @@ def test_stop_page_may_equal_the_start_page(
 
 
 def test_a_retake_stays_50_s_when_the_speed_floor_is_lower() -> None:
-    # 45 s on the same page: over the 38 s/page floor, still a retaken start.
+    # 45 s on the same page: over the 35 s/page floor, still a retaken start.
     photos = [_p("a", 50, 0), _p("b", 50, 0.75), _p("c", 60, 20)]
     sessions = _sessions.build_sessions(photos)
     assert [(s.start.name, s.end.name, s.pages) for s in sessions] == [("b", "c", 11)]

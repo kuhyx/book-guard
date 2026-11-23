@@ -43,7 +43,7 @@ String spokenLabel(String status) => switch (status) {
   'credited' => 'credited',
   'retry' => 'summary failed: rewrite it',
   'failed-quiz' => 'not counted: summary failed',
-  'too-fast' => 'not counted: under 38 s per page',
+  'too-fast' => 'not counted: under 35 s per page',
   _ => status,
 };
 

@@ -4,7 +4,7 @@ import 'package:book_guard_app/src/ebook_store.dart';
 const maxSession = Duration(hours: 6);
 
 /// Under this per page, the PC counts the session as flipped through.
-const minSecondsPerPage = 38;
+const minSecondsPerPage = 35;
 
 /// What closing the reader does with the running session. Closing never
 /// asks: what the PC would refuse is dropped, and only a too-fast session

@@ -36,7 +36,7 @@ TODAY = [
     [
         (NEEDS_CHECK, f"photograph page {CHECK.check_page}"),
         (NEEDS_QUIZ, "write the summary at the PC (book-guard quiz)"),
-        (TOO_FAST, "not counted: under 38 s per page"),
+        (TOO_FAST, "not counted: under 35 s per page"),
         (CREDITED, "credited"),
         ("mystery", "mystery"),
     ],

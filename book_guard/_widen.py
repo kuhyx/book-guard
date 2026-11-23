@@ -80,7 +80,7 @@ def widen(
 
     Raises:
         WidenError: No such session, no reason, already graded or retimed,
-            or the new span is still under the 38 s/page rule.
+            or the new span is still under the 35 s/page rule.
     """
     with exclusive(active):
         view = find_view(active, session_id)

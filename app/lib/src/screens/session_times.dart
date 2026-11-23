@@ -36,7 +36,7 @@ DateTime onDayOf(DateTime day, TimeOfDay time) {
 /// those times.
 ///
 /// Only later starts and earlier ends: the PC refuses anything outside the
-/// photos, and anything under 38 s a page (book-guard `_retime.py`). A
+/// photos, and anything under 35 s a page (book-guard `_retime.py`). A
 /// graded session shows its times without the button. The two pickers are
 /// told apart by a play (start) or stop (end) glyph above each.
 class SessionTimes extends StatelessWidget {

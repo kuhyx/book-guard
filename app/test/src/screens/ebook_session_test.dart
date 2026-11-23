@@ -22,12 +22,13 @@ void main() {
     textSha: '',
   );
 
-  test('the floor is 38 s a page', () => expect(minSecondsPerPage, 38));
+  test('the floor is 35 s a page', () => expect(minSecondsPerPage, 35));
 
-  test('60 pages in 2290 s count, in 2279 s are too fast', () {
+  test('60 pages in 2275 s count, in 2099 s are too fast', () {
     ReaderExit at(int seconds) =>
         judgeExit(start, 60000, map, t0.add(Duration(seconds: seconds)));
-    expect(at(2290), ReaderExit.stop);
-    expect(at(2279), ReaderExit.tooFast);
+    expect(at(2275), ReaderExit.stop);
+    expect(at(2100), ReaderExit.stop);
+    expect(at(2099), ReaderExit.tooFast);
   });
 }

@@ -11,7 +11,7 @@ The PC checks it, estimates its physical pages with its own page map (the
 copy on the share is never trusted) and appends it to
 ``data_dir/ebook_sessions.json`` -- append-only, like everything else that
 records reading. From then on it is a :class:`~book_guard._sessions.Session`
-like any photo pair: too fast below 38 s a page, else waiting for its
+like any photo pair: too fast below 35 s a page, else waiting for its
 summary, graded on the exact text that was on screen, credited through
 ``_quiz.record_verdict`` and the bonus rule.
 

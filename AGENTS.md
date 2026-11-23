@@ -177,7 +177,7 @@ Read README.md first. These are the invariants that are easy to break.
   The one other way is the owner's CLI `book-guard accept SESSION --reason`
   (`_accept.py`): credits a needs-check/needs-quiz session as it stands via
   `record_verdict`, `detail.grader == "manual"`, `graded == "0"`; it
-  overrides the speed floor (`MIN_SECONDS_PER_PAGE`, 38 s since 2026-11-18;
+  overrides the speed floor (`MIN_SECONDS_PER_PAGE`, 35 s since 2026-11-23;
   the retake window is its own `RETAKE_SECONDS`, 50) only with
   `--ignore-floor`, which marks the row `detail.floor == "waived"`. No
   app/MCP route to either.

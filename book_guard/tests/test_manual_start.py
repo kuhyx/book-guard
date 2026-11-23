@@ -146,7 +146,7 @@ def test_page_floor() -> None:
 def test_the_stop_photo_closes_it_and_is_judged_from_at(bg_paths: Paths) -> None:
     _seed(bg_paths)
     _start(bg_paths)
-    stop = rec("stop", 290, AT + timedelta(minutes=31))  # 31 pages, 38 s each
+    stop = rec("stop", 290, AT + timedelta(minutes=31))  # 31 pages, 60 s each
     seed_photos(
         bg_paths, rec("s", 200, T0), rec("e", 259, T0 + timedelta(hours=1)), stop
     )
@@ -172,8 +172,8 @@ def test_floor_counts_from_at(bg_paths: Paths) -> None:
     assert [p.page for p in session.evidence] == [290]
     assert photo_ref("start", session.start) is None
     seed_photos(
-        bg_paths, *base, rec("stop", 290, AT + timedelta(minutes=19))
-    )  # < 31*38
+        bg_paths, *base, rec("stop", 290, AT + timedelta(minutes=18))
+    )  # 1080 s < 31*35
     assert snapshot(bg_paths).sessions[-1].status == TOO_FAST
 
 

@@ -62,10 +62,12 @@ ended) that open the lock for the rest of that day even while behind the
 pace line: reading anything beats reading nothing. It clears the lock only --
 it earns no bonus; the debt stays, on the month's remaining weekends."""
 
-MIN_SECONDS_PER_PAGE: Final = 38
+MIN_SECONDS_PER_PAGE: Final = 35
 """A session faster than this is page-flipping, not reading. Lowered from 50
-on 2026-11-18 at the reader's request: 60 pages read in 38 minutes (38.2 s a
-page) had been refused as too fast."""
+to 38 on 2026-11-18 (60 pages in 38 min, 38.2 s a page, refused as too fast),
+then to 35 on 2026-11-23 (60 pages in 37 min 55 s, 37.9 s a page, refused).
+It sits about 8 % under the reader's fastest real pace, so a real session a
+little quicker than the last one is not refused again."""
 
 RETAKE_SECONDS: Final = 50
 """A stop photo on the start page sooner than this is the start retaken. It
