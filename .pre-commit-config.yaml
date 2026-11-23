@@ -13,7 +13,10 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+      # flutter_launcher_icons writes these two without a final newline; keep
+      # its bytes so a regen leaves the checkout clean (todo fe70b845).
       - id: end-of-file-fixer
+        exclude: ^app/(android/app/src/main/res/values/colors\.xml|web/manifest\.json)$
       - id: check-yaml
       - id: check-json
       - id: check-toml
