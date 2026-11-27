@@ -144,7 +144,7 @@ class _TodoTile extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(item.icon, color: context.statusColors.warning),
+              Icon(item.icon, color: item.color(context)),
               if (item.extra case final extra?) ...[
                 const SizedBox(width: AppSpacing.xs),
                 Icon(extra, size: 20),

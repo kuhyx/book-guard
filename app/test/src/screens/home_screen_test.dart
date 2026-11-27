@@ -64,7 +64,7 @@ void main() {
   testWidgets('the Read badge shows while a session waits', (tester) async {
     await pump(tester);
     expect(readBadge(tester).isLabelVisible, isTrue);
-    api.state = sampleState({'sessions': const <Object>[]});
+    api.state = sampleState({'sessions': const <Object>[], 'open_start': null});
     await tester.tap(iconLabeled('refresh'));
     await settle(tester);
     expect(find.byType(Badge), findsWidgets);

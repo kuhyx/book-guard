@@ -241,9 +241,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       bottomNavigationBar: HomeNavBar(
         selected: _tab,
         onSelected: (i) => setState(() => _tab = i),
-        readWaiting: (local?.needSummary ?? state?.needSummary ?? const []).any(
-          (s) => !_grading.contains(s.id),
-        ),
+        readStep: readStepFor(local, state, _grading),
       ),
     );
   }

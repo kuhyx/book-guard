@@ -164,7 +164,7 @@ void main() {
       expect(find.text(n), findsOneWidget, reason: n);
     }
     expect(find.byIcon(Icons.replay), findsOneWidget);
-    expect(find.byIcon(Icons.auto_stories), findsOneWidget);
+    expect(find.byIcon(Icons.stop), findsOneWidget);
     expect(find.byIcon(Icons.search), findsOneWidget);
     expectNoWords(tester);
   });
