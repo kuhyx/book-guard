@@ -38,7 +38,7 @@ Read README.md first. These are the invariants that are easy to break.
 - Never run a bare `flutter build apk` (release or debug); use
   `scripts/build_apk.sh aot|aot-debug` then `apk|apk-debug` (with
   `native`/`native-debug` between them after a dependency change), each call
-  under 60 s.
+  under 60 s. The script calls plain `gradlew` with a shared `PROPS` array (never `flutter build apk`), keeping the AOT task up-to-date.
 
 ## Invariants
 
