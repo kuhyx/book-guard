@@ -1,5 +1,6 @@
 import 'package:book_guard_app/src/guard_api.dart';
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/screens/ebook_session.dart';
 import 'package:book_guard_app/src/screens/icon_num.dart';
 import 'package:book_guard_app/src/screens/session_screen.dart';
 import 'package:book_guard_app/src/screens/session_status_icon.dart';
@@ -35,6 +36,13 @@ class SessionRow extends StatelessWidget {
           ),
           IconNum(pagesGlyph, '${session.pages}'),
           IconNum(minutesGlyph, '${session.minutes}'),
+          if (session.status == 'too-fast')
+            IconNum(
+              Icons.speed,
+              '${secondsPerPage(session)}<$minSecondsPerPage',
+              tint: tintFor(context, session.status),
+              semanticLabel: 'seconds per page',
+            ),
         ],
       ),
       trailing: open ? const Icon(Icons.chevron_right) : null,
@@ -47,4 +55,16 @@ class SessionRow extends StatelessWidget {
           : null,
     );
   }
+}
+
+/// Seconds read per page (floored), from the session's own clock; the
+/// minutes when its times are unknown. A too-fast session shows it beside
+/// the floor, so the fail says why (kuhy, 2026-11-24).
+int secondsPerPage(SessionInfo session) {
+  final start = session.startedAt;
+  final end = session.endedAt;
+  final seconds = start != null && end != null
+      ? end.difference(start).inSeconds
+      : session.minutes * 60;
+  return session.pages > 0 ? seconds ~/ session.pages : 0;
 }

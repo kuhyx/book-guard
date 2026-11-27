@@ -1,5 +1,7 @@
 import 'package:book_guard_app/src/guard_state.dart';
+import 'package:book_guard_app/src/next_step.dart';
 import 'package:book_guard_app/src/screens/grader_note.dart';
+import 'package:book_guard_app/src/screens/step_style.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
@@ -75,6 +77,7 @@ class SummarySection extends StatelessWidget {
           icon: Icons.check,
           semanticLabel: 'Submit summary',
           filled: true,
+          fill: stepStyle(context, StepKind.summary).color,
           onPressed: onSubmit,
           badge: Row(
             mainAxisSize: MainAxisSize.min,

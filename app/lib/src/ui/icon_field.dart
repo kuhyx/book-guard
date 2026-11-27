@@ -157,6 +157,8 @@ class GlyphButton extends StatelessWidget {
     this.filled = false,
     this.badge,
     this.color,
+    this.fill,
+    this.size,
     super.key,
   });
 
@@ -178,9 +180,20 @@ class GlyphButton extends StatelessWidget {
   /// Tint for the glyph; the theme's when null.
   final Color? color;
 
+  /// A filled button's own background (its glyph turns white on it).
+  final Color? fill;
+
+  /// The glyph's size; the theme's when null.
+  final double? size;
+
   @override
   Widget build(BuildContext context) {
-    final glyph = Icon(icon, semanticLabel: semanticLabel, color: color);
+    final glyph = Icon(
+      icon,
+      semanticLabel: semanticLabel,
+      color: color,
+      size: this.size,
+    );
     final extra = badge;
     final child = extra == null
         ? glyph
@@ -191,7 +204,11 @@ class GlyphButton extends StatelessWidget {
     const size = Size(64, 48);
     return filled
         ? FilledButton(
-            style: FilledButton.styleFrom(minimumSize: size),
+            style: FilledButton.styleFrom(
+              minimumSize: size,
+              backgroundColor: fill,
+              foregroundColor: fill == null ? null : Colors.white,
+            ),
             onPressed: onPressed,
             child: child,
           )

@@ -27,11 +27,19 @@ void main() {
     'Submit summary',
   ].where((l) => spoken(l).evaluate().isNotEmpty).length;
 
-  testWidgets('an old check owed, a summary owed and reading: one summary', (
+  testWidgets('an old check owed, a summary owed and reading: the stop', (
     tester,
   ) async {
-    // An older PC's needs-check-photo session waits on its summary now.
+    // Reading wins (a sent summary frees the next start; its fail may come
+    // back mid-reading); an older PC's needs-check-photo is a summary now.
     await pump(tester, const {});
+    expect(spoken('Photograph the check page'), findsNothing);
+    expect(spoken('Stop reading'), findsOneWidget);
+    expect(actions(), 1);
+  });
+
+  testWidgets('an old check owed, not reading: one summary', (tester) async {
+    await pump(tester, const {'open_start': null});
     expect(spoken('Photograph the check page'), findsNothing);
     expect(spoken('Submit summary'), findsOneWidget);
     expect(actions(), 1);

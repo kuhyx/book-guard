@@ -1,6 +1,7 @@
 import 'package:book_guard_app/src/capture.dart';
 import 'package:book_guard_app/src/next_step.dart';
 import 'package:book_guard_app/src/screens/photo_mark.dart';
+import 'package:book_guard_app/src/screens/step_style.dart';
 import 'package:book_guard_app/src/screens/wait_glyph.dart';
 import 'package:book_guard_app/src/ui/icon_field.dart';
 import 'package:design_system/design_system.dart';
@@ -60,12 +61,15 @@ class SessionButtons extends StatelessWidget {
     if (label == null) return const SizedBox.shrink();
     final onPressed = photo == null ? null : () => photo(label);
     final since = reading;
-    // The camera is always there; a fresh stored photo sits beside it.
-    // Camera (file on the desktop) + play to start; + stop and the page
-    // reading began at to stop.
+    // The step's own big glyph and colour (a green play, a red stop with
+    // the page reading began at); the camera (a file on the desktop) is a
+    // small badge. A fresh stored photo sits beside it.
+    final style = stepStyle(context, step.kind);
     final camera = GlyphButton(
       filled: true,
-      icon: desktop ? Icons.upload_file : Icons.photo_camera,
+      icon: style.icon,
+      fill: style.color,
+      size: stepGlyphSize,
       semanticLabel: step.kind == StepKind.start
           ? 'Start reading'
           : 'Stop reading',
@@ -73,8 +77,14 @@ class SessionButtons extends StatelessWidget {
       badge: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(step.kind == StepKind.start ? Icons.play_arrow : Icons.stop),
-          if (step.kind == StepKind.stop && since != null) Text('$since'),
+          Icon(
+            desktop ? Icons.upload_file : Icons.photo_camera,
+            size: stepBadgeSize,
+          ),
+          if (step.kind == StepKind.stop && since != null) ...[
+            const SizedBox(width: AppSpacing.xs),
+            Text('$since'),
+          ],
         ],
       ),
     );

@@ -78,17 +78,16 @@ Read README.md first. These are the invariants that are easy to break.
   `... page_truth.py DIR 18:24`) and `python3 -m scripts.pencil_goldens`;
   retraining is `scripts/train_pencil.py` (chunks under 60 s).
 - **One session at a time** (`app/lib/src/next_step.dart`): the Read tab
-  offers exactly one step -- the oldest unfinished session's summary, else
-  the stop, else the start -- never a new start while one is unfinished.
-  While a photo or summary is checked it shows the stage glyph in a
-  spinner, no button. The Status tab tiles only open sessions
-  (`needs-quiz`; an older PC's `needs-check-photo` counts as one);
-  credited and failed ones sit behind the all-sessions tile.
-- **No check page** (from `CHECK_DROP_DATE`, 2026-11-27): a stop photo makes
-  the session `needs-quiz` at once. Photos taken before that day pair
-  exactly as before (`_check_photos.claims_check`), so every session id stays
-  the same; after it only a photo the phone labelled `check<N>_` (an old
-  app) is claimed as a check photo, never a plain start on that page.
+  offers exactly one step -- the stop while reading, else the oldest
+  unfinished session's summary, else the start -- never a new start while
+  one is unfinished. **Never a wait on the PC**: a queued photo or summary
+  moves the tab on at once (`sendQueued(wait: false)`, `phone_view.dart`);
+  a summary with the grader counts as done. One glyph and colour per step
+  (`step_style.dart`). Status tiles: open sessions only (`needs-quiz`, an
+  old `needs-check-photo`); the rest behind the all-sessions tile.
+- **No check page** (`CHECK_DROP_DATE` 2026-11-27): a stop makes the session
+  `needs-quiz`. Older photos pair as before (`_check_photos.claims_check`,
+  ids unchanged); later only an old app's `check<N>_` photo is a check.
 - **The app is offline-first.** Every upload goes through its outbox; it
   must keep working (photos, page numbers, summary queued) with
   the PC and the network both gone. App data lives in its support folder
@@ -97,7 +96,8 @@ Read README.md first. These are the invariants that are easy to break.
   `DEFAULT_MODEL = "haiku"`; another model only via an explicit per-run
   `--model`. Never a config value. Only when Claude fails (outage, usage
   cap) does the fallback in `_local.py` (ollama) answer: `LOCAL_MODEL`
-  (`qwen3:32b`) re-casts *all* grading votes, `LOCAL_VISION_MODEL` reads a
+  (`qwen3:32b`) re-casts *all* grading votes (`_votes.py`: no Claude call
+  while `claude_down.json` names a reset ahead), `LOCAL_VISION_MODEL` reads a
   contents photo -- constants too. The local grader gets `LOCAL_REMINDER`
   appended; Haiku's prompt never does. Re-run `scripts/replay_verdicts.py
   --local` (the reader's real summaries) and `grader_suite.py --local`
@@ -131,10 +131,9 @@ Read README.md first. These are the invariants that are easy to break.
   -- never re-split the days before a switch.
 - **Both ends of a paper session count** (`_sessions.Session.pages` =
   stop - start + 1; a stop on the start page is 1 page, unless it comes under
-  50 s after the start: then it is the start retaken). The old check page
-  was drawn from start..stop inclusive (`check_page_for`; the Dart
-  `checkPageFor` still matches it for the session details -- literals
-  pinned in `test_core_inclusive.py` and `local_session_test.dart`). In-app sessions keep end - start (their end
+  50 s after the start: then it is the start retaken). The old check page:
+  start..stop inclusive (`check_page_for` = Dart `checkPageFor`, pinned in
+  `test_core_inclusive.py`, `local_session_test.dart`). In-app sessions keep end - start (their end
   is the first page not read). Rows written under this rule carry
   `detail.counting == "inclusive"` (`_quiz.record_verdict`); every older
   `session:<sha16>-<sha16>[#n]` credit gets exactly one signed +1 top-up,
@@ -173,7 +172,8 @@ Read README.md first. These are the invariants that are easy to break.
   starts `book-guard-index.service` (idle CPU/IO, resumable checkpoints)
   without waiting; `book-guard index` does the work under its own
   `index.lock`, never the ledger's `write.lock`. A page photo must never
-  wait on an ebook being embedded.
+  wait on an ebook being embedded, nor on a grade: `summary` requests are
+  `book-guard-grade.service`'s (`_grade_pass.py`, `grade.lock`).
 - **Nothing credits without the grader** -- except a summary (150+ chars)
   that neither Claude nor the local model graded for `GRADER_GRACE` (5 min):
   `quiz_one` credits it with `detail.graded == "0"`. `detail.grader` names
@@ -186,12 +186,10 @@ Read README.md first. These are the invariants that are easy to break.
   the retake window is its own `RETAKE_SECONDS`, 50) only with
   `--ignore-floor`, which marks the row `detail.floor == "waived"`. No
   app/MCP route to either.
-- **A fail names what is missing** (1-3 topics, never the answers); a
-  failed summary can be rewritten any number of times (`<sid>#2`, `#3`, ...
-  until a credit row), each judged generously and only on those topics
-  (`_prompt.py`). The grader never fails on what it cannot verify against
-  the text it was given (often just three photographed pages). Re-run
-  `scripts/grader_suite.py` after touching it.
+- **A summary fails only off-topic or for a contradiction** (`_prompt._rules`;
+  2026-11-27: all 7 real fails before were false), never on what the grader
+  cannot verify. A fail names 1-3 topics (never answers); rewrites are
+  unlimited (`<sid>#2`, ...). Re-run `scripts/grader_suite.py` after it.
 - **A start without a photo is CLI-only** (`book-guard start --page N --at
   ISO --reason`, `_manual_start.py`): a signed `start:` row, read back as a
   text-less page record by `_manual_pages.pages` -- every session builder

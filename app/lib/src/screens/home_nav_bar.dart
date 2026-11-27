@@ -1,7 +1,9 @@
+import 'package:book_guard_app/src/next_step.dart';
+import 'package:book_guard_app/src/screens/step_style.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// The four tabs at the bottom of the home screen; the Read tab carries a
-/// dot while a session waits for a check photo or a summary.
+/// The four tabs at the bottom of the home screen; the Read tab carries the
+/// summary step's amber pen while a session waits for its summary.
 class HomeNavBar extends StatelessWidget {
   /// Creates the bar.
   const new({
@@ -27,7 +29,11 @@ class HomeNavBar extends StatelessWidget {
     labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
     destinations: [
       _tab(Icons.insights, 'status'),
-      _tab(Icons.menu_book, 'read', dot: readWaiting),
+      _tab(
+        Icons.menu_book,
+        'read',
+        step: readWaiting ? StepKind.summary : null,
+      ),
       _tab(Icons.library_books, 'book'),
       _tab(Icons.local_library, 'library'),
     ],
@@ -36,11 +42,21 @@ class HomeNavBar extends StatelessWidget {
 
 /// One icon-only destination: no label and no tooltip, so nothing is
 /// painted but the glyph; the name is only spoken.
-NavigationDestination _tab(IconData glyph, String name, {bool dot = false}) {
+/// A [step] owed there badges it with that step's glyph and colour.
+NavigationDestination _tab(IconData glyph, String name, {StepKind? step}) {
   final icon = Icon(glyph, semanticLabel: name);
   return NavigationDestination(
-    icon: dot ? Badge(child: icon) : icon,
+    icon: step == null ? icon : Builder(builder: (c) => _badged(c, icon, step)),
     label: '',
     tooltip: '',
+  );
+}
+
+Widget _badged(BuildContext context, Widget icon, StepKind step) {
+  final style = stepStyle(context, step);
+  return Badge(
+    backgroundColor: style.color,
+    label: Icon(style.icon, size: 10, color: Colors.white),
+    child: icon,
   );
 }

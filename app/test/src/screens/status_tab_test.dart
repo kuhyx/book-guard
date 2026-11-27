@@ -77,9 +77,10 @@ void main() {
 
     // Only what is still to do gets a tile, newest first: a credited or an
     // unknown session is history, behind the all-sessions tile.
-    final summary = tester.getRect(iconLabeled('write the summary'));
-    final check = tester.getRect(iconLabeled('photograph the check page'));
-    expect(summary.top, lessThanOrEqualTo(check.top));
+    // An older PC's needs-check-photo waits on its summary too (no check
+    // page since 2026-11-27): two summary tiles, never a check-page one.
+    expect(iconLabeled('write the summary'), findsNWidgets(2));
+    expect(iconLabeled('photograph the check page'), findsNothing);
     expect(find.byIcon(Icons.help_outline), findsNothing);
     expect(find.text('5-9'), findsNothing);
     expect(iconLabeled('credited'), findsNothing);
@@ -130,7 +131,6 @@ void main() {
 
   test('every session status has its own glyph, tint and spoken label', () {
     const known = [
-      'needs-check-photo',
       'needs-quiz',
       'credited',
       'retry',
@@ -141,10 +141,7 @@ void main() {
     expect(iconFor('odd'), Icons.help_outline);
     expect(spokenLabel('too-fast'), contains('35 s'));
     expect(spokenLabel('odd'), 'odd');
-    expect(
-      statusText(sampleState().sessions.first),
-      spokenLabel('needs-check-photo'),
-    );
+    expect(statusText(sampleState().sessions.first), spokenLabel('needs-quiz'));
   });
 
   testWidgets('the PC lines become glyphs and page numbers, never words', (

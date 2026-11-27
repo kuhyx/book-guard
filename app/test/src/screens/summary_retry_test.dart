@@ -59,62 +59,63 @@ void main() {
   TextField field(WidgetTester tester) =>
       tester.widget<TextField>(find.byType(TextField));
 
-  Future<void> submitFailing(WidgetTester tester) async {
-    api.onSend = (_) async => const GuardResponse(
-      ok: true,
-      code: 'failed',
-      passed: false,
-      data: {
-        'missing': ['two events'],
-      },
-    );
+  /// Sends a summary; kuhy, 2026-11-24: it is queued, never waited on.
+  Future<void> submit(WidgetTester tester) async {
     await tester.enterText(find.byType(TextField), 'x' * 160);
     await tester.tap(spoken('Submit summary'));
     await settle(tester);
   }
 
-  testWidgets('a first failure unlocks the box and keeps the text', (
+  /// The PC's fail arrives with the next snapshot: a retry newer than the
+  /// marker; the home screen settles the marker, then redraws the panel.
+  Future<void> failLater(WidgetTester tester, int round) async {
+    final later = SessionInfo.fromJson({
+      'id': _id,
+      'start_page': 51,
+      'end_page': 104,
+      'status': 'needs-quiz',
+      'retry': {
+        'feedback': 'Name two events.',
+        'summary': 'x' * 160,
+        'missing': ['two events'],
+        'graded_at': DateTime.now()
+            .add(Duration(minutes: round))
+            .toIso8601String(),
+      },
+    });
+    await api.settleGrading(later);
+    await pump(tester, later);
+  }
+
+  testWidgets('a sent summary is out with the grader, nothing waited on', (
     tester,
   ) async {
+    var asked = false;
+    api.onSend = (_) async {
+      asked = true;
+      return const GuardResponse(ok: true, code: 'failed', passed: false);
+    };
     await pump(tester, _session());
-    await submitFailing(tester);
-    expect(cueOf(CueKind.error), findsOneWidget);
-    expect(find.text('“two events”'), findsOneWidget);
-    expect(field(tester).enabled, isTrue);
-    expect(field(tester).controller?.text, 'x' * 160);
-    expect(await api.loadDraft(_id), 'x' * 160);
-    expect(await api.gradingSince(_id), isNull);
-  });
-
-  testWidgets('a rewrite failing again unlocks the box once more', (
-    tester,
-  ) async {
-    await pump(tester, _session(retry: true));
-    await submitFailing(tester);
-    expect(field(tester).enabled, isTrue);
-    expect(field(tester).controller?.text, 'x' * 160);
-    expect(await api.loadDraft(_id), 'x' * 160);
-    expect(await api.gradingSince(_id), isNull);
-    // And again: there is no limit.
-    await tester.tap(spoken('Submit summary'));
-    await settle(tester);
-    expect(field(tester).enabled, isTrue);
+    await submit(tester);
+    expect(asked, isFalse);
+    expect(await api.gradingSince(_id), isNotNull);
     expect(await api.loadDraft(_id), 'x' * 160);
   });
 
-  testWidgets('a passing rewrite is final: draft forgotten, green tick', (
+  testWidgets('each later fail unlocks the box, keeps the text, names topics', (
     tester,
   ) async {
     await pump(tester, _session(retry: true));
-    api.onSend = (_) async =>
-        const GuardResponse(ok: true, code: 'passed', passed: true);
-    await tester.enterText(find.byType(TextField), 'x' * 160);
-    await tester.tap(spoken('Submit summary'));
-    await settle(tester);
-    expect(await api.loadDraft(_id), '');
-    expect(await api.gradingSince(_id), isNull);
-    expect(cueOf(CueKind.ok), findsOneWidget);
-    expect(cueOf(CueKind.error), findsNothing);
+    for (final round in [1, 2]) {
+      // There is no limit on rewrites.
+      await submit(tester);
+      await failLater(tester, round);
+      expect(find.text('“two events”'), findsOneWidget);
+      expect(field(tester).enabled, isTrue);
+      expect(field(tester).controller?.text, 'x' * 160);
+      expect(await api.loadDraft(_id), 'x' * 160);
+      expect(await api.gradingSince(_id), isNull);
+    }
   });
 
   testWidgets('the rewrite shows topics, never the prose, from the old text', (

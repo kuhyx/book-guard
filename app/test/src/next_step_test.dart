@@ -41,9 +41,21 @@ void main() {
     expect(step.label, 'stop');
   });
 
-  test('the oldest owed summary comes before a stop', () {
+  test('while reading, the stop wins over a summary that came back', () {
+    // A sent summary frees the next start (kuhy, 2026-11-24: never wait);
+    // its fail may come back mid-reading, and the stop must stay.
     final step = nextStep(
       openStart: 300,
+      quiz: [_session('b', status: 'needs-quiz', day: 21)],
+      captures: [],
+      now: _now,
+    );
+    expect(step.kind, StepKind.stop);
+  });
+
+  test('the oldest owed summary comes first when not reading', () {
+    final step = nextStep(
+      openStart: null,
       quiz: [
         _session('b', status: 'needs-quiz', day: 21),
         _session('c', status: 'needs-quiz', day: 19),

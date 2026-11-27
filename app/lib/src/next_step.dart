@@ -55,9 +55,9 @@ List<Capture> staleCaptures(List<Capture> captures, DateTime now) => [
     if (!_fresh(c, now)) c,
 ];
 
-/// The oldest unfinished session's summary; with none unfinished, the stop
-/// photo while reading, else the start photo -- so a new session never
-/// starts while one is unfinished. A stored capture is offered only when its
+/// The stop photo while reading; else the oldest unfinished session's
+/// summary, else the start photo -- so a new session never starts while
+/// one is unfinished. A stored capture is offered only when its
 /// label is that step's and it is under [freshFor] old at [now].
 NextStep nextStep({
   required int? openStart,
@@ -71,9 +71,13 @@ NextStep nextStep({
       final at = (a.$2.startedAt ?? _never).compareTo(b.$2.startedAt ?? _never);
       return at != 0 ? at : a.$1.compareTo(b.$1);
     });
-  final step = indexed.isNotEmpty
+  // Reading wins: a summary out with the grader freed this start, and its
+  // fail may come back mid-reading (kuhy, 2026-11-24: never wait).
+  final step = openStart != null
+      ? const NextStep(StepKind.stop)
+      : indexed.isNotEmpty
       ? NextStep(StepKind.summary, session: indexed.first.$2)
-      : NextStep(openStart == null ? StepKind.start : StepKind.stop);
+      : const NextStep(StepKind.start);
   final label = step.label;
   if (label == null) return step;
   final stored = captures
