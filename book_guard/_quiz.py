@@ -28,7 +28,7 @@ from book_guard._prompt import (
     local_reminder,
 )
 from book_guard._prompt_parts import MAX_MISSING
-from book_guard._votes import claude_known_out, claude_votes, flagged_pass
+from book_guard._votes import claude_known_out, claude_votes, flagged_pass, tally
 
 if TYPE_CHECKING:
     from book_guard._books import Book
@@ -96,7 +96,8 @@ def grade(
         [context.span if context else "", *(p.text for p in session.evidence)]
     )
     votes = [_vote(a, source) for a in answers]
-    passed = sum(v.passed for v in votes) * 2 > len(votes)
+    lone = grader.startswith("local:") and not (context and context.span)
+    passed = tally([v.passed for v in votes], unanimous_fail=lone)
     winners = [v for v in votes if v.passed == passed]
     # A vote whose feedback was dropped (overturned) speaks last.
     chosen = next((v for v in winners if v.feedback), winners[0])

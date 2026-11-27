@@ -77,3 +77,15 @@ def flagged_pass(answer: dict[str, object], source: str) -> bool | None:
     quote = _letters(str(answer.get("contradicts") or ""))
     proven = len(quote) >= _MIN_QUOTE and quote in _letters(source)
     return not (topic or proven)
+
+
+def tally(passes: list[bool], *, unanimous_fail: bool) -> bool:
+    """The verdict of the votes: a majority, or a pass unless all fail.
+
+    The local model with only two photos is noise on "another book" (the
+    same real summary passed 3/3, then failed 2/3, 2026-11-27): there a
+    fail must be unanimous. Claude, or any grader with the text: majority.
+    """
+    if unanimous_fail:
+        return any(passes)
+    return sum(passes) * 2 > len(passes)

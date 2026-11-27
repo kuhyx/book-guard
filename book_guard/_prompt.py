@@ -200,10 +200,10 @@ LOCAL_REMINDER_TEXT: Final = (
     " short, vague or broad summary that leaves out most events still PASSES"
     " when it is about these pages; missing details and claims that are also"
     " on the photographed pages are never a reason to fail."
-    ' Add two fields to the JSON: "off_topic": true|false (nothing in it'
-    " matches the book's text above: another book or another part of this"
-    ' one) and "contradicts": "" -- or, only for a direct conflict, the words'
-    " of the text above that the summary conflicts with, copied exactly."
+    ' Add two fields to the JSON: "off_topic": true|false (another book or'
+    ' another part of this one) and "contradicts": "" -- or, only for a direct'
+    " conflict, the words of the text above that the summary conflicts with,"
+    " copied exactly."
 )
 """The local reminder when the book's text is in the prompt: with it the
 grader can tell another part of the book, so "off_topic" asks for that."""

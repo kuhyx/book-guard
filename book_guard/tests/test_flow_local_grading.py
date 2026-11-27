@@ -158,3 +158,31 @@ def test_an_overturned_vote_does_not_speak_for_the_verdict(
     monkeypatch.setattr(_local, "ask_local", lambda _s, _p: next(answers))
     verdict = _quiz.grade(make_book(), only_session(quiz_pair()), SUMMARY)
     assert (verdict.passed, verdict.feedback) == (True, "matches")
+
+
+@pytest.mark.parametrize(
+    ("span", "passed"), [("", True), ("the book's own words", False)]
+)
+def test_a_photo_only_local_fail_must_be_unanimous(
+    monkeypatch: pytest.MonkeyPatch, span: str, passed: bool
+) -> None:
+    flags = iter([True, True, False])
+
+    def local(_system: str, _prompt: str) -> dict[str, object]:
+        topic = next(flags)
+        return {
+            "passed": not topic,
+            "feedback": "f",
+            "other_book": topic,
+            "off_topic": topic,
+            "contradicts": "",
+        }
+
+    monkeypatch.setattr(_quiz, "ask", _claude_down)
+    monkeypatch.setattr(_local, "ask_local", local)
+    context = Context(span=span)
+    verdict = _quiz.grade(
+        make_book(), only_session(quiz_pair()), SUMMARY, context=context
+    )
+    assert verdict.votes == (False, False, True)
+    assert verdict.passed is passed

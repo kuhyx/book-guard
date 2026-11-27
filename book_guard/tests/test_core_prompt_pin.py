@@ -64,7 +64,7 @@ PINNED = {
     "photos+span": "79edc1709be8cb9303500f0ce017bd675f33e1bb0d028f58fd488755e5040cd3",
     "rewrite": "1bfb4e6735f665a27baca9aa8ac1c194f8d045696a941a3e67c4e526ab2e5d38",
     "photos+local": "772d48b1abee61d08418ee61409f058a4ae3f9bc84cacd11ef47083cbac4f92f",
-    "photos+span+local": "1559a5bf47523fd280d77aca1cd00d3802c47c09cbc324f3244142d87d6c0432",
+    "photos+span+local": "877045f2b098baaf901ef4ff230397796905e1dc05f34fd056a7669623d45eff",
 }
 
 

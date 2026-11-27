@@ -100,7 +100,7 @@ Read README.md first. These are the invariants that are easy to break.
   while `claude_down.json` names a reset ahead), `LOCAL_VISION_MODEL` reads a
   contents photo -- constants too. The local grader gets `local_reminder`
   appended (Haiku never): its topic flag + a quoted contradiction decide its
-  vote (`_votes.flagged_pass`). Re-run `scripts/replay_verdicts.py
+  vote (`_votes.flagged_pass`); with photos only, a fail is unanimous. Re-run `scripts/replay_verdicts.py
   --local` (the reader's real summaries) and `grader_suite.py --local`
   after changing either model.
 - **Isolated Claude calls.** `_claude.ask` runs the CLI with
