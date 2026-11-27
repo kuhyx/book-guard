@@ -60,7 +60,12 @@ class PaceTile extends StatelessWidget {
 /// fill what is left of the tab and page sideways past it.
 class StatusTiles extends StatelessWidget {
   /// Creates the tiles.
-  const new({required this.state, super.key, this.api});
+  const new({
+    required this.state,
+    super.key,
+    this.api,
+    this.grading = const {},
+  });
 
   /// The snapshot.
   final GuardState state;
@@ -68,16 +73,25 @@ class StatusTiles extends StatelessWidget {
   /// For opening a session's history; null hides the link.
   final GuardApi? api;
 
+  /// Sessions whose summary is out with the grader (the Status tab).
+  final Set<String> grading;
+
   @override
   Widget build(BuildContext context) {
     final sessions = state.sessions.reversed.toList();
     // The main screen lists what is still to do: a credited or a failed
     // session is history (the sheet, the Library), never a tile.
     final open = sessions.where(isOpen).toList();
+    // The PC's ask for a summary the phone already sent is stale.
+    final sent = {
+      for (final s in sessions)
+        if (grading.contains(s.id)) '${s.startPage}-${s.endPage}',
+    };
     final tiles = <Widget>[
-      for (final t in state.todo) _TodoTile(t),
+      for (final t in state.todo)
+        if (!asksSummaryOf(t, sent)) _TodoTile(t),
       for (final s in open.take(recentSessions))
-        _SessionTile(session: s, api: api),
+        _SessionTile(session: s, api: api, grading: grading.contains(s.id)),
       if (sessions.length > min(open.length, recentSessions))
         _AllSessionsTile(sessions: sessions, api: api),
     ];
@@ -154,10 +168,13 @@ class _TodoTile extends StatelessWidget {
 /// One session: status glyph and range on top, pages and minutes below;
 /// a tap opens its history when there is one.
 class _SessionTile extends StatelessWidget {
-  const new({required this.session, required this.api});
+  const new({required this.session, required this.api, required this.grading});
 
   final SessionInfo session;
   final GuardApi? api;
+
+  /// Its summary is out with the grader.
+  final bool grading;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +194,10 @@ class _SessionTile extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SessionStatusIcon(statusKey(session), size: 24),
+              SessionStatusIcon(
+                grading ? 'grading' : statusKey(session),
+                size: 24,
+              ),
               const SizedBox(width: AppSpacing.sm),
               IconNum(
                 Icons.import_contacts,

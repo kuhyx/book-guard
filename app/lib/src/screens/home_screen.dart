@@ -21,10 +21,9 @@ import 'package:material_ui/material_ui.dart';
 /// Four icon tabs over one live snapshot: status, read, book, library.
 ///
 /// The snapshot is refetched every [refreshEvery] and after every action,
-/// because the PC changes it on its own (a photo read, a check page named).
-/// Each refresh first sends whatever the outbox holds. With the PC out of
-/// reach the last snapshot stays on screen, overlaid with the photos taken
-/// since, and the app keeps working.
+/// because the PC changes it on its own (a photo read, a summary graded).
+/// Each refresh first sends whatever the outbox holds; with the PC out of
+/// reach the last snapshot stays, overlaid with the photos taken since.
 class HomeScreen extends StatefulWidget {
   /// Creates the screen.
   const new({
@@ -186,6 +185,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         error: _error,
         api: widget.api,
         waiting: _waiting,
+        grading: _grading,
       ),
       ReadTab(
         api: widget.api,

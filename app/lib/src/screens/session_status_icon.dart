@@ -25,11 +25,12 @@ IconData iconFor(String status) => switch (status) {
   'retry' => Icons.replay,
   'failed-quiz' => Icons.cancel,
   'too-fast' => Icons.fast_forward,
+  'grading' => Icons.hourglass_top,
   _ => Icons.help_outline,
 };
 
 /// The tint for a PC session status: green done, amber waiting on the
-/// reader, red not counted, grey unknown.
+/// reader, red not counted, grey with the grader or unknown.
 Color tintFor(BuildContext context, String status) {
   final colors = context.statusColors;
   return switch (status) {
@@ -47,6 +48,7 @@ String spokenLabel(String status) => switch (status) {
   'retry' => 'summary failed: rewrite it',
   'failed-quiz' => 'not counted: summary failed',
   'too-fast' => 'not counted: under 35 s per page',
+  'grading' => 'summary sent: grading',
   _ => status,
 };
 

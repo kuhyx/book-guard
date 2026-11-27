@@ -10,6 +10,12 @@ import 'package:material_ui/material_ui.dart';
 final _number = RegExp(r'\d+(?:-\d+)?');
 final _clock = RegExp(r'\d{1,2}:\d{2}');
 
+/// Whether [line] asks for a summary of a range (`63-80`) in [ranges].
+bool asksSummaryOf(String line, Set<String> ranges) {
+  if (ranges.isEmpty || !line.toLowerCase().contains('summary')) return false;
+  return TodoItem.parse(line).numbers.any(ranges.contains);
+}
+
 /// One to-do line, reduced to what can be drawn.
 class TodoItem {
   /// Creates an item.

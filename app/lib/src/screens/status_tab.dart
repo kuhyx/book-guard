@@ -21,6 +21,7 @@ class StatusTab extends StatelessWidget {
     super.key,
     this.api,
     this.waiting = 0,
+    this.grading = const {},
   });
 
   /// The latest snapshot, or null before one arrived.
@@ -34,6 +35,10 @@ class StatusTab extends StatelessWidget {
 
   /// Items still waiting on the phone for the PC.
   final int waiting;
+
+  /// Sessions whose summary is out with the grader: shown as grading,
+  /// never asked for again.
+  final Set<String> grading;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +60,7 @@ class StatusTab extends StatelessWidget {
             PaceTile(state: s),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
-              child: StatusTiles(state: s, api: api),
+              child: StatusTiles(state: s, api: api, grading: grading),
             ),
           ],
         ],
