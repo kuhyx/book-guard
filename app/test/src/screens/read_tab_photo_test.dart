@@ -91,11 +91,12 @@ void main() {
     expect(api.photos.keys, ['stop_p.jpg']);
   });
 
-  testWidgets('a check page gets its own button and file name', (tester) async {
+  testWidgets('no check page is asked for, not even an old one', (
+    tester,
+  ) async {
     await pump(tester, state: sampleState(), photo: _photo('c.jpg'));
-    expect(find.text('12'), findsOneWidget);
-    await tapAndType(tester, find.byIcon(Icons.fact_check));
-    expect(api.photos.keys, ['check12_c.jpg']);
+    expect(find.byIcon(Icons.fact_check), findsNothing);
+    expect(spoken('Submit summary'), findsOneWidget);
   });
 
   testWidgets('a photo the PC rejects wears its reject glyph', (tester) async {

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from book_guard import _ledger
+from book_guard._check_photos import check_page_for
 from book_guard._pagenum import Context
 from book_guard._photo_context import (
     Sidecar,
@@ -17,7 +18,6 @@ from book_guard._photo_context import (
     read_sidecar,
     sidecar_path,
 )
-from book_guard._sessions import check_page_for
 from book_guard.tests._flow_helpers import T0, add_book, rec
 
 if TYPE_CHECKING:

@@ -24,8 +24,9 @@ a book -- and shows the number it found boxed: tap another, or drag a box
 around the right one; it is never typed. Everything (photo, its sidecar
 note with the number's box, summaries, error entries) waits in an outbox
 on the phone and goes to `~/data/cloud/Reading/` over dufs whenever the PC
-answers; offline, the app names the check page and the session exactly as
-the PC will. **The phone's number is the page**: the `.path` unit takes it
+answers; offline, the app pairs the start and stop into the session exactly
+as the PC will, and a stop opens the summary at once (no check page since
+2026-11-27). **The phone's number is the page**: the `.path` unit takes it
 as is within seconds, and Tesseract only turns the photo upright and
 transcribes it for the grader. **It is the only page number there is**:
 the PC never reads one itself. A photo that arrives with no number (the

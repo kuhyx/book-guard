@@ -7,7 +7,7 @@ import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The Read tab's photo button for the [step] ([nextStep]): start or
-/// stop, or the check page -- always the camera -- and, beside it,
+/// stop -- always the camera -- and, beside it,
 /// finishing that step's photo stored and never sent. A summary step has
 /// no photo button (the summary panel is the step).
 class SessionButtons extends StatelessWidget {
@@ -34,7 +34,7 @@ class SessionButtons extends StatelessWidget {
   /// Desktop: a file instead of the camera.
   final bool desktop;
 
-  /// Takes a photo for a label (`start`, `stop`, `check<N>`); null while
+  /// Takes a photo for a label (`start`, `stop`); null while
   /// busy.
   final void Function(String label)? onPhoto;
 
@@ -61,32 +61,23 @@ class SessionButtons extends StatelessWidget {
     final onPressed = photo == null ? null : () => photo(label);
     final since = reading;
     // The camera is always there; a fresh stored photo sits beside it.
-    final camera = switch (step.kind) {
-      StepKind.check => GlyphButton(
-        filled: true,
-        icon: Icons.fact_check,
-        semanticLabel: 'Photograph the check page',
-        onPressed: onPressed,
-        badge: Text('${step.session?.checkPage}'),
+    // Camera (file on the desktop) + play to start; + stop and the page
+    // reading began at to stop.
+    final camera = GlyphButton(
+      filled: true,
+      icon: desktop ? Icons.upload_file : Icons.photo_camera,
+      semanticLabel: step.kind == StepKind.start
+          ? 'Start reading'
+          : 'Stop reading',
+      onPressed: onPressed,
+      badge: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(step.kind == StepKind.start ? Icons.play_arrow : Icons.stop),
+          if (step.kind == StepKind.stop && since != null) Text('$since'),
+        ],
       ),
-      // Camera (file on the desktop) + play to start; + stop and the page
-      // reading began at to stop.
-      _ => GlyphButton(
-        filled: true,
-        icon: desktop ? Icons.upload_file : Icons.photo_camera,
-        semanticLabel: step.kind == StepKind.start
-            ? 'Start reading'
-            : 'Stop reading',
-        onPressed: onPressed,
-        badge: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(step.kind == StepKind.start ? Icons.play_arrow : Icons.stop),
-            if (step.kind == StepKind.stop && since != null) Text('$since'),
-          ],
-        ),
-      ),
-    };
+    );
     return Align(
       alignment: Alignment.centerLeft,
       child: Wrap(

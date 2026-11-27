@@ -52,12 +52,14 @@ def test_view_of_a_quiet_snapshot() -> None:
 
 
 def test_chores_carry_icons_and_numbers_only() -> None:
-    session_check = SessionView(CHECK, None, NEEDS_CHECK)
+    # A session that waited on its check photo is drawn as waiting on its
+    # summary: no check page is asked for any more.
+    old_check = SessionView(CHECK, None, NEEDS_CHECK)
     session_quiz = SessionView(CHECK, None, NEEDS_QUIZ)
-    snap = replace(make_snap(book=make_book()), sessions=[session_check, session_quiz])
+    snap = replace(make_snap(book=make_book()), sessions=[old_check, session_quiz])
     chores = p.build(snap).chores
-    assert [c.icon for c in chores] == [p.CAMERA, p.PENCIL]
-    assert chores[0].number == str(CHECK.check_page)
+    assert [c.icon for c in chores] == [p.PENCIL]
+    assert chores[0].number == "10-20"
     for c in chores:
         assert not LETTERS.search(c.number)
 
@@ -96,9 +98,9 @@ def test_text_lines_have_no_words() -> None:
 
 
 def test_toast_is_glyphs_and_numbers() -> None:
-    seed = replace(make_snap(), sessions=[SessionView(CHECK, None, NEEDS_CHECK)])
+    seed = replace(make_snap(), sessions=[SessionView(CHECK, None, NEEDS_QUIZ)])
     body = p.toast_body(seed)
-    assert p.GLYPH[p.CAMERA] in body
+    assert p.GLYPH[p.PENCIL] in body
     assert not LETTERS.search(body)
     assert p.toast_body(make_snap(book=make_book())) == ""
 
@@ -139,8 +141,9 @@ def test_bar_without_a_total_is_empty() -> None:
 
 
 def test_session_text_names_its_mark() -> None:
-    line = p.session_text(SessionView(CHECK, None, NEEDS_CHECK))
-    assert line.endswith(f"{p.GLYPH[p.CAMERA]} {CHECK.check_page}")
+    line = p.session_text(SessionView(CHECK, None, NEEDS_QUIZ))
+    assert line.endswith(p.GLYPH[p.PENCIL])
+    assert str(CHECK.check_page) not in line.split()[-1]
 
 
 def test_book_line_is_a_tick_a_book_and_its_pages() -> None:

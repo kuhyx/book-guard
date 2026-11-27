@@ -8,14 +8,18 @@ import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The status key that picks the glyph for [session]: a failed summary
-/// waiting for its rewrite is `retry`, whatever the ledger status says.
-String statusKey(SessionInfo session) =>
-    session.retry != null ? 'retry' : session.status;
+/// waiting for its rewrite is `retry`, whatever the ledger status says; an
+/// older PC's `needs-check-photo` waits on its summary (no check page since
+/// 2026-11-27).
+String statusKey(SessionInfo session) => switch (session) {
+  SessionInfo(retry: _?) => 'retry',
+  SessionInfo(status: 'needs-check-photo') => 'needs-quiz',
+  _ => session.status,
+};
 
 /// The glyph for a PC session status (see [statusKey]); unknown ones get a
 /// neutral question mark.
 IconData iconFor(String status) => switch (status) {
-  'needs-check-photo' => Icons.photo_camera,
   'needs-quiz' => Icons.edit,
   'credited' => Icons.check_circle,
   'retry' => Icons.replay,
@@ -30,7 +34,7 @@ Color tintFor(BuildContext context, String status) {
   final colors = context.statusColors;
   return switch (status) {
     'credited' => colors.success,
-    'needs-check-photo' || 'needs-quiz' || 'retry' => colors.warning,
+    'needs-quiz' || 'retry' => colors.warning,
     'failed-quiz' || 'too-fast' => colors.danger,
     _ => Theme.of(context).colorScheme.onSurfaceVariant,
   };
@@ -38,7 +42,6 @@ Color tintFor(BuildContext context, String status) {
 
 /// The words a screen reader speaks for [status]; never painted.
 String spokenLabel(String status) => switch (status) {
-  'needs-check-photo' => 'photograph the check page',
   'needs-quiz' => 'write the summary',
   'credited' => 'credited',
   'retry' => 'summary failed: rewrite it',

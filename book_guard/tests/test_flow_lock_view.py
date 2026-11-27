@@ -24,7 +24,7 @@ from book_guard._lock_view import (
     install_demo_close,
     make_vars,
 )
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ
+from book_guard._sessions import NEEDS_QUIZ
 from book_guard._state import SessionView
 from book_guard.tests._flow_helpers import make_book, make_snap
 from book_guard.tests.test_flow_render import CHECK
@@ -100,7 +100,7 @@ def fake_tk(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def _busy_snap() -> Any:
-    sessions = [SessionView(CHECK, None, NEEDS_CHECK)]
+    sessions = [SessionView(CHECK, None, NEEDS_QUIZ)]
     sessions.append(SessionView(CHECK, None, NEEDS_QUIZ, verdicts=_VERDICTS))
     return replace(make_snap(book=make_book()), sessions=sessions)
 

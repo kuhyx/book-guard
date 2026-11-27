@@ -73,8 +73,8 @@ def build_prompt(
         (
             f"The reader read pages {session.start.page}-{session.end.page}"
             f" ({session.pages} pages). They photographed the page they started"
-            " on, a check page in between, and the page where they STOPPED --"
-            " the stop page was read too."
+            f" on{', a check page in between,' if session.check else ''}"
+            " and the page where they STOPPED -- the stop page was read too."
         ),
         "Transcribed text of those photos (OCR: expect garbled words):",
     ]

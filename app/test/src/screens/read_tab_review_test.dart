@@ -170,8 +170,8 @@ void main() {
     final reader = FakeReader(
       fakeScan([(19, (left: 17, top: 54, right: 23, bottom: 58))]),
     );
-    await pump(tester, reader, state: readingState(check: 19));
-    await open(tester, find.byIcon(Icons.fact_check));
+    await pump(tester, reader, state: readingState(openStart: 10));
+    await open(tester, spoken('Stop reading'));
     expect(chosenPage(19), findsOneWidget);
     await tester.tap(spoken('Send the page number'));
     await settle(tester, 10);

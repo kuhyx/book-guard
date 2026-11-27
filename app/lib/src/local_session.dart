@@ -16,7 +16,8 @@ const retakeSeconds = 50;
 
 /// The check page from [startPage] to [endPage], both included, exactly as
 /// the PC names it (`book_guard/_sessions.py` check_page_for); null only
-/// when the stop is before the start.
+/// when the stop is before the start. No longer asked for (2026-11-27); kept
+/// so a session's details match the PC's.
 int? checkPageFor(int startPage, String startSha, int endPage, String endSha) {
   final low = startPage;
   final high = endPage;
@@ -38,16 +39,12 @@ class LocalView {
   /// Creates a view.
   const new({
     required this.openStart,
-    required this.needCheck,
     required this.needSummary,
     required this.waiting,
   });
 
   /// The page reading started at, by the phone's photos.
   final int? openStart;
-
-  /// Sessions whose check page is still to be photographed.
-  final List<SessionInfo> needCheck;
 
   /// Sessions waiting for a summary.
   final List<SessionInfo> needSummary;
@@ -89,9 +86,8 @@ LocalView? localView(GuardState? state, List<JournalEntry> journal) {
     );
   }
   var openPage = open?.page ?? pcStart;
-  // Start from what the PC already asks for; pending photos then answer
-  // those or add sessions of their own.
-  final needCheck = [...?state?.needCheck];
+  // Start from what the PC already asks for; pending photos add sessions of
+  // their own. A stop opens the summary at once: no check page is asked for.
   final needSummary = [...?state?.needSummary];
   for (final e in pending) {
     final page = e.page;
@@ -110,7 +106,7 @@ LocalView? localView(GuardState? state, List<JournalEntry> journal) {
         continue;
       }
       if (startPage != null && page >= startPage) {
-        needCheck.add(
+        needSummary.add(
           SessionInfo(
             id: sessionId(start.sha, e.sha),
             startPage: startPage,
@@ -119,34 +115,15 @@ LocalView? localView(GuardState? state, List<JournalEntry> journal) {
             pages: page - startPage + 1,
             minutes: seconds ~/ 60,
             startedAt: start.takenAt,
-            status: 'needs-check-photo',
-          ),
-        );
-      }
-      (open, openPage) = (null, null);
-    } else if (e.label.startsWith('check')) {
-      final wanted = int.tryParse(e.label.substring(5));
-      final hit = needCheck.where((s) => s.checkPage == wanted).firstOrNull;
-      if (hit != null) {
-        needCheck.remove(hit);
-        needSummary.add(
-          SessionInfo(
-            id: hit.id,
-            startPage: hit.startPage,
-            endPage: hit.endPage,
-            checkPage: hit.checkPage,
-            pages: hit.pages,
-            minutes: hit.minutes,
-            startedAt: hit.startedAt,
             status: 'needs-quiz',
           ),
         );
       }
+      (open, openPage) = (null, null);
     }
   }
   return LocalView(
     openStart: openPage,
-    needCheck: needCheck,
     needSummary: needSummary,
     waiting: pending.length,
   );

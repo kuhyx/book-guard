@@ -10,7 +10,7 @@ import pytest
 
 from book_guard._ask import Ask
 from book_guard._render import session_line, status_lines, todo_lines
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
+from book_guard._sessions import NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, SessionView
 from book_guard.tests._flow_helpers import (
     T0,
@@ -34,7 +34,6 @@ TODAY = [
 @pytest.mark.parametrize(
     ("status", "action"),
     [
-        (NEEDS_CHECK, f"photograph page {CHECK.check_page}"),
         (NEEDS_QUIZ, "write the summary at the PC (book-guard quiz)"),
         (TOO_FAST, "not counted: under 35 s per page"),
         (CREDITED, "credited"),
@@ -56,14 +55,12 @@ def test_todo_lines_all_kinds_in_urgency_order() -> None:
     snap = make_snap(
         sessions=[
             SessionView(quiz, None, NEEDS_QUIZ),
-            SessionView(CHECK, None, NEEDS_CHECK),
             SessionView(only_session(fast_pair()), None, TOO_FAST),
         ],
         open_start=start,
     )
     since = start.taken.astimezone().strftime("%a %H:%M")
     assert todo_lines(snap) == [
-        f"TAKE A PHOTO of page {CHECK.check_page} (check for p. 10-20)",
         "WRITE A SUMMARY at the PC for p. 10-11",
         f"Reading since p. 50 ({since}) -- photograph the page where you stop",
         (
@@ -74,7 +71,7 @@ def test_todo_lines_all_kinds_in_urgency_order() -> None:
 
 
 def test_status_lines_locked_with_everything() -> None:
-    views = [SessionView(CHECK, None, NEEDS_CHECK)] * 8
+    views = [SessionView(CHECK, None, NEEDS_QUIZ)] * 8
     snap = make_snap(book=make_book(), sessions=views, locked=True)
     lines = status_lines(snap, recent=3)
     assert lines[:7] == [

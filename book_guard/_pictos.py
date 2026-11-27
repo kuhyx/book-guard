@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from book_guard._constants import DAILY_PASS_PAGES, ESCAPES_PER_MONTH
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
+from book_guard._sessions import NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED
 from book_guard._state import OVERLAP as OVERLAP_STATUS
 
@@ -65,7 +65,6 @@ GLYPH: Final = {
 """Text-mode glyphs (terminal, toast) for every drawn icon."""
 
 _MARKS: Final = {
-    NEEDS_CHECK: CAMERA,
     NEEDS_QUIZ: PENCIL,
     TOO_FAST: FAST,
     CREDITED: OK,
@@ -143,9 +142,6 @@ def _gauges(snap: Snapshot) -> tuple[Gauge, ...]:
 
 def _chores(snap: Snapshot) -> tuple[Chore, ...]:
     chores = [
-        Chore(CAMERA, str(v.session.check_page)) for v in snap.with_status(NEEDS_CHECK)
-    ]
-    chores += [
         Chore(PENCIL, _span(v.session), RETRY if v.verdicts else "")
         for v in snap.with_status(NEEDS_QUIZ)
     ]
@@ -159,9 +155,8 @@ def _chores(snap: Snapshot) -> tuple[Chore, ...]:
 def _entry(view: SessionView) -> Entry:
     s = view.session
     mark = _MARKS.get(view.status, NO)
-    number = str(s.check_page) if view.status == NEEDS_CHECK else ""
     when = s.started_at.astimezone().strftime("%d.%m %H:%M")
-    return Entry(_span(s), f"▤{s.pages} ◷{s.minutes}", when, mark, number)
+    return Entry(_span(s), f"▤{s.pages} ◷{s.minutes}", when, mark, "")
 
 
 def build(snap: Snapshot, *, recent: int = 4) -> View:

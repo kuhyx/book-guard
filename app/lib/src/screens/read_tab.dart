@@ -81,9 +81,6 @@ class _ReadTabState extends State<ReadTab> {
     return local != null ? local.openStart : widget.state?.openStart;
   }
 
-  List<SessionInfo> get _checks =>
-      widget.local?.needCheck ?? widget.state?.needCheck ?? const [];
-
   List<SessionInfo> get _quiz =>
       widget.local?.needSummary ?? widget.state?.needSummary ?? const [];
 
@@ -188,7 +185,6 @@ class _ReadTabState extends State<ReadTab> {
     // One session at a time: the oldest unfinished session's one step.
     final step = nextStep(
       openStart: _openStart,
-      checks: _checks,
       quiz: _quiz,
       captures: widget.captures,
       now: widget.clock(),

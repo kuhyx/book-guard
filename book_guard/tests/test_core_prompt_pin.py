@@ -69,3 +69,14 @@ def test_the_photo_prompt_is_byte_identical(case: str) -> None:
     if local:
         prompt += LOCAL_REMINDER
     assert hashlib.sha256(prompt.encode()).hexdigest() == PINNED[case]
+
+
+def test_a_session_without_a_check_photo_names_only_start_and_stop() -> None:
+    """From the drop of the check page a session has two photos."""
+    two = Session(_photo("start", 10, 0), _photo("end", 20, 30), 15)
+    prompt = build_prompt(BOOK, two, SUMMARY)
+    assert (
+        "They photographed the page they started on and the page where they"
+        " STOPPED -- the stop page was read too." in prompt
+    )
+    assert "check page" not in prompt

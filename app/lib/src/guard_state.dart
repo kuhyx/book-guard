@@ -114,13 +114,11 @@ class GuardState {
   /// offline; null from a PC that predates them (the views hide).
   final PaceInputs? paceInputs;
 
-  /// Sessions waiting for their check-page photo.
-  List<SessionInfo> get needCheck =>
-      sessions.where((s) => s.status == 'needs-check-photo').toList();
-
-  /// Sessions waiting for a summary.
-  List<SessionInfo> get needSummary =>
-      sessions.where((s) => s.status == 'needs-quiz').toList();
+  /// Sessions waiting for a summary. An older PC's `needs-check-photo`
+  /// counts too: no check page is asked for since 2026-11-27.
+  List<SessionInfo> get needSummary => sessions
+      .where((s) => s.status == 'needs-quiz' || s.status == 'needs-check-photo')
+      .toList();
 }
 
 int? _int(Object? raw) => raw is int ? raw : int.tryParse('${raw ?? ''}');

@@ -17,7 +17,7 @@ from book_guard._constants import (
     MIN_SECONDS_PER_PAGE,
     WEEKEND_CAP_PAGES,
 )
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST
+from book_guard._sessions import NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, OVERLAP
 
 if TYPE_CHECKING:
@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 
 
 _STATUS_TEXT: Final = {
-    NEEDS_CHECK: "photograph page {check}",
     NEEDS_QUIZ: "write the summary at the PC (book-guard quiz)",
     TOO_FAST: f"not counted: under {MIN_SECONDS_PER_PAGE} s per page",
     CREDITED: "credited",
@@ -47,7 +46,7 @@ def session_line(view: SessionView) -> str:
     """``p. 40-65 (25 p, 31 min) Sat 21:04 -- photograph page 52``."""
     s = view.session
     when = s.started_at.astimezone().strftime("%a %d.%m %H:%M")
-    action = _STATUS_TEXT.get(view.status, view.status).format(check=s.check_page)
+    action = _STATUS_TEXT.get(view.status, view.status)
     if view.status == NEEDS_QUIZ and view.verdicts:
         action = "summary failed: rewrite it (book-guard quiz)"
     span = f"{_pages(s)} ({s.pages} p, {s.minutes} min)"
@@ -57,11 +56,6 @@ def session_line(view: SessionView) -> str:
 def todo_lines(snap: Snapshot) -> list[str]:
     """What to do next, most urgent first. Empty when nothing is pending."""
     lines = [
-        f"TAKE A PHOTO of page {v.session.check_page} "
-        f"(check for p. {v.session.start.page}-{v.session.end.page})"
-        for v in snap.with_status(NEEDS_CHECK)
-    ]
-    lines += [
         f"{'REWRITE THE' if v.verdicts else 'WRITE A'} SUMMARY at the PC for "
         f"{_pages(v.session)}"
         for v in snap.with_status(NEEDS_QUIZ)

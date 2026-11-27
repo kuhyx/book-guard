@@ -17,8 +17,8 @@ import 'package:material_ui/material_ui.dart';
 /// wait behind the all-sessions tile.
 const recentSessions = 6;
 
-/// Whether [session] still waits on the reader (its check photo or its
-/// summary, a failed one to rewrite included).
+/// Whether [session] still waits on the reader: its summary, a failed one
+/// to rewrite included (an older PC's `needs-check-photo` too).
 bool isOpen(SessionInfo session) =>
     session.status == 'needs-check-photo' || session.status == 'needs-quiz';
 

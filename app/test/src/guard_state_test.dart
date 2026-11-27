@@ -32,9 +32,10 @@ void main() {
     expect([first.startPage, first.endPage, first.checkPage], [1, 20, 12]);
     expect([first.pages, first.minutes], [20, 30]);
     expect(first.startedAt, DateTime.utc(2026, 9, 26, 10));
-    expect(state.needCheck.single.id, 'session:a-b');
-    expect(state.needSummary.single.id, 'session:c-d');
-    expect(state.needSummary.single.startPage, 21);
+    // A session an older PC still lists as waiting on its check photo now
+    // waits on its summary: no check page is asked for.
+    expect(state.needSummary.map((s) => s.id), ['session:a-b', 'session:c-d']);
+    expect(state.needSummary.last.startPage, 21);
     final bare = state.sessions.last;
     expect([bare.id, bare.endPage, bare.pages, bare.minutes], ['', 0, 0, 0]);
     expect(bare.checkPage, isNull);
@@ -53,7 +54,7 @@ void main() {
     expect(state.sessions, isEmpty);
     expect(state.openStart, isNull);
     expect(state.generatedAt, isNull);
-    expect(state.needCheck, isEmpty);
+    expect(state.needSummary, isEmpty);
   });
 
   test('parses the one-number pace, defaulting for an older PC', () {

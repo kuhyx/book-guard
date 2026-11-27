@@ -30,7 +30,7 @@ void main() {
       expect(localView(null, []), isNull);
     });
 
-    test('offline start, stop and check become a session to summarise', () {
+    test('an offline start and stop become a session to summarise', () {
       final start = e('start_a.jpg', 'start', 51, 0);
       final stop = e('stop_b.jpg', 'stop', 103, 50);
       final check = checkPageFor(51, start.sha, 103, stop.sha)!;
@@ -38,16 +38,18 @@ void main() {
       final view = localView(state(), [start, stop])!;
       expect(view.openStart, isNull);
       expect(view.waiting, 2);
-      final local = view.needCheck.last;
+      final local = view.needSummary.last;
       expect((local.checkPage, local.pages, local.minutes), (check, 53, 50));
       expect(local.id, sessionId(start.sha, stop.sha));
+      // No check page is asked for: the stop alone opens the summary.
+      expect(local.status, 'needs-quiz');
+      // An old app's check photo changes nothing.
       final done = localView(state(), [
         start,
         stop,
         e('check_c', 'check$check', check, 52),
       ])!;
-      expect(done.needCheck.map((s) => s.id), ['session:pc']);
-      expect(done.needSummary.single.status, 'needs-quiz');
+      expect(done.needSummary.map((s) => s.id), ['session:pc', local.id]);
     });
 
     test('a start already read by the PC is matched for its hash', () {
@@ -57,15 +59,15 @@ void main() {
         e('stop_b.jpg', 'stop', 52, 5),
       ])!;
       // 51 -> 52 reads two pages; the check page is one of them.
-      final check = view.needCheck.last.checkPage;
+      final check = view.needSummary.last.checkPage;
       expect(check, inInclusiveRange(51, 52));
-      expect(view.needCheck.last.pages, 2);
+      expect(view.needSummary.last.pages, 2);
     });
 
     test('a stop on the start page is a one-page session', () {
       final start = e('start_a.jpg', 'start', 51, 0);
       final view = localView(state(), [start, e('stop_b.jpg', 'stop', 51, 5)])!;
-      final one = view.needCheck.last;
+      final one = view.needSummary.last;
       expect((one.pages, one.checkPage), (1, 51));
     });
 
@@ -75,7 +77,7 @@ void main() {
         e('stop_b.jpg', 'stop', 51, 0),
       ])!;
       expect(view.openStart, 51);
-      expect(view.needCheck.map((s) => s.id), ['session:pc']);
+      expect(view.needSummary.map((s) => s.id), ['session:pc']);
     });
 
     test('check pages equal the PC (book_guard/_sessions.py)', () {
@@ -92,19 +94,19 @@ void main() {
 
     test('a stop without a start, or going backwards, is no session', () {
       expect(
-        localView(state(), [e('x', 'stop', 9, 0)])!.needCheck,
+        localView(state(), [e('x', 'stop', 9, 0)])!.needSummary,
         hasLength(1),
       );
       final back = localView(state(), [
         e('s', 'start', 60, 0),
         e('t', 'stop', 50, 9),
       ])!;
-      expect((back.openStart, back.needCheck.length), (null, 1));
+      expect((back.openStart, back.needSummary.length), (null, 1));
       final unread = localView(state(), [
         e('s', 'start', null, 0),
         e('t', 'stop', 70, 9),
       ])!;
-      expect(unread.needSummary, isEmpty);
+      expect(unread.needSummary.map((s) => s.id), ['session:pc']);
     });
 
     test("a check photo answers the PC's own pending session", () {
@@ -112,7 +114,6 @@ void main() {
         e('c', 'check30', 30, 0),
         e('d', 'check31', 31, 1),
       ])!;
-      expect(view.needCheck, isEmpty);
       expect(view.needSummary.single.id, 'session:pc');
     });
 
@@ -136,9 +137,8 @@ void main() {
         journal,
       )!;
       expect(view.waiting, 2);
-      expect(view.needSummary, isEmpty);
-      expect(view.needCheck.map((s) => (s.startPage, s.endPage)), [
-        (0, 0), // the PC's own session:pc, unanswered by the old check30
+      expect(view.needSummary.map((s) => (s.startPage, s.endPage)), [
+        (0, 0), // the PC's own session:pc
         (600, 620),
       ]);
       expect(view.openStart, isNull);
@@ -165,7 +165,7 @@ void main() {
         [...old, fresh],
       )!;
       expect((view.waiting, view.openStart), (1, 300));
-      expect(view.needSummary, isEmpty);
+      expect(view.needSummary.map((s) => s.id), ['session:pc']);
     });
 
     test("today's sequence: the PC's open start stays open", () {

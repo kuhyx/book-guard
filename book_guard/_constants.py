@@ -36,6 +36,15 @@ Today's share is today's requirement: reading it is on pace, opens the lock
 and earns the hour. The lock goes on only for a day whose yesterday missed
 its requirement; the 20-page pass and the weekend-only debt are gone."""
 
+CHECK_DROP_DATE: Final = date(2026, 11, 27)
+"""From this day no check page is asked for: a stop opens the summary at once.
+
+Photos taken before it pair exactly as they always did (every session id
+stays the same); from it only a photo the phone labelled ``check<N>`` (an
+old app) is still claimed as a check photo, so a plain photo of a pending
+session's old check page is a new start, never swallowed.
+"""
+
 MIDWEEK_WEIGHT: Final = 15
 EDGE_WEIGHT: Final = 30
 WEEKEND_WEIGHT: Final = 50

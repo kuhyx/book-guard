@@ -6,8 +6,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from book_guard import _sessions
+from book_guard._check_photos import check_page_for
 from book_guard._photos import PhotoRecord
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST, Session
+from book_guard._sessions import NEEDS_QUIZ, TOO_FAST, Session
 
 _T0 = datetime(2026, 10, 2, 20, 0, tzinfo=UTC)
 
@@ -32,7 +33,8 @@ def test_session_properties() -> None:
     assert session.pages == 21
     assert session.seconds == 45.5 * 60
     assert session.minutes == 45
-    assert session.state == NEEDS_CHECK
+    # No check page is asked for any more: the stop alone opens the summary.
+    assert session.state == NEEDS_QUIZ
     assert session.evidence == [start, end]
     session.check = _p("c", 20, 50)
     assert session.state == NEEDS_QUIZ
@@ -61,16 +63,16 @@ def test_too_fast() -> None:
 
 def test_check_page_for() -> None:
     start, end = _p("a", 10, 0), _p("b", 30, 40)
-    page = _sessions.check_page_for(start, end)
+    page = check_page_for(start, end)
     assert page is not None
     assert 10 <= page <= 30
-    assert page == _sessions.check_page_for(start, end)  # deterministic
-    assert _sessions.check_page_for(_p("a", 10, 0), _p("b", 9, 5)) is None
+    assert page == check_page_for(start, end)  # deterministic
+    assert check_page_for(_p("a", 10, 0), _p("b", 9, 5)) is None
 
 
 def test_simple_pair_then_check_photo() -> None:
     start, end = _p("a", 10, 0), _p("b", 30, 40)
-    page = _sessions.check_page_for(start, end)
+    page = check_page_for(start, end)
     check = _p("c", page, 41)
     sessions = _sessions.build_sessions([start, end, check])
     assert len(sessions) == 1
@@ -80,11 +82,11 @@ def test_simple_pair_then_check_photo() -> None:
 
 def test_check_photo_must_be_after_end() -> None:
     start, end = _p("a", 10, 0), _p("b", 30, 40)
-    page = _sessions.check_page_for(start, end)
+    page = check_page_for(start, end)
     same_time = _p("c", page, 40)
     sessions = _sessions.build_sessions([start, end, same_time])
     assert sessions[0].check is None
-    assert sessions[0].state == NEEDS_CHECK
+    assert sessions[0].state == NEEDS_QUIZ
 
 
 def test_backwards_photo_replaces_start() -> None:
@@ -105,8 +107,8 @@ def test_stale_start_replaced() -> None:
 def test_check_claimed_by_right_pending_session() -> None:
     s1 = (_p("a", 10, 0), _p("b", 20, 30))
     s2 = (_p("c", 100, 60), _p("d", 120, 90))
-    page1 = _sessions.check_page_for(*s1)
-    page2 = _sessions.check_page_for(*s2)
+    page1 = check_page_for(*s1)
+    page2 = check_page_for(*s2)
     assert page1 != page2
     photos = [*s1, *s2, _p("e", page2, 91), _p("f", page1, 92)]
     sessions = _sessions.build_sessions(photos)
@@ -123,7 +125,7 @@ def test_open_start() -> None:
     assert _sessions.open_start([start]) == start
     end = _p("b", 30, 40)
     assert _sessions.open_start([start, end]) is None
-    page = _sessions.check_page_for(start, end)
+    page = check_page_for(start, end)
     assert _sessions.open_start([start, end, _p("c", page, 41)]) is None
     later = _p("d", 31, 50)
     assert _sessions.open_start([start, end, later]) == later
@@ -134,3 +136,40 @@ def test_open_start_ignores_stale_leftovers() -> None:
     # ("c") ends b's session, so nothing is waiting for an end photo.
     photos = [_p("a", 50, 0), _p("b", 10, 1), _p("c", 11, 5)]
     assert _sessions.open_start(photos) is None
+
+
+_AFTER_DROP = datetime(2026, 11, 28, 9, 0, tzinfo=UTC)
+
+
+def _later(name: str, page: int, minutes: float) -> PhotoRecord:
+    """A photo taken after the check page was dropped."""
+    taken = (_AFTER_DROP + timedelta(minutes=minutes)).isoformat()
+    return PhotoRecord(
+        sha=name * 20,
+        name=name,
+        taken_at=taken,
+        uploaded_at=taken,
+        kind="page",
+        page=page,
+    )
+
+
+def test_after_the_drop_a_plain_photo_is_never_a_check_photo() -> None:
+    """The next start on a pending session's check page stays a start."""
+    start, end = _later("a", 10, 0), _later("b", 30, 40)
+    page = check_page_for(start, end)
+    assert page is not None
+    nxt = _later(f"start_{page}", page, 60)
+    sessions = _sessions.build_sessions([start, end, nxt])
+    assert sessions[0].check is None
+    assert sessions[0].state == NEEDS_QUIZ
+    assert _sessions.open_start([start, end, nxt]) == nxt
+
+
+def test_after_the_drop_an_old_app_check_photo_is_still_claimed() -> None:
+    start, end = _later("a", 10, 0), _later("b", 30, 40)
+    page = check_page_for(start, end)
+    check = _later(f"check{page}_x", page or 0, 41)
+    sessions = _sessions.build_sessions([start, end, check])
+    assert sessions[0].check == check
+    assert _sessions.open_start([start, end, check]) is None

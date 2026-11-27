@@ -33,8 +33,8 @@ def write_next_file(paths: Paths, snap: Snapshot) -> None:
             *status_lines(snap),
             "",
             "How: photo of the open page when you START, photo when you STOP,",
-            "then a photo of the check page named above. Upload all to",
-            "Reading/inbox with the dufs app. Page numbers must be visible.",
+            "then the summary. Upload the photos to Reading/inbox with the",
+            "dufs app. Page numbers must be visible.",
         ]
     )
     backfill(paths.processed, paths.thumbs)

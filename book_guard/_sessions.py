@@ -5,9 +5,12 @@ The protocol the phone side follows:
 
 1. Photograph the open page when you start reading.
 2. Photograph the open page when you stop (the last page you read).
-3. Photograph the *check page* book-guard then names (in NEXT.txt) --
-   a page from the start page to the stop page, both included, picked from
-   the photos' hashes, so it cannot be known before the end photo exists.
+3. Write the summary.
+
+Until ``CHECK_DROP_DATE`` a third photo came between them: the *check
+page*, a page from the start page to the stop page, both included, picked
+from the photos' hashes. It is no longer asked for; the pairing below still
+claims the old check photos, so every session id stays what it was.
 
 Both ends count: a session is ``stop page - start page + 1`` pages, and a
 stop on the start page is one page.
@@ -15,7 +18,9 @@ stop on the start page is one page.
 Walking the photos in capture order:
 
 * a photo showing a pending session's check page, taken after that session
-  ended, is that session's check photo;
+  ended, is that session's check photo -- from ``CHECK_DROP_DATE`` only
+  when the phone labelled it ``check<N>`` (an old app;
+  :mod:`book_guard._check_photos`);
 * otherwise it closes the open session if it shows the start page (at least
   :data:`RETAKE_SECONDS` later -- sooner is a retaken start) or a later
   page, within :data:`MAX_SESSION` of the start;
@@ -28,9 +33,9 @@ session state to go stale -- only the ledger's credit/reject verdicts.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
 from typing import TYPE_CHECKING, Final
 
+from book_guard._check_photos import check_page_for, claims_check
 from book_guard._constants import MAX_SESSION, MIN_SECONDS_PER_PAGE, RETAKE_SECONDS
 from book_guard._photos import MANUAL_START_NAME
 
@@ -42,6 +47,7 @@ if TYPE_CHECKING:
 
 TOO_FAST: Final = "too-fast"
 NEEDS_CHECK: Final = "needs-check-photo"
+"""No longer produced (``CHECK_DROP_DATE``); old app builds still read it."""
 NEEDS_QUIZ: Final = "needs-quiz"
 
 
@@ -120,8 +126,6 @@ class Session:
         """Where the session is in the protocol, before any ledger verdict."""
         if self.seconds < self.pages * MIN_SECONDS_PER_PAGE:
             return TOO_FAST
-        if self.check_page is not None and self.check is None:
-            return NEEDS_CHECK
         return NEEDS_QUIZ
 
     @property
@@ -137,29 +141,6 @@ class Session:
         # A manual start (``book-guard start``) shows no page.
         photos = (self.start, self.check, self.end)
         return [p for p in photos if p is not None and p.name != MANUAL_START_NAME]
-
-
-def check_page_for(start: PhotoRecord, end: PhotoRecord) -> int | None:
-    """The page to photograph as proof: from the start page to the stop page.
-
-    Both ends are drawn from (a one-page session names its own page); ``None``
-    only when the stop page is before the start page.
-    """
-    low, high = int(start.page or 0), int(end.page or 0)
-    if high < low:
-        return None
-    seed = hashlib.sha256((start.sha + end.sha).encode()).digest()
-    return low + int.from_bytes(seed[:8], "big") % (high - low + 1)
-
-
-def _claims_check(pending: list[Session], photo: PhotoRecord) -> bool:
-    """Attach ``photo`` as the check photo of the first session it answers."""
-    for session in pending:
-        if session.check_page == photo.page and photo.taken > session.end.taken:
-            session.check = photo
-            pending.remove(session)
-            return True
-    return False
 
 
 def _closes(start: PhotoRecord, photo: PhotoRecord, after: PhotoRecord | None) -> bool:
@@ -204,7 +185,7 @@ def build_sessions(
     pending: list[Session] = []
     start: PhotoRecord | None = None
     for index, photo in enumerate(pages):
-        if _claims_check(pending, photo):
+        if claims_check(pending, photo):
             continue
         following = pages[index + 1] if index + 1 < len(pages) else None
         if (

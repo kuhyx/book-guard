@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 from book_guard import _publish
 from book_guard._bookindex import index_path
 from book_guard._ledger import CREDIT, ESCAPE_UNDONE, REJECT
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ
-from book_guard._state import CREDITED, awaiting_check, awaiting_quiz, snapshot
+from book_guard._sessions import NEEDS_QUIZ
+from book_guard._state import CREDITED, awaiting_quiz, snapshot
 from book_guard._state_json import SCHEMA, to_json
 from book_guard.tests._flow_helpers import (
     ISBN13,
@@ -135,10 +135,12 @@ def test_escapes_left_never_negative(bg_paths: Paths) -> None:
 def test_session_views_take_ledger_verdicts(bg_paths: Paths) -> None:
     ids = _seed_three_sessions(bg_paths)
     snap = snapshot(bg_paths, today=LOCKED_DAY)
-    assert [v.status for v in snap.sessions] == [CREDITED, NEEDS_QUIZ, NEEDS_CHECK]
+    # The third waited on its check photo; with no check page it waits on
+    # its summary at once.
+    assert [v.status for v in snap.sessions] == [CREDITED, NEEDS_QUIZ, NEEDS_QUIZ]
     assert [v.session.session_id for v in snap.sessions] == ids
-    assert awaiting_check(snap) == [snap.sessions[2]]
-    assert awaiting_quiz(snap) == [snap.sessions[1]]  # a failed summary is asked again
+    # A failed summary is asked again.
+    assert awaiting_quiz(snap) == [snap.sessions[1], snap.sessions[2]]
     assert snap.open_start is not None
     assert snap.open_start.page == 50
 
@@ -177,7 +179,7 @@ def test_to_json_full(bg_paths: Paths) -> None:
         "War",
         10,
     )
-    assert doc["todo"][0].startswith("TAKE A PHOTO of page ")
+    assert doc["todo"][0].startswith("REWRITE THE SUMMARY at the PC for p. ")
     assert first["detail"].startswith("sessions/session_")
     assert len(doc["photos"]) == 9
     newest = doc["photos"][0]

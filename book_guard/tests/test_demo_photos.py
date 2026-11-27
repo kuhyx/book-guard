@@ -10,8 +10,9 @@ import zipfile
 
 import pytest
 
+from book_guard._check_photos import check_page_for
 from book_guard._photos import PhotoRecord
-from book_guard._sessions import build_sessions, check_page_for
+from book_guard._sessions import build_sessions
 from scripts import demo_photos
 
 _START = "2026-10-15T08:12:58+02:00"

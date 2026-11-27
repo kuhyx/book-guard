@@ -7,9 +7,9 @@ the EXIF DateTimeOriginal is set so the session clock can be exercised.
 
     python3 scripts/demo_photos.py BOOK.epub OUT_DIR PAGE ISO_TIME [PAGE ISO_TIME ...]
 
-A session asks for a check page drawn from its start..stop pages, which
-depends on the two photos' bytes, so render the start and stop first, then
-the check photo (taken after the stop) from them:
+Until 2026-11-27 a session asked for a check page drawn from its start..stop
+pages (none is asked for now). To replay an old app's check photo, render the
+start and stop first, then the check photo (taken after the stop) from them:
 
     python3 scripts/demo_photos.py --check BOOK.epub OUT_DIR START.jpg STOP.jpg ISO_TIME
 """
@@ -27,8 +27,8 @@ import zipfile
 
 from PIL import Image, ImageDraw, ImageFont
 
+from book_guard._check_photos import check_page_for
 from book_guard._photos import PhotoRecord
-from book_guard._sessions import check_page_for
 
 _FONT = "/usr/share/fonts/TTF/DejaVuSerif.ttf"
 _CHARS_PER_PAGE = 1500

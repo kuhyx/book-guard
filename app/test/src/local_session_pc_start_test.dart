@@ -29,7 +29,8 @@ void main() {
     final stop = journalEntry('stop_b.jpg', 'stop', 290, 40);
     final view = localView(pcStart(), [stop])!;
     expect(view.openStart, isNull);
-    final session = view.needCheck.single;
+    final session = view.needSummary.single;
+    expect(session.status, 'needs-quiz');
     // book_guard._sessions.check_page_for on the same two hashes: 269.
     expect(session.checkPage, 269);
     expect(session.id, sessionId(_manualSha, stop.sha));
@@ -42,6 +43,6 @@ void main() {
     });
     expect(state.openStartSha, isNull);
     final view = localView(state, [journalEntry('s.jpg', 'stop', 290, 4)])!;
-    expect(view.needCheck, isEmpty);
+    expect(view.needSummary, isEmpty);
   });
 }

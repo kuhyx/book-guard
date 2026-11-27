@@ -11,7 +11,7 @@ import pytest
 from book_guard import _accept
 from book_guard._cli import main
 from book_guard._ledger import load
-from book_guard._sessions import NEEDS_CHECK, TOO_FAST
+from book_guard._sessions import NEEDS_QUIZ, TOO_FAST
 from book_guard._state import CREDITED, snapshot
 from book_guard.tests._flow_helpers import T0, add_book, add_entry, rec, seed_photos
 
@@ -29,7 +29,7 @@ def _seed(paths: Paths, seconds: int = 2290) -> str:
 
 def test_accept_credits_without_check_page_or_summary(bg_paths: Paths) -> None:
     sid = _seed(bg_paths)
-    assert snapshot(bg_paths).sessions[0].status == NEEDS_CHECK
+    assert snapshot(bg_paths).sessions[0].status == NEEDS_QUIZ
     entry = _accept.accept(bg_paths, sid, "read it, skipped the check")
     assert (entry.entry_id, entry.kind, entry.amount) == (sid, "credit", 60)
     (row,) = load(bg_paths.ledger, bg_paths.key_file).verdicts()[sid]

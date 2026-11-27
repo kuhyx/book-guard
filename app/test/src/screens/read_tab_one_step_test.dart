@@ -27,11 +27,13 @@ void main() {
     'Submit summary',
   ].where((l) => spoken(l).evaluate().isNotEmpty).length;
 
-  testWidgets('a check owed, a summary owed and reading: only the check', (
+  testWidgets('an old check owed, a summary owed and reading: one summary', (
     tester,
   ) async {
+    // An older PC's needs-check-photo session waits on its summary now.
     await pump(tester, const {});
-    expect(spoken('Photograph the check page'), findsOneWidget);
+    expect(spoken('Photograph the check page'), findsNothing);
+    expect(spoken('Submit summary'), findsOneWidget);
     expect(actions(), 1);
   });
 

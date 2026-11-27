@@ -9,11 +9,12 @@ import hashlib
 import pytest
 
 from book_guard import _sessions
+from book_guard._check_photos import check_page_for
 from book_guard._constants import RETAKE_SECONDS
 from book_guard._ebook_sessions import EbookRead
 from book_guard._pagenum import Choice, Context, choose
 from book_guard._photos import PhotoRecord
-from book_guard._sessions import NEEDS_CHECK, NEEDS_QUIZ, TOO_FAST, Session
+from book_guard._sessions import NEEDS_QUIZ, TOO_FAST, Session
 
 _T0 = datetime(2026, 10, 2, 20, 0, tzinfo=UTC)
 
@@ -74,16 +75,16 @@ def test_check_page_is_drawn_from_start_to_stop() -> None:
     seen = set()
     for i in range(300):
         start, end = _p(f"s{i}", 10, 0), _p(f"e{i}", 13, 40)
-        page = _sessions.check_page_for(start, end)
+        page = check_page_for(start, end)
         assert page is not None
         seen.add(page)
     assert seen == {10, 11, 12, 13}
 
 
 def test_check_page_of_adjacent_and_same_page_sessions() -> None:
-    adjacent = _sessions.check_page_for(_p("a", 10, 0), _p("b", 11, 5))
+    adjacent = check_page_for(_p("a", 10, 0), _p("b", 11, 5))
     assert adjacent in {10, 11}
-    assert _sessions.check_page_for(_p("a", 10, 0), _p("b", 10, 5)) == 10
+    assert check_page_for(_p("a", 10, 0), _p("b", 10, 5)) == 10
 
 
 def _bare(sha: str, page: int) -> PhotoRecord:
@@ -105,15 +106,13 @@ def test_check_page_values_are_pinned_for_the_app_port(
     start: tuple[int, str], end: tuple[int, str], expected: int
 ) -> None:
     # The same literals sit in app/test/src/local_session_test.dart.
-    got = _sessions.check_page_for(_bare(start[1], start[0]), _bare(end[1], end[0]))
+    got = check_page_for(_bare(start[1], start[0]), _bare(end[1], end[0]))
     assert got == expected
 
 
-def test_one_page_session_waits_for_its_check_photo() -> None:
+def test_one_page_session_waits_for_its_summary() -> None:
     sessions = _sessions.build_sessions([_p("a", 10, 0), _p("b", 10, 2)])
-    assert [(s.pages, s.check_page, s.state) for s in sessions] == [
-        (1, 10, NEEDS_CHECK)
-    ]
+    assert [(s.pages, s.check_page, s.state) for s in sessions] == [(1, 10, NEEDS_QUIZ)]
 
 
 def test_stop_on_the_start_page_closes_the_session() -> None:

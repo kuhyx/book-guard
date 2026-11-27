@@ -230,7 +230,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         selected: _tab,
         onSelected: (i) => setState(() => _tab = i),
         readWaiting:
-            (local?.needCheck ?? state?.needCheck ?? const []).isNotEmpty ||
             (local?.needSummary ?? state?.needSummary ?? const []).isNotEmpty,
       ),
     );

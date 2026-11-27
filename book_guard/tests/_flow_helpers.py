@@ -13,11 +13,12 @@ from typing import TYPE_CHECKING, Final
 
 from book_guard import _ledger, _photos
 from book_guard._books import Book, register
+from book_guard._check_photos import check_page_for
 from book_guard._ledger import CREDIT, ESCAPE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._pace import Pace
 from book_guard._photos import OK, PhotoRecord
-from book_guard._sessions import build_sessions, check_page_for
+from book_guard._sessions import build_sessions
 from book_guard._state import SessionView, Snapshot
 
 if TYPE_CHECKING:

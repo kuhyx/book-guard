@@ -8,7 +8,7 @@ Read README.md first. These are the invariants that are easy to break.
   is a full sandbox (its own ledger, photo cache and Reading folder); the
   real tree is `~/.local/share/book_guard` + `~/data/cloud/Reading`.
   `scripts/demo_photos.py` renders page photos with EXIF times from an epub
-  (`--check` renders the check photo a start/stop pair asks for);
+  (`--check` renders the check photo an old app sent; none is asked for);
   `process --now` (sandbox only) fakes the upload-check clock.
 - Tests: `scripts/setup_dev.sh` once, then `.venv/bin/python -m pytest`
   (100% branch coverage is enforced). `book_guard/tests/conftest.py` makes
@@ -78,14 +78,19 @@ Read README.md first. These are the invariants that are easy to break.
   `... page_truth.py DIR 18:24`) and `python3 -m scripts.pencil_goldens`;
   retraining is `scripts/train_pencil.py` (chunks under 60 s).
 - **One session at a time** (`app/lib/src/next_step.dart`): the Read tab
-  offers exactly one step -- the oldest unfinished session's check photo or
-  summary, else the stop, else the start -- never a new start while one is
-  unfinished. While a photo or summary is checked it shows the stage glyph
-  in a spinner, no button. The Status tab tiles only open sessions
-  (`needs-check-photo`, `needs-quiz`); credited and failed ones sit behind
-  the all-sessions tile.
+  offers exactly one step -- the oldest unfinished session's summary, else
+  the stop, else the start -- never a new start while one is unfinished.
+  While a photo or summary is checked it shows the stage glyph in a
+  spinner, no button. The Status tab tiles only open sessions
+  (`needs-quiz`; an older PC's `needs-check-photo` counts as one);
+  credited and failed ones sit behind the all-sessions tile.
+- **No check page** (from `CHECK_DROP_DATE`, 2026-11-27): a stop photo makes
+  the session `needs-quiz` at once. Photos taken before that day pair
+  exactly as before (`_check_photos.claims_check`), so every session id stays
+  the same; after it only a photo the phone labelled `check<N>_` (an old
+  app) is claimed as a check photo, never a plain start on that page.
 - **The app is offline-first.** Every upload goes through its outbox; it
-  must keep working (photos, page numbers, check page, summary queued) with
+  must keep working (photos, page numbers, summary queued) with
   the PC and the network both gone. App data lives in its support folder
   and survives `adb install -r` -- never uninstall or clear it.
 - **Haiku only, then local.** Every Claude call defaults to
@@ -126,10 +131,10 @@ Read README.md first. These are the invariants that are easy to break.
   -- never re-split the days before a switch.
 - **Both ends of a paper session count** (`_sessions.Session.pages` =
   stop - start + 1; a stop on the start page is 1 page, unless it comes under
-  50 s after the start: then it is the start retaken). The check page is
-  drawn from start..stop inclusive (`check_page_for`; the Dart
-  `checkPageFor` must match -- literals pinned in `test_core_inclusive.py`
-  and `local_session_test.dart`). In-app sessions keep end - start (their end
+  50 s after the start: then it is the start retaken). The old check page
+  was drawn from start..stop inclusive (`check_page_for`; the Dart
+  `checkPageFor` still matches it for the session details -- literals
+  pinned in `test_core_inclusive.py` and `local_session_test.dart`). In-app sessions keep end - start (their end
   is the first page not read). Rows written under this rule carry
   `detail.counting == "inclusive"` (`_quiz.record_verdict`); every older
   `session:<sha16>-<sha16>[#n]` credit gets exactly one signed +1 top-up,

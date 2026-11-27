@@ -94,10 +94,6 @@ def _entry(parent: tk.Misc, e: _pictos.Entry) -> None:
         )
     ok = e.mark == _pictos.OK
     icon(row, e.mark, size=22, color=SUCCESS if ok else MUTED).pack(side="left")
-    if e.number:
-        tk.Label(row, text=e.number, bg=BG, fg=MUTED, font=(FONT, 12)).pack(
-            side="left", padx=6
-        )
 
 
 def _paint_status(body: tk.Frame, shared: Shared) -> None:

@@ -10,17 +10,17 @@ from typing import TYPE_CHECKING
 import pytest
 
 from book_guard import _manual_start, _mcp
+from book_guard._check_photos import check_page_for
 from book_guard._cli import main
 from book_guard._ledger import load
 from book_guard._quiz import Verdict, record_verdict
 from book_guard._render import status_lines
 from book_guard._session_files import photo_ref
 from book_guard._sessions import (
-    NEEDS_CHECK,
+    NEEDS_QUIZ,
     TOO_FAST,
     EbookSpan,
     Session,
-    check_page_for,
 )
 from book_guard._state import snapshot
 from book_guard._state_json import to_json
@@ -155,7 +155,7 @@ def test_the_stop_photo_closes_it_and_is_judged_from_at(bg_paths: Paths) -> None
     session = snap.sessions[-1].session
     assert (session.start.page, session.end.page, session.pages) == (260, 290, 31)
     assert session.started_at == AT
-    assert session.state == NEEDS_CHECK
+    assert session.state == NEEDS_QUIZ
 
 
 def test_floor_counts_from_at(bg_paths: Paths) -> None:
@@ -164,7 +164,7 @@ def test_floor_counts_from_at(bg_paths: Paths) -> None:
     base = [rec("s", 200, T0), rec("e", 259, T0 + timedelta(hours=1))]
     seed_photos(bg_paths, *base, rec("stop", 290, AT + timedelta(minutes=20)))  # 1200 s
     view = snapshot(bg_paths).sessions[-1]
-    assert view.status == NEEDS_CHECK
+    assert view.status == NEEDS_QUIZ
     session = view.session
     assert 260 <= (session.check_page or 0) <= 290
     assert session.check_page == check_page_for(session.start, session.end)

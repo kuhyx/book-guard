@@ -34,7 +34,6 @@ from book_guard._session_times import (
     widened,
 )
 from book_guard._sessions import (
-    NEEDS_CHECK,
     NEEDS_QUIZ,
     Session,
     build_sessions,
@@ -243,8 +242,3 @@ def snapshot(
 def awaiting_quiz(snap: Snapshot) -> list[SessionView]:
     """Sessions whose summary is the only thing missing."""
     return snap.with_status(NEEDS_QUIZ)
-
-
-def awaiting_check(snap: Snapshot) -> list[SessionView]:
-    """Sessions waiting for their check-page photo."""
-    return snap.with_status(NEEDS_CHECK)
