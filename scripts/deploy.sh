@@ -8,8 +8,10 @@
 #      dependencies such as gatelock move with pyproject), then import the
 #      CLI with that interpreter.
 #   2. The desktop app: scripts/install_desktop.sh (web build + wrapper).
-#   3. The phone: a release APK through phone_deploy.sh (adb install -r,
-#      never an uninstall: app data survives). A phone out of reach (exit 30)
+#   3. The phone: a release APK through phone_deploy.sh's stages (prep,
+#      dart, kotlin, assemble, install; each well under 60 s -- one
+#      `flutter build apk` held a build slot 57-64 s), then adb install -r,
+#      never an uninstall: app data survives. A phone out of reach (exit 30)
 #      or held by another session (exit 40) is reported and skipped; the
 #      next deploy installs it.
 #
@@ -22,6 +24,7 @@ set -euo pipefail
 readonly LIVE="${HOME}/src/book-guard"
 readonly BUNDLE="${HOME}/.local/share/book-guard-desktop/bundle/web/index.html"
 readonly PHONE_DEPLOY="${HOME}/.claude/scripts/phone_deploy.sh"
+readonly CAPPED="${HOME}/.claude/scripts/capped.sh"
 readonly APK="${HOME}/src/book-guard/app/build/app/outputs/flutter-apk/app-release.apk"
 
 die() {
@@ -48,8 +51,34 @@ systemctl --user daemon-reload || die "systemctl --user daemon-reload failed"
 "${LIVE}/scripts/install_desktop.sh"
 [[ -s "${BUNDLE}" ]] || die "desktop bundle missing: ${BUNDLE}"
 
+# Every stage is its own phone_deploy process. Outside a claude session the
+# phone lease would name each one pid:N, so install would wait on prep's own
+# lease (exit 40): one owner for the whole run.
+claim_lease_owner() {
+  [[ -n "${PHONE_LEASE_OWNER:-}" ]] && return 0
+  local owner
+  owner="$(PYTHONPATH="${HOME}/src/testsAndMisc" python3 -m python_pkg.phone_lease whoami)"
+  [[ "${owner}" == pid:* ]] && owner="book-guard-deploy:$$"
+  export PHONE_LEASE_OWNER="${owner}"
+}
+
+# The staged build: gradle's up-to-date outputs carry each stage to the next.
+# A rerun after a failed install reuses the build number, so gradle would
+# leave the old APK and phone_deploy reads that as a killed build (exit 34):
+# drop the build artifacts (gitignored) first.
+phone_build_and_install() {
+  local stage
+  claim_lease_owner
+  rm -f "${APK}" "${LIVE}/app/build/app/outputs/apk/release/app-release.apk"
+  "${PHONE_DEPLOY}" "${LIVE}/app" --release --stage prep || return
+  for stage in dart kotlin assemble; do
+    CAP_MEM=4G "${CAPPED}" "${PHONE_DEPLOY}" "${LIVE}/app" --stage "${stage}" || return
+  done
+  "${PHONE_DEPLOY}" "${LIVE}/app" --stage install
+}
+
 status=0
-"${PHONE_DEPLOY}" "${LIVE}/app" --release || status=$?
+phone_build_and_install || status=$?
 case "${status}" in
   0) echo "deploy: phone updated" ;;
   30 | 40) echo "deploy: phone out of reach or leased (${status}), APK not installed" ;;
