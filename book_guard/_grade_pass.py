@@ -11,20 +11,19 @@ that themselves around each write).
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-import fcntl
 import logging
 from typing import TYPE_CHECKING, Final
 
 from book_guard import _paths
 from book_guard._app_handlers import HANDLERS
+from book_guard._flock import try_exclusive
 from book_guard._publish import write_next_file
 from book_guard._requests import GRADED, handle_requests, pending_kinds
 from book_guard._state import snapshot
 
 if TYPE_CHECKING:
     import argparse
-    from collections.abc import Iterator
+    from contextlib import AbstractContextManager
 
     from book_guard._paths import Paths
 
@@ -33,21 +32,9 @@ _logger: Final = logging.getLogger(__name__)
 GRADE_UNIT: Final = "book-guard-grade.service"
 
 
-@contextmanager
-def grade_lock(paths: Paths) -> Iterator[bool]:
+def grade_lock(paths: Paths) -> AbstractContextManager[bool]:
     """Try to become the one grade run; yields whether that worked."""
-    paths.data_dir.mkdir(parents=True, exist_ok=True)
-    with (paths.data_dir / "grade.lock").open("w") as handle:
-        try:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            _logger.warning("grade.lock is held: another grade run is going")
-            yield False
-            return
-        try:
-            yield True
-        finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+    return try_exclusive(paths, "grade")
 
 
 def waiting(paths: Paths) -> bool:

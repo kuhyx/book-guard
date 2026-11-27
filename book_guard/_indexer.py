@@ -15,8 +15,6 @@ Two index runs never overlap (``index.lock``, separate from the ledger's
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-import fcntl
 import logging
 import os
 import shutil
@@ -26,9 +24,10 @@ from typing import TYPE_CHECKING, Final
 from book_guard import _indexjob
 from book_guard._attach import attach_dropped
 from book_guard._booktext import SUPPORTED
+from book_guard._flock import try_exclusive
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from contextlib import AbstractContextManager
     from pathlib import Path
 
     from book_guard._paths import Paths
@@ -38,21 +37,9 @@ _logger: Final = logging.getLogger(__name__)
 INDEX_UNIT: Final = "book-guard-index.service"
 
 
-@contextmanager
-def index_lock(paths: Paths) -> Iterator[bool]:
+def index_lock(paths: Paths) -> AbstractContextManager[bool]:
     """Try to become the one index run; yields whether that worked."""
-    paths.data_dir.mkdir(parents=True, exist_ok=True)
-    with (paths.data_dir / "index.lock").open("w") as handle:
-        try:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            _logger.warning("index.lock is held: another index run is going")
-            yield False
-            return
-        try:
-            yield True
-        finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+    return try_exclusive(paths, "index")
 
 
 def queued(paths: Paths) -> list[Path]:

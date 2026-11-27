@@ -85,6 +85,16 @@ repos:
       # Two workers fit capped.sh's CPU share (16 s -> 13.5 s); more workers are
       # slower under the CPU % cap.
       # An old .venv without pytest-xdist falls back to one process.
+      # CI's whole-tree duplicate-code run, here too (the per-file pylint above
+      # cannot see a copy between two files): a lock helper copied from
+      # _indexer into _grade_pass passed every local gate and turned CI red
+      # for three pushes. Whole tree, ~3 s.
+      - id: pylint-duplicate-code
+        name: pylint duplicate-code (whole tree, as CI)
+        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --disable=all --enable=duplicate-code book_guard scripts
+        language: system
+        files: ^(book_guard|scripts)/.*\.py$
+        pass_filenames: false
       - id: pytest
         name: pytest (100% branch coverage)
         entry: |

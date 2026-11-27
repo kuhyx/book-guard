@@ -12,12 +12,15 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import fcntl
-from typing import TYPE_CHECKING
+import logging
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from book_guard._paths import Paths
+
+_logger: Final = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -28,5 +31,26 @@ def exclusive(paths: Paths) -> Iterator[None]:
         fcntl.flock(handle, fcntl.LOCK_EX)
         try:
             yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+@contextmanager
+def try_exclusive(paths: Paths, name: str) -> Iterator[bool]:
+    """Try to become the one ``name`` run (grade, index); yields whether it did.
+
+    Never waits: a second run sees ``False`` at once and leaves the work to
+    the holder, unlike :func:`exclusive`, which queues writers.
+    """
+    paths.data_dir.mkdir(parents=True, exist_ok=True)
+    with (paths.data_dir / f"{name}.lock").open("w") as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            _logger.warning("%s.lock is held: another %s run is going", name, name)
+            yield False
+            return
+        try:
+            yield True
         finally:
             fcntl.flock(handle, fcntl.LOCK_UN)
