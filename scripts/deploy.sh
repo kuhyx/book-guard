@@ -65,13 +65,14 @@ claim_lease_owner() {
 # The staged build: gradle's up-to-date outputs carry each stage to the next.
 # A rerun after a failed install reuses the build number, so gradle would
 # leave the old APK and phone_deploy reads that as a killed build (exit 34):
-# drop the build artifacts (gitignored) first.
+# drop the build artifacts (gitignored) first. kernel and aot split the cold
+# Dart compile (40 s capped in one call); dart then only packages it.
 phone_build_and_install() {
   local stage
   claim_lease_owner
   rm -f "${APK}" "${LIVE}/app/build/app/outputs/apk/release/app-release.apk"
   "${PHONE_DEPLOY}" "${LIVE}/app" --release --stage prep || return
-  for stage in dart kotlin assemble; do
+  for stage in kernel aot dart kotlin assemble; do
     CAP_MEM=4G "${CAPPED}" "${PHONE_DEPLOY}" "${LIVE}/app" --stage "${stage}" || return
   done
   "${PHONE_DEPLOY}" "${LIVE}/app" --stage install

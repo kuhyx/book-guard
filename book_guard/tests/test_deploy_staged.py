@@ -12,7 +12,15 @@ import re
 
 SCRIPT: Path = Path(__file__).resolve().parents[2] / "scripts" / "deploy.sh"
 
-_STAGES = ("--stage prep", "dart", "kotlin", "assemble", "--stage install")
+_STAGES = (
+    "--stage prep",
+    "kernel",
+    "aot",
+    "dart",
+    "kotlin",
+    "assemble",
+    "--stage install",
+)
 
 
 def _code_lines() -> list[str]:
