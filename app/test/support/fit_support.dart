@@ -36,6 +36,8 @@ GuardState busyState() => GuardState.fromJson(busyJson());
 /// [busyState] as the PC writes it.
 Map<String, dynamic> busyJson() => {
   ...fullState(),
+  // Not reading: the session waiting for its summary is the Read tab's step.
+  'open_start': null,
   'pace_inputs': inputsJson(),
   'todo': ['Photograph page 42', 'Write the summary of 21-40', 'Read 20'],
   'sessions': [

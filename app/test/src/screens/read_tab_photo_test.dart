@@ -95,7 +95,12 @@ void main() {
   testWidgets('no check page is asked for, not even an old one', (
     tester,
   ) async {
-    await pump(tester, state: sampleState(), photo: _photo('c.jpg'));
+    // Not reading: the waiting session's summary is the step.
+    await pump(
+      tester,
+      state: sampleState({'open_start': null}),
+      photo: _photo('c.jpg'),
+    );
     expect(find.byIcon(Icons.fact_check), findsNothing);
     expect(spoken('Submit summary'), findsOneWidget);
   });

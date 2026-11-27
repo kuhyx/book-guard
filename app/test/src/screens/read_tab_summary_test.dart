@@ -26,6 +26,7 @@ void main() {
     ReadTab(
       api: api,
       state: sampleState({
+        'open_start': null,
         'sessions': [
           {'id': 'session:c-d', 'status': 'needs-quiz', 'start_page': '21'},
         ],

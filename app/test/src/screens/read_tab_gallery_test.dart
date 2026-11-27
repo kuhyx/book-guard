@@ -53,6 +53,7 @@ void main() {
     await pump(
       tester,
       state: sampleState({
+        'open_start': null,
         'photos': [
           {'name': 'a.jpg', 'kind': 'page', 'page': 7, 'status': 'ok'},
         ],
