@@ -177,7 +177,8 @@ Read README.md first. These are the invariants that are easy to break.
   `book-guard-grade.service`'s (`_grade_pass.py`, `grade.lock`).
 - **Nothing credits without the grader** -- except a summary (150+ chars)
   that neither Claude nor the local model graded for `GRADER_GRACE` (5 min):
-  `quiz_one` credits it with `detail.graded == "0"`. `detail.grader` names
+  `quiz_one` credits it with `detail.graded == "0"` (a local call gets the
+  grace left, floor 45 s: `_local.leash`). `detail.grader` names
   who judged a graded row (`claude:<model>` / `local:<model>`). The MCP server and the
   app's request files are read-only / route through `_grading.quiz_one`.
   The one other way is the owner's CLI `book-guard accept SESSION --reason`
