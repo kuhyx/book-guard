@@ -16,8 +16,9 @@ from book_guard._books import register, switch
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._constants import GRADER_GRACE
 from book_guard._flock import exclusive
-from book_guard._grader_wait import start, stop, waited_out
+from book_guard._grader_wait import left, start, stop, waited_out
 from book_guard._http import UnavailableError
+from book_guard._local import leash
 from book_guard._lookup import lookup_book, remember
 from book_guard._openlibrary import BookInfo
 from book_guard._prompt import Context
@@ -129,7 +130,10 @@ def _grade_or_wait(
     if len(summary.strip()) >= MIN_SUMMARY_CHARS:  # a short one needs no model
         start(paths, sid)
     try:
-        verdict = grade(view.book, view.session, summary, model=model, context=context)
+        with leash(left(paths, sid)):
+            verdict = grade(
+                view.book, view.session, summary, model=model, context=context
+            )
     except ClaudeUnavailableError:
         if not waited_out(paths, sid):
             raise

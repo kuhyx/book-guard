@@ -109,3 +109,29 @@ def test_ollama_down_is_not_retried(
 
 def test_local_unavailable_is_a_claude_outage_to_every_caller() -> None:
     assert issubclass(LocalUnavailableError, ClaudeUnavailableError)
+
+
+@pytest.mark.parametrize(
+    ("asked", "used"),
+    [
+        (0, _local.LOCAL_FLOOR_SECONDS),
+        (100, 100),
+        (999, _local.LOCAL_TIMEOUT_SECONDS),
+    ],
+)
+def test_a_leash_caps_each_call_between_floor_and_ceiling(
+    monkeypatch: pytest.MonkeyPatch, asked: float, used: float
+) -> None:
+    """Past the grace a hung ollama no longer holds the credit for 180 s."""
+    seen: list[float] = []
+
+    def urlopen(_request: Request, timeout: float) -> io.BytesIO:
+        seen.append(timeout)
+        return io.BytesIO(json.dumps(_content('{"pass": true}')).encode())
+
+    monkeypatch.setattr(_local, "urlopen", urlopen)
+    with _local.leash(asked):
+        assert _local.leash_seconds() == used
+        _local.ask_local("sys", "prompt")
+    assert seen == [used]
+    assert _local.leash_seconds() == _local.LOCAL_TIMEOUT_SECONDS

@@ -15,13 +15,18 @@ a stored default drifts.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json
 import logging
-from typing import Final
+from typing import TYPE_CHECKING, Final
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from book_guard._claude import RETRY_NOTE, ClaudeUnavailableError, parse_answer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _logger: Final = logging.getLogger(__name__)
 
@@ -34,6 +39,12 @@ LOCAL_TIMEOUT_SECONDS: Final = 180
 """A cold start loads ~20 GB first (measured 2026-10-15: ~25 s); a warm
 vote on a real summary took ~5-10 s. Kept so a Claude timeout plus three
 local votes (240 + 3 x 180 s) stays inside the inbox unit's 15 min."""
+LOCAL_FLOOR_SECONDS: Final = 45
+"""The shortest leash (:func:`leash`): a cold load (~25 s) and a vote still
+fit. 2026-11-27: another client kept its own model on the card, every
+qwen3:32b call hung its full 180 s, and a credit past the grace came at
+9 min instead of 5."""
+_leash: ContextVar[float] = ContextVar("local_leash", default=LOCAL_TIMEOUT_SECONDS)
 
 MIN_CTX: Final = 8192
 CTX_STEP: Final = 4096
@@ -81,6 +92,26 @@ def _payload(system: str, prompt: str, images: list[str]) -> bytes:
     ).encode()
 
 
+@contextmanager
+def leash(seconds: float) -> Iterator[None]:
+    """Cap each local call in this block near ``seconds``.
+
+    Clamped to :data:`LOCAL_FLOOR_SECONDS`..:data:`LOCAL_TIMEOUT_SECONDS`;
+    the grader passes what is left of its grace, so a hung ollama cannot
+    hold an ungraded credit long past it.
+    """
+    token = _leash.set(min(LOCAL_TIMEOUT_SECONDS, max(LOCAL_FLOOR_SECONDS, seconds)))
+    try:
+        yield
+    finally:
+        _leash.reset(token)
+
+
+def leash_seconds() -> float:
+    """The timeout each local call gets here (see :func:`leash`)."""
+    return _leash.get()
+
+
 def _ask_once(system: str, prompt: str, images: list[str]) -> dict[str, object]:
     try:
         with urlopen(
@@ -89,7 +120,7 @@ def _ask_once(system: str, prompt: str, images: list[str]) -> dict[str, object]:
                 data=_payload(system, prompt, images),
                 headers={"Content-Type": "application/json"},
             ),
-            timeout=LOCAL_TIMEOUT_SECONDS,
+            timeout=_leash.get(),
         ) as response:
             reply = json.loads(response.read())
         content = str(reply["message"]["content"])

@@ -44,9 +44,13 @@ def _load(paths: Paths) -> dict[str, str]:
     return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
 
 
+def _now() -> datetime:
+    return datetime.now(tz=UTC)
+
+
 def start(paths: Paths, session_id: str, *, now: datetime | None = None) -> None:
     """Start ``session_id``'s clock unless it already runs."""
-    moment = now or datetime.now(tz=UTC)
+    moment = now or _now()
     with exclusive(paths):
         waits = _load(paths)
         if session_id not in waits:
@@ -56,12 +60,19 @@ def start(paths: Paths, session_id: str, *, now: datetime | None = None) -> None
 
 def waited_out(paths: Paths, session_id: str, *, now: datetime | None = None) -> bool:
     """Note a failed grading of ``session_id``; whether the grace has passed."""
-    moment = now or datetime.now(tz=UTC)
+    moment = now or _now()
     with exclusive(paths):
         waits = _load(paths)
         first = waits.setdefault(session_id, moment.isoformat())
         write_json(clock_file(paths), waits, indent=1)
     return moment - datetime.fromisoformat(first) >= GRADER_GRACE
+
+
+def left(paths: Paths, session_id: str) -> float:
+    """Seconds of ``session_id``'s grace left (all of it before its clock)."""
+    first = _load(paths).get(session_id)
+    gone = (_now() - datetime.fromisoformat(first)).total_seconds() if first else 0
+    return GRADER_GRACE.total_seconds() - gone
 
 
 def stop(paths: Paths, session_id: str) -> None:

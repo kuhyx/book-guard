@@ -7,14 +7,15 @@ publishes its photos at once and only starts that unit.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import json
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from book_guard import _actions, _cli, _grade_pass, _grader_wait, _grading
+from book_guard import _actions, _cli, _grade_pass, _grader_wait, _grading, _local
 from book_guard._claude import ClaudeUnavailableError
+from book_guard._constants import GRADER_GRACE
 from book_guard._requests import Response
 from book_guard._state import SessionView
 from book_guard.tests._flow_helpers import only_session, quiz_pair
@@ -112,3 +113,38 @@ def test_the_grade_command_says_when_another_runs(
     with _grade_pass.grade_lock(bg_paths):
         assert _cli.main(["grade"]) == 0
     assert "another grade run" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("waited", "leash"),
+    [
+        (timedelta(0), _local.LOCAL_TIMEOUT_SECONDS),
+        (timedelta(minutes=4), 60),
+        (timedelta(minutes=20), _local.LOCAL_FLOOR_SECONDS),
+    ],
+)
+def test_the_local_leash_is_the_grace_left(
+    bg_paths: Paths,
+    monkeypatch: pytest.MonkeyPatch,
+    waited: timedelta,
+    leash: float,
+) -> None:
+    """A retry late in the grace gives the local model only what is left."""
+    seen: list[float] = []
+
+    def grade(*_a: object, **_k: object) -> object:
+        seen.append(_local.leash_seconds())
+        msg = "down"
+        raise ClaudeUnavailableError(msg)
+
+    now = datetime(2026, 11, 27, 12, tzinfo=UTC)
+    monkeypatch.setattr(_grading, "grade", grade)
+    monkeypatch.setattr(_grader_wait, "_now", lambda: now)
+    view = SessionView(only_session(quiz_pair()), None, "needs-quiz")
+    _grader_wait.start(bg_paths, view.session.session_id, now=now - waited)
+    if waited < GRADER_GRACE:
+        with pytest.raises(ClaudeUnavailableError):
+            _grading.quiz_one(bg_paths, view, "x" * 200)
+    else:
+        assert _grading.quiz_one(bg_paths, view, "x" * 200).passed
+    assert seen == [pytest.approx(leash)]
