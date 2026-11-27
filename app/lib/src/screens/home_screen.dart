@@ -9,6 +9,7 @@ import 'package:book_guard_app/src/screens/diagnostics_button.dart';
 import 'package:book_guard_app/src/screens/home_nav_bar.dart';
 import 'package:book_guard_app/src/screens/late_cue.dart';
 import 'package:book_guard_app/src/screens/library_tab.dart';
+import 'package:book_guard_app/src/screens/phone_view.dart';
 import 'package:book_guard_app/src/screens/read_tab.dart';
 import 'package:book_guard_app/src/screens/status_tab.dart';
 import 'package:book_guard_app/src/summary_store.dart';
@@ -36,8 +37,7 @@ class HomeScreen extends StatefulWidget {
     this.lostPhoto,
   });
 
-  /// The photo Android kept when it stopped the app while the camera was
-  /// open; null on the desktop.
+  /// The photo Android kept when it killed the app mid-camera, or null.
   final LostPhoto? lostPhoto;
 
   /// On-device page reading; null on the desktop.
@@ -66,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _timer;
   List<JournalEntry> _journal = const [];
   List<Capture> _captures = const [];
+  Set<String> _grading = const {};
   int _waiting = 0;
 
   @override
@@ -111,10 +112,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// Sends what waits, refetches the snapshot, picks up late answers;
-  /// errors are shown, never thrown.
+  /// Draws the [PhoneView] before any network call.
+  Future<void> _showLocal(GuardState? state) async {
+    final view = await phoneView(widget.api, state);
+    if (mounted) setState(() => _apply(view));
+  }
+
+  void _apply(PhoneView view) {
+    _journal = view.journal;
+    _captures = view.captures;
+    _grading = view.grading;
+  }
+
+  /// Sends what waits, refetches, picks up late answers; never throws.
   Future<void> refresh() async {
     final api = widget.api;
+    await _showLocal(_state);
     Object? error;
     GuardState? state;
     var answers = <LateAnswer>[];
@@ -129,14 +142,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     for (final s in state?.sessions ?? const <SessionInfo>[]) {
       await api.settleGrading(s);
     }
-    final journal = await api.journal.load();
-    final captures = await api.captures.pending();
+    final view = await phoneView(api, state);
     if (!mounted) return;
     setState(() {
       _state = state;
       _error = error;
-      _journal = journal;
-      _captures = captures;
+      _apply(view);
       _waiting = waiting;
     });
     if (answers.isEmpty) return;
@@ -185,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         local: local,
         journal: _journal,
         captures: _captures,
+        grading: _grading,
       ),
       BookTab(
         api: widget.api,
@@ -229,8 +241,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       bottomNavigationBar: HomeNavBar(
         selected: _tab,
         onSelected: (i) => setState(() => _tab = i),
-        readWaiting:
-            (local?.needSummary ?? state?.needSummary ?? const []).isNotEmpty,
+        readWaiting: (local?.needSummary ?? state?.needSummary ?? const []).any(
+          (s) => !_grading.contains(s.id),
+        ),
       ),
     );
   }

@@ -32,8 +32,7 @@ export 'package:book_guard_app/src/snapshot.dart';
 /// answers; the last snapshot is kept in [store] so the app still shows
 /// where the reading stands with no network at all.
 class GuardApi {
-  /// Creates an API over [dav]; [store] keeps the outbox, the journal and
-  /// the last snapshot (memory if not given).
+  /// An API over [dav]; [store] (memory if not given) keeps the outbox.
   new(
     this.dav, {
     Random? random,
@@ -125,16 +124,18 @@ class GuardApi {
     return await _responses.wait(id) ?? _notYet;
   }
 
-  /// The PC has not answered yet; it will when it is on.
+  /// The PC has not answered yet.
   static const _notYet = GuardResponse(ok: false, code: 'not_yet');
 
   /// Queues one request on the device and, if the PC is reachable, waits
   /// for its answer. Offline it stays queued; the answer is picked up by
-  /// [collectAnswers] later, named by its [type].
+  /// [collectAnswers] later, named by its [type]. [wait] false: `queued` at
+  /// once, sent on the next refresh (kuhy, 2026-11-24: never wait).
   Future<GuardResponse> sendQueued(
     String type,
-    Map<String, Object?> body,
-  ) async {
+    Map<String, Object?> body, {
+    bool wait = true,
+  }) async {
     final id = newId();
     final payload = {'id': id, 'type': type, ...body};
     await outbox.put(
@@ -142,7 +143,7 @@ class GuardApi {
       Uint8List.fromList(utf8.encode(jsonEncode(payload))),
     );
     await store.write('$_pending$id', Uint8List.fromList(utf8.encode(type)));
-    if (await flush() > 0) {
+    if (!wait || await flush() > 0) {
       // Kept on the phone: it goes to the PC (and is graded) once reachable.
       return const GuardResponse(ok: true, code: 'queued');
     }

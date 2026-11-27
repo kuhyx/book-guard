@@ -239,9 +239,10 @@ class _SlowSendApi extends FakeApi {
   @override
   Future<GuardResponse> sendQueued(
     String type,
-    Map<String, Object?> body,
-  ) async {
+    Map<String, Object?> body, {
+    bool wait = true,
+  }) async {
     await _gate;
-    return await super.sendQueued(type, body);
+    return await super.sendQueued(type, body, wait: wait);
   }
 }

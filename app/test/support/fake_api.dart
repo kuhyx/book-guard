@@ -30,6 +30,12 @@ class FakeApi extends GuardApi {
   /// When set, [fetchState] throws it.
   Exception? fetchError;
 
+  /// When set, [sendQueued] throws it: the phone could not even queue.
+  Exception? queueError;
+
+  /// When set, [fetchState] waits for it: a slow or absent PC.
+  Future<void>? fetchGate;
+
   /// How many times the snapshot was fetched.
   int fetches = 0;
 
@@ -63,6 +69,7 @@ class FakeApi extends GuardApi {
   @override
   Future<GuardState?> fetchState() async {
     fetches++;
+    await fetchGate;
     final error = fetchError;
     if (error != null) throw error;
     return state;
@@ -135,9 +142,12 @@ class FakeApi extends GuardApi {
   @override
   Future<GuardResponse> sendQueued(
     String type,
-    Map<String, Object?> body,
-  ) async {
-    if (offline) {
+    Map<String, Object?> body, {
+    bool wait = true,
+  }) async {
+    final error = queueError;
+    if (error != null) throw error;
+    if (offline || !wait) {
       sent.add((type: type, body: body));
       return const GuardResponse(ok: true, code: 'queued');
     }

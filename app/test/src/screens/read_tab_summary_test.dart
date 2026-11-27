@@ -59,9 +59,16 @@ void main() {
     expect(find.byType(TextField), findsNothing);
   });
 
-  testWidgets('a passed summary is a green tick and cleared', (tester) async {
-    final answer = Completer<GuardResponse>();
-    api.onSend = (_) => answer.future;
+  testWidgets('a sent summary is queued at once, never waited on', (
+    tester,
+  ) async {
+    // kuhy, 2026-11-24: never wait on the PC. The verdict arrives later as
+    // a late answer; nothing here asks the PC.
+    var asked = false;
+    api.onSend = (_) {
+      asked = true;
+      return Completer<GuardResponse>().future;
+    };
     await pump(tester);
     // The page range is on the submit button, as numerals.
     expect(
@@ -72,90 +79,49 @@ void main() {
       findsOneWidget,
     );
     await submit(tester, '  Kaladin trains.  ');
-    await tester.pump();
-    // With the grader: the pen in a spinner, no button.
-    expect(busyBar(), findsOneWidget);
-    expect(buttonSpoken('Submit summary'), findsNothing);
-
-    answer.complete(const GuardResponse(ok: true, passed: true));
     await settle(tester);
+    expect(asked, isFalse);
     expect(api.sent.single.type, 'summary');
     expect(api.sent.single.body, {
       'session_id': 'session:c-d',
       'summary': 'Kaladin trains.',
     });
-    expect(busyBar(), findsNothing);
-    expect(cueOf(CueKind.ok), findsOneWidget);
-    expect(cueOf(CueKind.error), findsNothing);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      '',
-    );
+    // The home screen refreshes at once and moves the tab on.
     expect(changed, 1);
-  });
-
-  testWidgets(
-    'a failed summary is a red cross, the topics, and kept for editing',
-    (tester) async {
-      api.onSend = (_) async => const GuardResponse(
-        ok: true,
-        code: 'failed',
-        passed: false,
-        data: {
-          'missing': ['the habit loop', 'Kaladin'],
-        },
-      );
-      await pump(tester);
-      await submit(tester, 'stuff happened');
-      await settle(tester);
-      expect(cueOf(CueKind.error), findsOneWidget);
-      // How many topics are missing, then each one quoted; a retry arrow.
-      expect(
-        find.descendant(of: cueOf(CueKind.error), matching: find.text('2')),
-        findsOneWidget,
-      );
-      expect(find.text('“the habit loop”'), findsOneWidget);
-      expect(find.text('“Kaladin”'), findsOneWidget);
-      expect(spoken('rewrite'), findsOneWidget);
-      expect(find.text('stuff happened'), findsOneWidget);
-    },
-  );
-
-  testWidgets('an unanswered request is neutral', (tester) async {
-    api.onSend = (_) async => const GuardResponse(ok: false, code: 'not_yet');
-    await pump(tester);
-    await submit(tester, 'text');
-    await settle(tester);
-    // Still with the grader: the spinner, neither a tick nor a cross.
-    expect(busyBar(), findsOneWidget);
-    expect(cueOf(CueKind.ok), findsNothing);
+    expect(buttonSpoken('Submit summary'), findsNothing);
     expect(cueOf(CueKind.error), findsNothing);
   });
 
-  testWidgets('a send failure shows an error and keeps grading text', (
+  testWidgets('a summary with the grader frees the next start', (tester) async {
+    await pumpTab(
+      tester,
+      ReadTab(
+        api: api,
+        state: sampleState({
+          'open_start': null,
+          'sessions': [
+            {'id': 'session:c-d', 'status': 'needs-quiz', 'start_page': '21'},
+          ],
+        }),
+        desktop: false,
+        onChanged: () async {},
+        grading: const {'session:c-d'},
+      ),
+    );
+    expect(spoken('Submit summary'), findsNothing);
+    expect(spoken('Start reading'), findsOneWidget);
+  });
+
+  testWidgets('a summary the phone cannot queue shows an error, text kept', (
     tester,
   ) async {
-    api.onSend = (_) async => throw shareDown();
+    api.queueError = shareDown();
     await pump(tester);
     await submit(tester, 'text');
     await settle(tester);
     expect(cueOf(CueKind.error), findsOneWidget);
     expect(busyBar(), findsNothing);
-    expect(changed, 1);
-  });
-
-  testWidgets('leaving mid-grading does not touch the dead tab', (
-    tester,
-  ) async {
-    final answer = Completer<GuardResponse>();
-    api.onSend = (_) => answer.future;
-    await pump(tester);
-    await submit(tester, 'text');
-    await tester.pump();
-    await tester.pumpWidget(const SizedBox());
-    answer.complete(const GuardResponse(ok: true, code: 'passed'));
-    await settle(tester);
-    expect(find.byType(StatusCue), findsNothing);
+    expect(find.text('text'), findsOneWidget);
     expect(changed, 1);
   });
 }

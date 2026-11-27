@@ -35,6 +35,7 @@ class ReadTab extends StatefulWidget {
     this.local,
     this.journal = const [],
     this.captures = const [],
+    this.grading = const {},
     this.clock = DateTime.now,
   });
 
@@ -65,6 +66,10 @@ class ReadTab extends StatefulWidget {
   /// Photos back from the camera that were never sent.
   final List<Capture> captures;
 
+  /// Sessions whose summary is out with the grader: a sent summary is done
+  /// for "one session at a time", so the next start is offered meanwhile.
+  final Set<String> grading;
+
   /// Now; replaced in tests.
   final DateTime Function() clock;
 
@@ -81,8 +86,13 @@ class _ReadTabState extends State<ReadTab> {
     return local != null ? local.openStart : widget.state?.openStart;
   }
 
-  List<SessionInfo> get _quiz =>
-      widget.local?.needSummary ?? widget.state?.needSummary ?? const [];
+  List<SessionInfo> get _quiz => [
+    for (final s
+        in widget.local?.needSummary ??
+            widget.state?.needSummary ??
+            const <SessionInfo>[])
+      if (!widget.grading.contains(s.id)) s,
+  ];
 
   Future<void> _run(String stage, Future<void> Function() action) async {
     setState(() => _busy = true);
@@ -155,6 +165,7 @@ class _ReadTabState extends State<ReadTab> {
     ),
     isbn: widget.state?.book?.isbn,
     show: _show,
+    onDelivered: widget.onChanged,
   );
 
   void _show(PhotoStatus status) {

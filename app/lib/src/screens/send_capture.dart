@@ -14,6 +14,10 @@ import 'package:material_ui/material_ui.dart';
 /// navigator, so a tab switch or a rebuild while the phone reads the photo
 /// cannot drop it (2026-11-22: four scans in a row ended in "review-left").
 /// Every step is a lifecycle event for the PC's log.
+///
+/// Returns once the photo is queued on the phone: the reader never waits on
+/// the PC (kuhy, 2026-11-24). The upload and the PC's reading go on in the
+/// background, drawn through [show]; [onDelivered] runs when they end.
 Future<void> sendCapture({
   required GuardApi api,
   required NavigatorState navigator,
@@ -23,6 +27,7 @@ Future<void> sendCapture({
   required PageContext pageContext,
   required String? isbn,
   required void Function(PhotoStatus status) show,
+  Future<void> Function()? onDelivered,
 }) async {
   final attempt = {'attempt': capture.id};
   if (reader != null) show(PhotoStatus.reading);
@@ -67,12 +72,33 @@ Future<void> sendCapture({
   );
   await api.captures.drop(capture);
   await api.errors.event('photo', 'queued', {...attempt, 'photo': name});
-  final sent = await deliverPhoto(
-    api,
-    name: name,
-    attempt: capture.id,
-    page: page,
-    onSent: show,
+  show(PhotoStatus.saved(page));
+  unawaited(
+    _deliver(api, name, capture.id, page, show, onDelivered ?? () async {}),
   );
-  show(sent.status);
+}
+
+/// The queued photo's trip to the PC, off the reader's path: a failure is
+/// logged, never thrown at a tab that has moved on.
+Future<void> _deliver(
+  GuardApi api,
+  String name,
+  String attempt,
+  int page,
+  void Function(PhotoStatus status) show,
+  Future<void> Function() onDelivered,
+) async {
+  try {
+    final sent = await deliverPhoto(
+      api,
+      name: name,
+      attempt: attempt,
+      page: page,
+      onSent: show,
+    );
+    show(sent.status);
+  } on Exception catch (error) {
+    await api.errors.log('photo', 'delivery failed: $error', {'photo': name});
+  }
+  await onDelivered();
 }

@@ -66,7 +66,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(LinearProgressIndicator), findsNothing);
-    expect(changed, 1);
+    // Refreshed when queued, and again when the PC had read it.
+    expect(changed, 2);
   });
 
   testWidgets('desktop, mid-session: stop photo from a file', (tester) async {
@@ -115,26 +116,28 @@ void main() {
     expect(cueOf(CueKind.warn), findsOneWidget);
   });
 
-  testWidgets('buttons stay locked until the PC has read the photo', (
-    tester,
-  ) async {
+  testWidgets('the next step is free once the photo is queued', (tester) async {
+    // kuhy, 2026-11-24: never wait on the PC. The photo is queued on the
+    // phone, the tab refreshes at once, and the PC's reading arrives later
+    // as a cue.
     final read = Completer<PhotoInfo?>();
     final slow = _SlowApi(read.future);
+    var refreshes = 0;
     await pumpTab(
       tester,
       ReadTab(
         api: slow,
         state: null,
         desktop: false,
-        onChanged: () async {},
+        onChanged: () async => refreshes++,
         photoSource: ({required camera}) async => _photo('s.jpg'),
       ),
     );
     await tapAndType(tester, spoken('Start reading'));
     expect(cueWith(Icons.cloud_upload), findsOneWidget);
-    // Being checked: the camera in a spinner, no button at all.
-    expect(busyBar(), findsOneWidget);
-    expect(buttonSpoken('Start reading'), findsNothing);
+    expect(busyBar(), findsNothing);
+    expect(buttonSpoken('Start reading'), findsOneWidget);
+    expect(refreshes, 1);
     read.complete(reading(name: 'start_s.jpg', page: 3));
     await settle(tester);
     expect(cueOf(CueKind.ok), findsOneWidget);
@@ -142,6 +145,7 @@ void main() {
       find.descendant(of: cueOf(CueKind.ok), matching: find.text('3')),
       findsOneWidget,
     );
+    expect(refreshes, 2);
   });
 
   testWidgets('a result arriving after the tab closed is dropped', (

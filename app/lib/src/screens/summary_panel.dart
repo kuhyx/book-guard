@@ -130,10 +130,12 @@ class _SummaryPanelState extends State<SummaryPanel> {
     });
     final GuardResponse response;
     try {
+      // Queued, never waited on: the verdict comes back as a late answer
+      // and the Read tab moves on at once (the summary is with the grader).
       response = await widget.api.sendQueued('summary', {
         'session_id': session.id,
         'summary': _text.text.trim(),
-      });
+      }, wait: false);
     } on Exception catch (error) {
       unawaited(widget.api.errors.log('summary', '$error'));
       await widget.api.cancelGrading(session.id); // the draft stays
