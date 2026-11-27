@@ -100,6 +100,30 @@ def test_notify_skipped_headless_or_empty(monkeypatch: pytest.MonkeyPatch) -> No
     assert sent == []
 
 
+def test_notify_survives_a_hung_or_missing_daemon(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A dead notification daemon costs at most 0.9 s and never raises."""
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    leashes: list[float] = []
+
+    def hung(argv: list[str], **kwargs: Any) -> None:
+        leashes.append(kwargs["timeout"])
+        raise subprocess.TimeoutExpired(argv, kwargs["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", hung)
+    _actions.notify("\N{CAMERA} 12", icon="camera-photo")
+    assert leashes == [_actions.NOTIFY_TIMEOUT_S]
+    assert _actions.NOTIFY_TIMEOUT_S <= 0.9
+
+    def gone(argv: list[str], **_k: Any) -> None:
+        raise FileNotFoundError(argv[0])
+
+    monkeypatch.setattr(subprocess, "run", gone)
+    _actions.notify("\N{CAMERA} 12")
+    assert [r.levelname for r in caplog.records] == ["WARNING", "WARNING"]
+
+
 def test_process_waits_for_settling_uploads(
     bg_paths: Paths, monkeypatch: pytest.MonkeyPatch
 ) -> None:

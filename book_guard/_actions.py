@@ -43,13 +43,36 @@ _SETTLE_WAIT_MAX: Final = 120.0
 """Longest a run waits for in-flight uploads before leaving them to the timer."""
 
 
+NOTIFY_TIMEOUT_S: Final = 0.9
+"""Longest a pass waits on ``notify-send``: a dead daemon blocks it for good.
+
+A short leash, not fire-and-forget ``Popen``: the oneshot unit's cgroup dies
+at exit and would drop a slow toast, and the long-running lock window would
+leak unreaped children.
+"""
+
+
 def notify(body: str, *, icon: str = "dialog-information") -> None:
-    """A glyph-only desktop notification; silently skipped headless or empty."""
+    """A glyph-only desktop notification; silently skipped headless or empty.
+
+    A hung or missing notification daemon only logs: the toast is a courtesy,
+    never a reason to delay or fail the pass that sent it.
+    """
     notifier = shutil.which("notify-send")
     if notifier and body:
-        subprocess.run(
-            [notifier, "-i", icon, GLYPH[BOOK], body], check=False, timeout=10
-        )
+        try:
+            subprocess.run(
+                [notifier, "-i", icon, GLYPH[BOOK], body],
+                check=False,
+                timeout=NOTIFY_TIMEOUT_S,
+                # Detached stdio: a helper the notifier forks cannot hold the
+                # caller's pipes (the journal, a lock window's log) open.
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            _logger.warning("desktop toast skipped: %s", exc)
 
 
 def process(
