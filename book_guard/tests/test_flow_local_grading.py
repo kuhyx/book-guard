@@ -103,21 +103,58 @@ def test_the_first_failed_vote_stops_the_rest(monkeypatch: pytest.MonkeyPatch) -
     assert len(calls) <= _quiz.GRADER_VOTES
 
 
+PAGE = "It was a dark night when the ship left the harbour."
+
+
 @pytest.mark.parametrize(
     ("answer", "passed"),
     [
         # qwen3 2026-11-27: "too vague" fails on its own on-topic judgement.
-        ({"passed": False, "off_topic": False, "contradicts": False}, True),
-        ({"passed": True, "off_topic": True, "contradicts": False}, False),
-        ({"passed": True, "off_topic": False, "contradicts": True}, False),
-        # Without both flags (Haiku's answer) its own verdict stands.
+        ({"passed": False, "off_topic": False, "contradicts": ""}, True),
+        ({"passed": True, "off_topic": True, "contradicts": ""}, False),
+        # Photos only: the grader names another book, never another part.
+        ({"passed": False, "other_book": False, "contradicts": ""}, True),
+        ({"passed": True, "other_book": True, "contradicts": ""}, False),
+        # A contradiction counts only when its quote is in the text shown,
+        # OCR spacing and case aside.
+        ({"passed": True, "other_book": False, "contradicts": "A DARK  night,"}, False),
+        ({"passed": False, "other_book": False, "contradicts": "Xi was silent"}, True),
+        ({"passed": False, "other_book": False, "contradicts": True}, True),
+        ({"passed": False, "other_book": False, "contradicts": "dark"}, True),
+        # Without both fields (Haiku's answer) its own verdict stands.
         ({"passed": False, "off_topic": False}, False),
-        ({"passed": True, "off_topic": "no", "contradicts": False}, True),
+        ({"passed": True, "off_topic": "no", "contradicts": ""}, True),
     ],
 )
-def test_the_two_flags_decide_a_local_vote(
-    answer: dict[str, object], passed: bool
-) -> None:
-    vote = _quiz._vote({**answer, "feedback": "f", "missing": ["a topic"]})
+def test_the_flags_decide_a_local_vote(answer: dict[str, object], passed: bool) -> None:
+    vote = _quiz._vote({**answer, "feedback": "f", "missing": ["a topic"]}, PAGE)
     assert vote.passed is passed
     assert vote.missing == (() if passed else ("a topic",))
+    # An overturned verdict's feedback argued the losing side: dropped.
+    assert vote.feedback == ("f" if passed is (answer["passed"] is True) else "")
+
+
+def test_an_overturned_vote_does_not_speak_for_the_verdict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    answers = iter(
+        [
+            {
+                "passed": False,
+                "feedback": "too vague",
+                "other_book": False,
+                "contradicts": "",
+            },
+            {
+                "passed": True,
+                "feedback": "matches",
+                "other_book": False,
+                "contradicts": "",
+            },
+            {"passed": False, "feedback": "no", "other_book": True, "contradicts": ""},
+        ]
+    )
+    monkeypatch.setattr(_quiz, "ask", _claude_down)
+    monkeypatch.setattr(_local, "ask_local", lambda _s, _p: next(answers))
+    verdict = _quiz.grade(make_book(), only_session(quiz_pair()), SUMMARY)
+    assert (verdict.passed, verdict.feedback) == (True, "matches")

@@ -132,7 +132,10 @@ def test_build_prompt_without_book_or_span() -> None:
         in prompt
     )
     assert "the book's own text" not in prompt
-    assert "it is plainly about another book, another part of this" in prompt
+    assert "it is plainly about another book or subject" in prompt
+    # With only two photos, the pages between are no "other part" (row 1 of
+    # the real rejects, local qwen3, 2026-11-27).
+    assert "never a sign of another part" in prompt
     assert "Use the book's text to see" not in prompt
 
 

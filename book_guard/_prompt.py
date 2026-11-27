@@ -153,15 +153,16 @@ def _rules(*, has_text: bool) -> list[str]:
             " content: ignore them."
         ),
         (
-            "PASS unless one of two things holds. (1) It is off-topic --"
-            " being about the right book is not enough, a summary of its other"
-            " chapters is off-topic too: "
+            "PASS unless one of two things holds. (1) It is off-topic"
             + (
-                "nothing in it matches the book's text above (another part of"
-                " the book, or another book)."
+                " -- being about the right book is not enough, a summary of its"
+                " other chapters is off-topic too: nothing in it matches the"
+                " book's text above (another part of the book, or another"
+                " book)."
                 if has_text
-                else "it is plainly about another book, another part of this"
-                " book, or another subject."
+                else ": it is plainly about another book or subject. You see"
+                " only the first and last page: content that is not on them"
+                " is the pages between, never a sign of another part."
             )
             + f" (2) It clearly contradicts {source} (a direct conflict -- not"
             " a detail you cannot find)." + between + " Minor inaccuracies,"
@@ -173,17 +174,41 @@ def _rules(*, has_text: bool) -> list[str]:
 
 
 LOCAL_REMINDER: Final = (
+    "\n\nREMINDER before you answer: you see only the first and last page, so"
+    " most of a real summary is on pages you have not seen -- expected, never"
+    " a reason to fail. PASS unless the summary is plainly about another book"
+    " or subject, or directly contradicts the photographed pages. A short,"
+    " vague or broad summary still PASSES."
+    ' Add two fields to the JSON: "other_book": true|false (true only when it'
+    " is about a different book or subject: other people, places and events"
+    " than this book's -- the same people at another time is this book) and"
+    ' "contradicts": "" -- or, only for a direct conflict, the words of the'
+    " photographed page that the summary conflicts with, copied exactly;"
+    " something you cannot find there is no conflict."
+)
+"""Appended only for the local fallback grader (:mod:`book_guard._local`)
+when it has only the photos: measured 2026-10-15 on the reader's 15 real
+summaries, both local qwen3 models failed genuine ones *because* they went
+past the photos -- the rule read backwards. 2026-11-27: asked "off_topic",
+qwen3 still failed a real Tiananmen summary of a Xi biography (pp. 151-203)
+because the photos did not show it; it now names only another book.
+Haiku's prompt is untouched."""
+
+LOCAL_REMINDER_TEXT: Final = (
     "\n\nREMINDER before you answer: PASS unless the summary is about another"
     " book or another part of this one, or directly contradicts the text. A"
     " short, vague or broad summary that leaves out most events still PASSES"
     " when it is about these pages; missing details and claims that are also"
     " on the photographed pages are never a reason to fail."
-    ' Add two fields to the JSON: "off_topic": true|false (another book or'
-    ' another part of this one) and "contradicts": true|false (a direct'
-    " conflict with the text)."
+    ' Add two fields to the JSON: "off_topic": true|false (nothing in it'
+    " matches the book's text above: another book or another part of this"
+    ' one) and "contradicts": "" -- or, only for a direct conflict, the words'
+    " of the text above that the summary conflicts with, copied exactly."
 )
-"""Appended only for the local fallback grader (:mod:`book_guard._local`):
-measured 2026-10-15 on the reader's 15 real summaries, both local qwen3
-models failed genuine ones *because* they went past the photos -- the rule
-read backwards (2026-11-27: restated for the off-topic-only rule). Haiku's
-prompt is untouched."""
+"""The local reminder when the book's text is in the prompt: with it the
+grader can tell another part of the book, so "off_topic" asks for that."""
+
+
+def local_reminder(*, has_text: bool) -> str:
+    """The reminder the local grader gets after a first photo summary."""
+    return LOCAL_REMINDER_TEXT if has_text else LOCAL_REMINDER

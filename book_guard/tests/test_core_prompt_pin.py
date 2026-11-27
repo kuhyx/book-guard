@@ -26,7 +26,7 @@ import pytest
 
 from book_guard._books import Book
 from book_guard._photos import PhotoRecord
-from book_guard._prompt import LOCAL_REMINDER, Context, build_prompt
+from book_guard._prompt import Context, build_prompt, local_reminder
 from book_guard._sessions import Session
 
 T = datetime(2026, 10, 5, 16, 0, tzinfo=UTC)
@@ -56,13 +56,15 @@ CASES = {
     "photos+span": (Context(span="the book's own words"), False),
     "rewrite": (Context(checklist=("the river", "the money")), False),
     "photos+local": (Context(), True),
+    "photos+span+local": (Context(span="the book's own words"), True),
 }
 
 PINNED = {
-    "photos": "694674e7120da76ce4c0f2dede178fb8c5f210afbb299a763378d71443fe4a05",
+    "photos": "db483d3a704629b8350b7c66c2b088587e169276daa15d4b3f58c92d36ab48e0",
     "photos+span": "79edc1709be8cb9303500f0ce017bd675f33e1bb0d028f58fd488755e5040cd3",
     "rewrite": "1bfb4e6735f665a27baca9aa8ac1c194f8d045696a941a3e67c4e526ab2e5d38",
-    "photos+local": "8c21283aea629ef9439f9df281db09cfde5b46fbb89987000f8d4ae3df7bf307",
+    "photos+local": "772d48b1abee61d08418ee61409f058a4ae3f9bc84cacd11ef47083cbac4f92f",
+    "photos+span+local": "1559a5bf47523fd280d77aca1cd00d3802c47c09cbc324f3244142d87d6c0432",
 }
 
 
@@ -71,7 +73,7 @@ def test_the_photo_prompt_is_byte_identical(case: str) -> None:
     context, local = CASES[case]
     prompt = build_prompt(BOOK, SESSION, SUMMARY, context)
     if local:
-        prompt += LOCAL_REMINDER
+        prompt += local_reminder(has_text=bool(context.span))
     assert hashlib.sha256(prompt.encode()).hexdigest() == PINNED[case]
 
 

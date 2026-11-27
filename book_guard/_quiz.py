@@ -22,13 +22,13 @@ from book_guard._inclusive import COUNTING, INCLUSIVE
 from book_guard._ledger import CREDIT, REJECT, Entry
 from book_guard._photos import MANUAL_START_NAME, TYPED
 from book_guard._prompt import (
-    LOCAL_REMINDER,
     SYSTEM,
     Context,
     build_prompt,
+    local_reminder,
 )
 from book_guard._prompt_parts import MAX_MISSING
-from book_guard._votes import claude_known_out, claude_votes
+from book_guard._votes import claude_known_out, claude_votes, flagged_pass
 
 if TYPE_CHECKING:
     from book_guard._books import Book
@@ -90,39 +90,54 @@ def grade(
     except ClaudeUnavailableError as exc:
         _logger.warning("Claude did not grade (%s); asking %s", exc, _local.LOCAL_MODEL)
         grader = f"local:{_local.LOCAL_MODEL}"
-        # One after another: the card holds one copy of the model.
-        # The reminder is about photographed pages: an in-app session has none.
-        rewrite = bool(context and context.checklist)
-        local_prompt = prompt + ("" if rewrite or session.estimated else LOCAL_REMINDER)
-        answers = [_local.ask_local(SYSTEM, local_prompt) for _ in range(GRADER_VOTES)]
-        # Graded after all: nothing waits on Claude, so the app stops saying
-        # so -- unless the outage names its reset (then Claude is skipped
-        # until it, and the flag stays to say so).
-        if not claude_known_out():
-            _errlog.claude_ok(_paths.paths())
-    votes = [_vote(a) for a in answers]
+        answers = _local_answers(session, prompt, context)
+    # What a local contradiction must quote: the text the grader was shown.
+    source = "\n".join(
+        [context.span if context else "", *(p.text for p in session.evidence)]
+    )
+    votes = [_vote(a, source) for a in answers]
     passed = sum(v.passed for v in votes) * 2 > len(votes)
-    chosen = next(v for v in votes if v.passed == passed)
+    winners = [v for v in votes if v.passed == passed]
+    # A vote whose feedback was dropped (overturned) speaks last.
+    chosen = next((v for v in winners if v.feedback), winners[0])
     return replace(chosen, grader=grader, votes=tuple(v.passed for v in votes))
 
 
-def _vote(answer: dict[str, object]) -> Verdict:
+def _local_answers(
+    session: Session, prompt: str, context: Context | None
+) -> list[dict[str, object]]:
+    """Every vote re-cast on the local model, one after another.
+
+    The card holds one copy of the model. The reminder is about photographed
+    pages: an in-app session has none, a rewrite has its checklist.
+    """
+    rewrite = bool(context and context.checklist)
+    reminder = local_reminder(has_text=bool(context and context.span))
+    local_prompt = prompt + ("" if rewrite or session.estimated else reminder)
+    answers = [_local.ask_local(SYSTEM, local_prompt) for _ in range(GRADER_VOTES)]
+    # Graded after all: nothing waits on Claude, so the app stops saying so --
+    # unless the outage names its reset (then Claude is skipped until it, and
+    # the flag stays to say so).
+    if not claude_known_out():
+        _errlog.claude_ok(_paths.paths())
+    return answers
+
+
+def _vote(answer: dict[str, object], source: str = "") -> Verdict:
     """One grader answer; a pass carries no missing list.
 
-    An answer naming ``off_topic`` and ``contradicts`` (the local grader's
-    :data:`LOCAL_REMINDER` asks for them) passes unless one is true: qwen3
-    failed on-topic summaries for "too vague" against its own prompt
-    (2026-11-27), so its two judgements decide, not its verdict.
+    A local answer's flags decide over its own verdict
+    (:func:`book_guard._votes.flagged_pass`); its feedback then argues the
+    side that lost, so it is dropped.
     """
-    flags = (answer.get("off_topic"), answer.get("contradicts"))
-    if all(isinstance(f, bool) for f in flags):
-        passed = not any(flags)
-    else:
-        passed = answer.get("passed") is True
+    said = answer.get("passed") is True
+    flagged = flagged_pass(answer, source)
+    passed = said if flagged is None else flagged
+    feedback = str(answer.get("feedback") or "") if passed is said else ""
     raw = answer.get("missing")
     items = [str(m).strip() for m in raw] if isinstance(raw, list) else []
     missing = () if passed else tuple(m for m in items if m)[:MAX_MISSING]
-    return Verdict(passed, str(answer.get("feedback") or ""), missing)
+    return Verdict(passed, feedback, missing)
 
 
 def bonus_eligible(session: Session, *, on_pace: bool = False) -> bool:

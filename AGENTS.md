@@ -98,8 +98,9 @@ Read README.md first. These are the invariants that are easy to break.
   cap) does the fallback in `_local.py` (ollama) answer: `LOCAL_MODEL`
   (`qwen3:32b`) re-casts *all* grading votes (`_votes.py`: no Claude call
   while `claude_down.json` names a reset ahead), `LOCAL_VISION_MODEL` reads a
-  contents photo -- constants too. The local grader gets `LOCAL_REMINDER`
-  appended; Haiku's prompt never does. Re-run `scripts/replay_verdicts.py
+  contents photo -- constants too. The local grader gets `local_reminder`
+  appended (Haiku never): its topic flag + a quoted contradiction decide its
+  vote (`_votes.flagged_pass`). Re-run `scripts/replay_verdicts.py
   --local` (the reader's real summaries) and `grader_suite.py --local`
   after changing either model.
 - **Isolated Claude calls.** `_claude.ask` runs the CLI with
