@@ -63,11 +63,13 @@ def test_kick_in_the_sandbox_does_nothing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("BOOK_GUARD_ROOT", str(tmp_path))
-    _indexer.kick()  # conftest's systemctl stub would raise if it ran
+    _indexer.kick(
+        _indexer.INDEX_UNIT
+    )  # conftest's systemctl stub would raise if it ran
 
 
 def test_kick_without_systemctl(caplog: pytest.LogCaptureFixture) -> None:
-    _indexer.kick()
+    _indexer.kick(_indexer.INDEX_UNIT)
     assert "no systemctl" in caplog.text
 
 
@@ -87,7 +89,7 @@ def test_kick_starts_the_unit_without_waiting(
 
     monkeypatch.setattr("book_guard._indexer.shutil.which", lambda _n: "/bin/sc")
     monkeypatch.setattr("book_guard._indexer.subprocess.run", run)
-    _indexer.kick()
+    _indexer.kick(_indexer.INDEX_UNIT)
     assert calls == [["/bin/sc", "--user", "start", "--no-block", _indexer.INDEX_UNIT]]
     assert ("could not start" in caplog.text) is logged
 
@@ -106,7 +108,7 @@ def test_process_marks_and_kicks_but_never_indexes(
     add_book(bg_paths)
     drop(bg_paths)
     kicked: list[bool] = []
-    monkeypatch.setattr("book_guard._actions.kick", lambda: kicked.append(True))
+    monkeypatch.setattr("book_guard._actions.kick", lambda _u: kicked.append(True))
     _cli.main(["process"])
     assert kicked == [True]
     assert (bg_paths.books / "war.txt").exists()  # photos first: not indexed

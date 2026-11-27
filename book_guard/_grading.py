@@ -16,13 +16,13 @@ from book_guard._books import register, switch
 from book_guard._claude import DEFAULT_MODEL, ClaudeUnavailableError
 from book_guard._constants import GRADER_GRACE
 from book_guard._flock import exclusive
-from book_guard._grader_wait import stop, waited_out
+from book_guard._grader_wait import start, stop, waited_out
 from book_guard._http import UnavailableError
 from book_guard._lookup import lookup_book, remember
 from book_guard._openlibrary import BookInfo
 from book_guard._prompt import Context
 from book_guard._publish import write_next_file
-from book_guard._quiz import Verdict, grade, record_verdict
+from book_guard._quiz import MIN_SUMMARY_CHARS, Verdict, grade, record_verdict
 from book_guard._state import snapshot
 from book_guard._summaries import save_unlocked
 
@@ -126,6 +126,8 @@ def _grade_or_wait(
     span = find_span(paths, view.book.isbn if view.book else "", view.session)
     _logger.info("grading %s: book text %s", sid, span.reason)
     context = Context(span=span.text, checklist=_checklist(view))
+    if len(summary.strip()) >= MIN_SUMMARY_CHARS:  # a short one needs no model
+        start(paths, sid)
     try:
         verdict = grade(view.book, view.session, summary, model=model, context=context)
     except ClaudeUnavailableError:

@@ -10,7 +10,6 @@ three photos"; every other rule (pace, time per page, upload age) is code.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import date
 import logging
@@ -29,6 +28,7 @@ from book_guard._prompt import (
     build_prompt,
 )
 from book_guard._prompt_parts import MAX_MISSING
+from book_guard._votes import claude_known_out, claude_votes
 
 if TYPE_CHECKING:
     from book_guard._books import Book
@@ -86,12 +86,7 @@ def grade(
     # noisy (2026-10-03: the same summary passed twice and failed once).
     grader = f"claude:{model}"
     try:
-        with ThreadPoolExecutor(max_workers=GRADER_VOTES) as pool:
-            answers = list(
-                pool.map(
-                    lambda _: ask(SYSTEM, prompt, model=model), range(GRADER_VOTES)
-                )
-            )
+        answers = claude_votes(ask, GRADER_VOTES, SYSTEM, prompt, model)
     except ClaudeUnavailableError as exc:
         _logger.warning("Claude did not grade (%s); asking %s", exc, _local.LOCAL_MODEL)
         grader = f"local:{_local.LOCAL_MODEL}"
@@ -100,8 +95,11 @@ def grade(
         rewrite = bool(context and context.checklist)
         local_prompt = prompt + ("" if rewrite or session.estimated else LOCAL_REMINDER)
         answers = [_local.ask_local(SYSTEM, local_prompt) for _ in range(GRADER_VOTES)]
-        # Graded after all: nothing waits on Claude, so the app stops saying so.
-        _errlog.claude_ok(_paths.paths())
+        # Graded after all: nothing waits on Claude, so the app stops saying
+        # so -- unless the outage names its reset (then Claude is skipped
+        # until it, and the flag stays to say so).
+        if not claude_known_out():
+            _errlog.claude_ok(_paths.paths())
     votes = [_vote(a) for a in answers]
     passed = sum(v.passed for v in votes) * 2 > len(votes)
     chosen = next(v for v in votes if v.passed == passed)

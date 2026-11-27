@@ -129,4 +129,6 @@ POLL_INTERVAL_MS: Final = 30_000
 UPLOAD_SETTLE_SECONDS: Final = 5.0
 """A photo modified more recently than this may still be uploading."""
 
-CLAUDE_TIMEOUT_SECONDS: Final = 240
+CLAUDE_TIMEOUT_SECONDS: Final = 60
+"""One Claude call's cap (240 until 2026-11-27): a grade takes ~11 s, and
+anything slower is an outage the local model answers instead."""

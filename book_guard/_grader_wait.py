@@ -1,7 +1,8 @@
 # Copyright (c) 2026 Krzysztof Rudnicki. MIT License.
 """The outage clock: how long a summary has waited on an unreachable grader.
 
-The first failed grading of a session starts its clock; a graded summary
+A session's clock starts when its grading starts (kuhy, 2026-11-24: the
+grace runs from the submit, not from Claude's timeout); a graded summary
 stops it. Past :data:`GRADER_GRACE` the summary is credited ungraded, so
 Claude being down (or out of usage) never blocks the reader for long.
 """
@@ -41,6 +42,16 @@ def _load(paths: Paths) -> dict[str, str]:
         _logger.warning("unreadable %s (%s); restarting", target, exc)
         return {}
     return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
+
+
+def start(paths: Paths, session_id: str, *, now: datetime | None = None) -> None:
+    """Start ``session_id``'s clock unless it already runs."""
+    moment = now or datetime.now(tz=UTC)
+    with exclusive(paths):
+        waits = _load(paths)
+        if session_id not in waits:
+            waits[session_id] = moment.isoformat()
+            write_json(clock_file(paths), waits, indent=1)
 
 
 def waited_out(paths: Paths, session_id: str, *, now: datetime | None = None) -> bool:

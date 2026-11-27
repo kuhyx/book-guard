@@ -85,24 +85,24 @@ def mark_queued(paths: Paths) -> bool:
     return True
 
 
-def kick() -> None:
-    """Start the index unit without waiting; a sandbox runs ``index`` by hand."""
+def kick(unit: str) -> None:
+    """Start ``unit`` without waiting; a sandbox runs its command by hand."""
     if os.environ.get("BOOK_GUARD_ROOT"):
-        _logger.info("sandbox: book files wait for `book_guard index`")
+        _logger.info("sandbox: %s not started; run its command by hand", unit)
         return
     systemctl = shutil.which("systemctl")
     if systemctl is None:
-        _logger.warning("no systemctl; %s not started", INDEX_UNIT)
+        _logger.warning("no systemctl; %s not started", unit)
         return
     done = subprocess.run(
-        [systemctl, "--user", "start", "--no-block", INDEX_UNIT],
+        [systemctl, "--user", "start", "--no-block", unit],
         check=False,
         timeout=10,
         capture_output=True,
         text=True,
     )
     if done.returncode != 0:
-        _logger.warning("could not start %s: %s", INDEX_UNIT, done.stderr.strip())
+        _logger.warning("could not start %s: %s", unit, done.stderr.strip())
 
 
 def run_index(paths: Paths) -> list[str] | None:

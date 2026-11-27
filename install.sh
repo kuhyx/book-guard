@@ -25,6 +25,7 @@ readonly UNITS=(
     book-guard-index.service
     book-guard-index.path
     book-guard-index.timer
+    book-guard-grade.service
     book-guard-wheel-todo.service
     book-guard-wheel-todo.timer
 )

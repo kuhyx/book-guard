@@ -107,17 +107,44 @@ def _load(path: Path) -> dict[str, Any] | None:
     return raw if isinstance(raw, dict) else None
 
 
+GRADED: Final = frozenset({"summary"})
+"""Handled by the grade unit alone, never by the photo pass (``_grade_pass``)."""
+
+
+def pending_kinds(paths: Paths) -> set[str]:
+    """The types of the requests waiting now (malformed ones count as ``""``)."""
+    return {str((_load(p) or {}).get("type", "")) for p in _pending(paths.requests)}
+
+
+def _wanted(
+    request: dict[str, Any] | None, skip: frozenset[str], only: frozenset[str] | None
+) -> bool:
+    kind = str((request or {}).get("type", ""))
+    return kind not in skip and (only is None or kind in only)
+
+
 def handle_requests(
-    paths: Paths, handlers: dict[str, Callable[[Paths, dict[str, Any]], Response]]
+    paths: Paths,
+    handlers: dict[str, Callable[[Paths, dict[str, Any]], Response]],
+    *,
+    skip: frozenset[str] = frozenset(),
+    only: frozenset[str] | None = None,
 ) -> int:
     """Answer every pending request; returns how many were answered.
+
+    A type in ``skip``, or outside ``only`` when given, is left in place for
+    the pass that handles it.
 
     A request whose handler hits a Claude outage, or raises
     :class:`DeferredError` (it refers to a photo still in the inbox), is left
     in place and retried next pass -- the app keeps polling.
     """
     answered = 0
-    loaded = [(path, _load(path)) for path in _pending(paths.requests)]
+    loaded = [
+        (path, request)
+        for path in _pending(paths.requests)
+        if _wanted(request := _load(path), skip, only)
+    ]
     loaded.sort(key=lambda pair: (pair[1] or {}).get("type") not in FIRST)
     for path, request in loaded:
         rid = str(request.get("id", "")) if request else ""

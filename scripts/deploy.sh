@@ -38,6 +38,12 @@ git -C "${LIVE}" pull --ff-only --quiet origin main
   die "pip install into the system python failed"
 /usr/bin/python3 -c 'import book_guard._cli' ||
   die "the units' python cannot import book_guard"
+# The unit files ship with the code (a new one, like book-guard-grade, must
+# exist before a pass starts it); enabling stays install.sh's job.
+install -m 644 -t "${HOME}/.config/systemd/user" "${LIVE}"/book-guard*.service \
+  "${LIVE}"/book-guard*.path "${LIVE}"/book-guard*.timer ||
+  die "could not install the unit files"
+systemctl --user daemon-reload || die "systemctl --user daemon-reload failed"
 
 "${LIVE}/scripts/install_desktop.sh"
 [[ -s "${BUNDLE}" ]] || die "desktop bundle missing: ${BUNDLE}"

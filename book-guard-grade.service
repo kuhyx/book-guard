@@ -1,0 +1,15 @@
+[Unit]
+Description=Grade the summaries the book-guard app sent (off the photo pass)
+
+[Service]
+Type=oneshot
+# Started by each photo pass that finds a summary waiting (_grade_pass.kick),
+# so a photo is never behind a grading call. Installed into the system
+# python's user site-packages (install.sh): no WorkingDirectory.
+ExecStart=/usr/bin/python3 -m book_guard grade
+Nice=10
+IOSchedulingClass=idle
+CPUQuota=240%
+MemoryMax=4G
+# Three Claude votes (60 s cap each) or three local ones, then the grace.
+TimeoutStartSec=15min

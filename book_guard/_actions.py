@@ -15,15 +15,16 @@ from book_guard._autogrant import auto_grant
 from book_guard._books import current, normalise_chapters, register
 from book_guard._constants import ESCAPE_PHRASE, UPLOAD_SETTLE_SECONDS
 from book_guard._flock import exclusive
+from book_guard._grade_pass import GRADE_UNIT, waiting
 from book_guard._grading import register_isbn
 from book_guard._inbox import InboxResult, process_inbox, unsettled
-from book_guard._indexer import kick, mark_queued
+from book_guard._indexer import INDEX_UNIT, kick, mark_queued
 from book_guard._ledger import EASE, ESCAPE, ESCAPE_UNDONE, Entry
 from book_guard._openlibrary import BookInfo
 from book_guard._phone_logs import merge_phone, merge_reports
 from book_guard._pictos import BOOK, GLYPH, toast_body, toast_icon
 from book_guard._publish import write_next_file
-from book_guard._requests import handle_requests
+from book_guard._requests import GRADED, handle_requests
 from book_guard._state import Snapshot, awaiting_quiz, snapshot
 
 if TYPE_CHECKING:
@@ -113,9 +114,9 @@ def process(
     # take it themselves around each write, and a grading call must not
     # hold up the next photo pass. Book files are never indexed here --
     # photos come first; the index unit does it in the background.
-    handle_requests(paths, HANDLERS)
+    handle_requests(paths, HANDLERS, skip=GRADED)
     if mark_queued(paths):
-        kick()
+        kick(INDEX_UNIT)
     if grant := auto_grant(paths):
         _logger.info("%s: today asks no pages, bonus granted", grant.day)
     snap = snapshot(paths)
@@ -126,6 +127,9 @@ def process(
         write_next_file(paths, snap)
     if result.read:
         notify(toast_body(snap), icon=toast_icon(snap))
+    # Last: the photos are out before a summary is even looked at.
+    if waiting(paths):
+        kick(GRADE_UNIT)
     return result, snap
 
 
