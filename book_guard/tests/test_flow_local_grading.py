@@ -101,3 +101,23 @@ def test_the_first_failed_vote_stops_the_rest(monkeypatch: pytest.MonkeyPatch) -
     verdict = _quiz.grade(make_book(), only_session(quiz_pair()), SUMMARY)
     assert verdict.grader == f"local:{_local.LOCAL_MODEL}"
     assert len(calls) <= _quiz.GRADER_VOTES
+
+
+@pytest.mark.parametrize(
+    ("answer", "passed"),
+    [
+        # qwen3 2026-11-27: "too vague" fails on its own on-topic judgement.
+        ({"passed": False, "off_topic": False, "contradicts": False}, True),
+        ({"passed": True, "off_topic": True, "contradicts": False}, False),
+        ({"passed": True, "off_topic": False, "contradicts": True}, False),
+        # Without both flags (Haiku's answer) its own verdict stands.
+        ({"passed": False, "off_topic": False}, False),
+        ({"passed": True, "off_topic": "no", "contradicts": False}, True),
+    ],
+)
+def test_the_two_flags_decide_a_local_vote(
+    answer: dict[str, object], passed: bool
+) -> None:
+    vote = _quiz._vote({**answer, "feedback": "f", "missing": ["a topic"]})
+    assert vote.passed is passed
+    assert vote.missing == (() if passed else ("a topic",))

@@ -14,11 +14,10 @@ from typing import Final
 MAX_MISSING: Final = 3
 
 MISSING: Final = (
-    f'On a FAIL, list in "missing" 1-{MAX_MISSING} things from THESE pages'
-    " whose mention would make you accept it: main events, not small details."
-    ' Name each as a topic (e.g. "what he did after arriving in the village"),'
-    " never the answer itself. Leave it empty only if no addition could rescue"
-    " the summary (it describes another book or another part of it)."
+    f'On a FAIL, always list in "missing" 1-{MAX_MISSING} main events of THESE'
+    " pages that a summary of them would be about, so the reader sees which"
+    ' part you expected. Name each as a topic (e.g. "what he did after'
+    ' arriving in the village"), never the answer itself.'
 )
 
 ANSWER: Final = (
@@ -36,7 +35,12 @@ UNVERIFIABLE: Final = (
 
 
 def rewrite_rules(checklist: tuple[str, ...]) -> list[str]:
-    """How a rewrite is judged: the previous grading's promise, nothing new."""
+    """How a rewrite is judged: like a first summary, off-topic only.
+
+    The checklist stays (it shows which part was expected); a rewrite that
+    only names its points passed nothing before 2026-11-27 and passes now:
+    failing it was a fail for missing details (2914bcee#2, a false reject).
+    """
     return [
         (
             "This is a REWRITE. The previous summary failed, and the grader"
@@ -44,18 +48,13 @@ def rewrite_rules(checklist: tuple[str, ...]) -> list[str]:
         ),
         *(f"- {item}" for item in checklist),
         (
-            "PASS if the rewrite says something about what happens for each"
-            " point -- a sentence is enough, in the reader's own words, any"
-            " language. Judge it generously: this is not a quiz with one right"
-            " answer, and partial, imprecise or misremembered details still"
-            " cover a point. Do not add requirements beyond this list, never"
-            " judge pace, time or the stop page, and never fail for anything"
-            " you cannot verify."
+            "PASS unless the rewrite is still off-topic (about another book or"
+            " another part of this one: it touches none of these points) or it"
+            " clearly contradicts the text. A sentence on a point, a mention of"
+            " it, partial or misremembered details: all fine, in the reader's"
+            " own words and any language (kuhy, 2026-11-24: a fail for missing"
+            " details is never a real reason). Never judge pace, time or the"
+            " stop page, and never fail for anything you cannot verify."
         ),
-        (
-            "A point is NOT covered when the rewrite only names it (e.g. 'I"
-            " also read about X') without saying anything about what happens."
-            ' FAIL only then, and list in "missing" exactly the points still'
-            " missing."
-        ),
+        ('On a FAIL, list in "missing" the points it still does not touch.'),
     ]

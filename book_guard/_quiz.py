@@ -107,8 +107,18 @@ def grade(
 
 
 def _vote(answer: dict[str, object]) -> Verdict:
-    """One grader answer; a pass carries no missing list."""
-    passed = answer.get("passed") is True
+    """One grader answer; a pass carries no missing list.
+
+    An answer naming ``off_topic`` and ``contradicts`` (the local grader's
+    :data:`LOCAL_REMINDER` asks for them) passes unless one is true: qwen3
+    failed on-topic summaries for "too vague" against its own prompt
+    (2026-11-27), so its two judgements decide, not its verdict.
+    """
+    flags = (answer.get("off_topic"), answer.get("contradicts"))
+    if all(isinstance(f, bool) for f in flags):
+        passed = not any(flags)
+    else:
+        passed = answer.get("passed") is True
     raw = answer.get("missing")
     items = [str(m).strip() for m in raw] if isinstance(raw, list) else []
     missing = () if passed else tuple(m for m in items if m)[:MAX_MISSING]

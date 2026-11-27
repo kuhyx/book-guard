@@ -65,21 +65,19 @@ def _ebook_rules() -> list[str]:
     """How a first summary of an in-app stretch is judged."""
     return [
         (
-            "Judge only whether the summary shows the reader read this text."
-            " Pace and time are checked elsewhere: never judge them. Never fail"
-            " it for omitting anything. Remarks about their own reading are"
-            " not content: ignore them."
+            "Judge only whether the summary is about this text. Pace and time"
+            " are checked elsewhere: never judge them. Never fail it for"
+            " omitting anything, for staying with broad themes, or because it"
+            " draws on the beginning of the text. Remarks about their own"
+            " reading are not content: ignore them."
         ),
         (
-            "FAIL if every specific claim comes from the very beginning of the"
-            " text (its first page or so): that is what someone writes who only"
-            " looked at where they started. FAIL if it is generic (nothing a"
-            " non-reader could not write), clearly contradicts the text above"
-            " (a direct conflict -- not a detail you cannot find), or is about"
-            " another part of the book or another book: knowing the famous plot"
-            " is no proof of reading THIS stretch. Otherwise PASS. Minor"
-            " inaccuracies, imperfect recall, typos, an informal tone and any"
-            " language (e.g. Polish) are fine."
+            "PASS unless it is about another part of the book or another book"
+            " (nothing in it matches the text above: knowing the famous plot"
+            " is no proof of reading THIS stretch), or it clearly contradicts"
+            " the text above (a direct conflict -- not a detail you cannot"
+            " find). Minor inaccuracies, imperfect recall, typos, an informal"
+            " tone and any language (e.g. Polish) are fine."
         ),
         MISSING,
     ]

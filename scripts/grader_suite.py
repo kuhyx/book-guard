@@ -23,8 +23,7 @@ from typing import TYPE_CHECKING
 from book_guard import _ledger, _local, _photos, _quiz
 from book_guard._anchor import find_span
 from book_guard._books import book_at
-from book_guard._claude import ClaudeUnavailableError, ask
-from book_guard._local import ask_local
+from book_guard._claude import ClaudeUnavailableError
 from book_guard._pagenum import Context
 from book_guard._paths import paths
 from book_guard._prompt import Context as GradeContext
@@ -35,11 +34,9 @@ from book_guard._sessions import build_sessions
 if TYPE_CHECKING:
     from book_guard._books import Book
     from book_guard._paths import Paths
-    from book_guard._photos import PhotoRecord
     from book_guard._sessions import Session
 
 _DEMO_START_PAGE = 40
-_EVIDENCE_PHOTOS = 3
 
 GENUINE = (
     "Captain Smollett, worried about mutiny, lets the crew go ashore for the "
@@ -70,8 +67,14 @@ REWRITE_ECHO = (
     VAGUE + " I also read what Jim does when the crew is let ashore and what "
     "happens between Silver and the sailor Tom, which were important parts."
 )
-MUST_NAME_MISSING = {"vague", "photo-paraphrase"}
-"""A fail must say what to add (the rewrite's deal)."""
+MUST_NAME_MISSING = {"wrong-part", "other-book"}
+"""A fail must name its 1-3 topics (the rewrite's deal)."""
+OTHER_BOOK = (
+    "Ishmael signs on to the whaler Pequod with the harpooner Queequeg. "
+    "Captain Ahab nails a gold doubloon to the mast and swears the crew to "
+    "hunt the white whale that took his leg, while Starbuck warns that "
+    "vengeance on a dumb brute is madness."
+)
 WRONG_PART = (
     "Jim is a prisoner in the stockade and Silver protects him from the other "
     "pirates, who hand Silver the black spot. On the treasure hunt they find a "
@@ -95,33 +98,11 @@ def _out(*parts: object) -> None:
 
 
 def _paraphrase_of_photos(texts: list[str]) -> str:
-    """The cheat: restate only what the photographed pages visibly say."""
-    return (
-        "On the page where I started, "
-        + texts[0][:280]
-        + " Later on, "
-        + texts[1][:280]
-        + " At the end, "
-        + texts[2][:280]
+    """Restate only what the photographed pages visibly say (start, stop)."""
+    lead = ("On the page where I started, ", " Later on, ", " At the end, ")
+    return "".join(
+        lead[min(i, len(lead) - 1)] + text[:280] for i, text in enumerate(texts)
     )
-
-
-def _smart_cheat(photos: list[PhotoRecord], model: str) -> str:
-    """The realistic cheat: a summary built ONLY from the photographed pages.
-
-    Fluent, as someone who skimmed three pages would write it.
-    """
-    excerpts = "\n\n".join(p.text for p in photos)
-    system = "You write short, natural book-club summaries."
-    prompt = (
-        "Write a natural 4-sentence summary of the reading below, as if you "
-        "had read the whole stretch. Use ONLY facts from these excerpts. "
-        'Answer with the line {"ok": true}, then ---TEXT---, then the '
-        "summary.\n\n" + excerpts
-    )
-    if "--local" in sys.argv:
-        return str(ask_local(system, prompt)["text"])
-    return str(ask(system, prompt, model=model)["text"])
 
 
 def _vision_failures(active: Paths, session: Session) -> int:
@@ -141,25 +122,30 @@ def _grade_failures(
 ) -> int:
     """Grade every case; count verdicts on the wrong side."""
     cases = [
+        # kuhy, 2026-11-24: every real fail was false. A summary fails only
+        # off-topic (another part, another book) or for a contradiction;
+        # broad themes and claims also on the photos pass (2026-11-27).
         ("genuine", GENUINE, True),
-        ("vague", VAGUE, False),
+        ("vague", VAGUE, True),
         (
             "photo-paraphrase",
             _paraphrase_of_photos([p.text for p in session.evidence]),
-            False,
+            True,
         ),
         ("wrong-part", WRONG_PART, False),
-        ("smart-photo-cheat", "", False),  # written below, only when run
+        ("other-book", OTHER_BOOK, False),
         ("polish", POLISH, True),
         ("rewrite-genuine", REWRITE_GENUINE, True),
-        ("rewrite-echo", REWRITE_ECHO, False),
+        # Off-topic only for rewrites too: one that names its points is
+        # about the right part (failing it was a fail for missing details).
+        ("rewrite-echo", REWRITE_ECHO, True),
     ]
     only = _flag_value("--case")
     failures = 0
     for name, written, want in cases:
         if only and name != only:
             continue
-        summary = written or _smart_cheat(session.evidence, model)
+        summary = written
         checklist = CHECKLIST if name.startswith("rewrite-") else ()
         context = GradeContext(span=span_text, checklist=checklist)
         verdict = grade(book, session, summary, model=model, context=context)
@@ -210,12 +196,6 @@ def main() -> int:
         for s in build_sessions(_photos.usable_pages(records))
         if s.start.page == _DEMO_START_PAGE
     )
-    if len(session.evidence) < _EVIDENCE_PHOTOS:
-        _out(
-            "the demo session has no check-page photo: render it with "
-            "`scripts/demo_photos.py --check` (see its docstring) and process it"
-        )
-        return 2
     book = book_at(ledger, session.end.taken)
     use_span = book is not None and "--no-span" not in sys.argv
     span = find_span(active, book.isbn, session) if book and use_span else None

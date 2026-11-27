@@ -66,7 +66,7 @@ def test_the_grader_reads_exactly_the_text_on_screen(
     )
     assert response.passed is True
     assert "e-book reader app" in prompts[0]
-    assert "STEP 1, the photo test" not in prompts[0]
+    assert "PASS unless one of two things" not in prompts[0]
     assert TEXT[middle(40) : middle(52)] in prompts[0]
     ledger = _ledger.load(mapped.ledger, mapped.key_file)
     (row,) = ledger.verdicts()["session:ebook-abcdef0123456789"]

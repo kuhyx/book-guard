@@ -23,14 +23,14 @@ from dataclasses import dataclass
 import sys
 from typing import TYPE_CHECKING
 
-from book_guard import _ledger, _local, _photos, _quiz
+from book_guard import _ledger, _local, _quiz
 from book_guard._anchor import find_span
 from book_guard._books import book_at
 from book_guard._claude import ClaudeUnavailableError
 from book_guard._ledger import CREDIT, REJECT
 from book_guard._paths import paths
 from book_guard._prompt import Context
-from book_guard._sessions import build_sessions
+from book_guard._state import snapshot
 
 if TYPE_CHECKING:
     from book_guard._ledger import Entry, Ledger
@@ -124,10 +124,10 @@ def main() -> int:
         vars(_local)["LOCAL_MODEL"] = args.local_model or _local.LOCAL_MODEL
     active = paths()
     ledger = _ledger.load(active.ledger, active.key_file)
-    records = _photos.usable_pages(_photos.load(active.photos))
-    replay = _Replay(
-        active, ledger, {s.session_id: s for s in build_sessions(records)}, args.model
-    )
+    # The state's own sessions (manual starts, in-app breaks, retimes), so a
+    # session that never had a start photo is replayed too.
+    sessions = {v.session.session_id: v.session for v in snapshot(active).sessions}
+    replay = _Replay(active, ledger, sessions, args.model)
     rows = _judged(ledger.entries)
     count = len(rows) if args.count is None else args.count
     chosen = rows[args.first : args.first + count]

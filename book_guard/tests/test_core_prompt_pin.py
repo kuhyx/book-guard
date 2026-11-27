@@ -11,6 +11,10 @@ Moved once without a re-run (2026-11-11, both ends of a paper session count):
 the page range now ends on the stop page (``10-20``, 11 pages), and the stop
 page is "the last page read" instead of "not read". Re-run
 ``scripts/grader_suite.py`` to re-measure.
+
+Moved 2026-11-27 with a re-run (kuhy: all 7 real fails were false): a
+summary fails only off-topic or for a contradiction (``_prompt._rules``),
+a fail always names 1-3 topics, a rewrite passes on one covered point.
 """
 
 from __future__ import annotations
@@ -55,10 +59,10 @@ CASES = {
 }
 
 PINNED = {
-    "photos": "43eac27e604c0130d5c7521b2083186e29bdc8429a3e22655f0483914d1d67ae",
-    "photos+span": "d5b2541b2a6105a66f1a5db894551087af197829e4803f5e7bae0263b6111335",
-    "rewrite": "5e49ca3ddbaa949a4e1511b4461fa362be6b2edb8f27c7e0985da89ea107a5c4",
-    "photos+local": "b03af5706f073fc8bec58cdb32a4a3afa531f5fd0d58a7bd5493a1865a35dfa8",
+    "photos": "694674e7120da76ce4c0f2dede178fb8c5f210afbb299a763378d71443fe4a05",
+    "photos+span": "79edc1709be8cb9303500f0ce017bd675f33e1bb0d028f58fd488755e5040cd3",
+    "rewrite": "1bfb4e6735f665a27baca9aa8ac1c194f8d045696a941a3e67c4e526ab2e5d38",
+    "photos+local": "8c21283aea629ef9439f9df281db09cfde5b46fbb89987000f8d4ae3df7bf307",
 }
 
 

@@ -129,11 +129,12 @@ def _seen(session: Session, *, has_text: bool) -> str:
 
 
 def _rules(*, has_text: bool) -> list[str]:
-    """How a first summary is judged: the photo test first, then leniency.
+    """How a first summary is judged: PASS unless it is off-topic.
 
-    The order matters. Stated as one more rule among lenient ones, "built
-    only from the photos fails" lost: a fluent cheat written from the three
-    photos passed 4 of 4 (2026-10-07). As a step decided first, it holds.
+    kuhy, 2026-11-24: every one of the 7 real fails was a false alarm --
+    "only what the photos show", "too broad", "add the specific details".
+    So the photo test (STEP 1 until then) and "generic" are gone: a summary
+    fails only for another book or part, or for contradicting the text.
     """
     source = "the book's text above" if has_text else "the photographed pages"
     between = (
@@ -143,49 +144,46 @@ def _rules(*, has_text: bool) -> list[str]:
     )
     return [
         (
-            "Judge only whether the summary shows the reader read these pages."
+            "Judge only whether the summary is about these pages of this book."
             " Pace and time are checked elsewhere: never judge them. A summary"
             " of dozens of pages leaves out most details: never fail it for"
-            " omitting anything. Remarks about their own reading (e.g. that"
-            " they did not read the stop page) are not content: ignore them."
+            " omitting anything, for staying with broad themes, or because its"
+            " claims are also on the photographed pages. Remarks about their own"
+            " reading (e.g. that they did not read the stop page) are not"
+            " content: ignore them."
         ),
         (
-            "STEP 1, the photo test -- decide it first. Go through the"
-            " summary's specific claims and check each against the transcribed"
-            " photo text above (start, check AND stop page). If every specific"
-            " claim is on those photographed pages, the summary FAILS, however"
-            " fluent and accurate: that is exactly what someone writes who only"
-            " looked at the three photos." + between
-        ),
-        (
-            "STEP 2, only when the summary also has specific content that is"
-            " NOT on the photographed pages (from the pages between them --"
-            " what a real reader adds): PASS, unless it is generic (nothing a"
-            f" non-reader could not write), clearly contradicts {source} (a"
-            " direct conflict -- not a detail you cannot find), or "
+            "PASS unless one of two things holds. (1) It is off-topic --"
+            " being about the right book is not enough, a summary of its other"
+            " chapters is off-topic too: "
             + (
                 "nothing in it matches the book's text above (another part of"
                 " the book, or another book)."
                 if has_text
-                else "is plainly about another book or subject."
+                else "it is plainly about another book, another part of this"
+                " book, or another subject."
             )
-            + " Alongside such content, things also on the stop page are fine"
-            " (a story runs across the page break). Minor inaccuracies,"
-            " imperfect recall, typos, an informal tone and any language"
-            " (e.g. Polish) are fine."
+            + f" (2) It clearly contradicts {source} (a direct conflict -- not"
+            " a detail you cannot find)." + between + " Minor inaccuracies,"
+            " imperfect recall, typos, an informal tone and any language (e.g."
+            " Polish) are fine."
         ),
         MISSING,
     ]
 
 
 LOCAL_REMINDER: Final = (
-    "\n\nREMINDER before you answer: details that are NOT on the photographed"
-    " pages are what a real reader adds -- they are the reason to PASS, never"
-    " a reason to fail. FAIL a first summary only when ALL its specific"
-    " claims are on the photographed pages, or it is generic, or about"
-    " another book or part."
+    "\n\nREMINDER before you answer: PASS unless the summary is about another"
+    " book or another part of this one, or directly contradicts the text. A"
+    " short, vague or broad summary that leaves out most events still PASSES"
+    " when it is about these pages; missing details and claims that are also"
+    " on the photographed pages are never a reason to fail."
+    ' Add two fields to the JSON: "off_topic": true|false (another book or'
+    ' another part of this one) and "contradicts": true|false (a direct'
+    " conflict with the text)."
 )
 """Appended only for the local fallback grader (:mod:`book_guard._local`):
 measured 2026-10-15 on the reader's 15 real summaries, both local qwen3
 models failed genuine ones *because* they went past the photos -- the rule
-read backwards. Haiku's prompt is untouched."""
+read backwards (2026-11-27: restated for the off-topic-only rule). Haiku's
+prompt is untouched."""

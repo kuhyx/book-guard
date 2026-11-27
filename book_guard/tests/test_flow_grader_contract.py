@@ -44,15 +44,17 @@ def test_a_rewrite_is_judged_on_the_checklist_only() -> None:
     prompt = build_prompt(None, session, SUMMARY, Context(checklist=MISSING))
     assert "This is a REWRITE" in prompt
     assert "\n- what he did in the village\n- who he worked for\n" in prompt
-    assert "Do not add requirements beyond this list" in prompt
-    assert "Judge it generously" in prompt
+    assert "PASS unless the rewrite is still off-topic" in prompt
     assert "never fail for anything you cannot verify" in prompt
-    assert "is NOT covered when the rewrite only names it" in prompt
-    assert "STEP 1" not in prompt
+    # A rewrite that only names its points is on-topic: it passes now.
+    assert "is NOT covered when the rewrite only names it" not in prompt
+    assert "PASS unless one of two things" not in prompt
     fresh = build_prompt(None, session, SUMMARY)
-    assert 'list in "missing" 1-3 things' in fresh
+    assert 'always list in "missing" 1-3 main events' in fresh
     assert "never the answer itself" in fresh
-    assert "STEP 1, the photo test" in fresh
+    # kuhy, 2026-11-24: a fail is off-topic or a contradiction, nothing else.
+    assert "PASS unless one of two things holds" in fresh
+    assert "STEP 1" not in fresh
     assert "REWRITE" not in fresh
 
 

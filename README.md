@@ -52,8 +52,9 @@ Polish paper copy anchors in an English epub, and Haiku gets the continuous
 text between the start and end anchors -- not a handful of retrieved
 snippets. Without a file, it grades on the three photos alone. Either way,
 whatever it cannot check against the text it was given is never a reason
-to fail -- only a clear contradiction, or a summary with no sign of the
-reading (generic, a restatement of the photos, another book).
+to fail -- only a clear contradiction, or a summary of another book or
+another part of it. Missing details, broad themes or claims that are also
+on the photos never fail one (2026-11-27: all 7 real fails were false).
 
 A passed session is a signed `credit` row in
 `~/.local/share/book_guard/ledger.json`. A failed summary is told what it
