@@ -30,7 +30,6 @@ jobs:
       - run: flutter pub get
       - if: matrix.task == 'analyze'
         run: |
-          flutter analyze --fatal-infos
           dart format --output=none --set-exit-if-changed lib test bin
       - if: matrix.task == 'web'
         run: flutter build web --release

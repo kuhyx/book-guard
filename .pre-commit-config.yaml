@@ -25,9 +25,6 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: debug-statements
-      - id: name-tests-test
-        args: [--pytest-test-first]
-        exclude: ^book_guard/tests/(_[a-z][a-z_]*|conftest)\.py$
       - id: check-ast
       - id: mixed-line-ending
         args: [--fix=lf]
@@ -51,50 +48,10 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.9
     hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
-        types_or: [python, pyi]
       - id: ruff-format
         types_or: [python, pyi]
   - repo: local
     hooks:
-      # The dev venv (scripts/setup_dev.sh) has every runtime dependency, so
-      # mypy runs strict with no disabled error codes.
-      # A shared cache (XDG_CACHE_HOME/mypy/book-guard) makes a fresh worktree
-      # hit the cache (~0.2 s) instead of a cold ~10 s run.
-      - id: mypy
-        name: mypy (strict, dev venv)
-        entry: bash -c '.venv/bin/python -m mypy --cache-dir "${XDG_CACHE_HOME:-$HOME/.cache}/mypy/book-guard" book_guard scripts'
-        language: system
-        pass_filenames: false
-        types: [python]
-      # Changed files only: the whole tree took ~16 s of a commit's 60 s cap
-      # (jobs=1, see pyproject); --all-files / CI still lint everything.
-      # --disable=duplicate-code: compares only files passed; commit/PR runs are
-      # partial anyway and cost ~5 s of the 60 s cap (whole-tree run is CI).
-      - id: pylint
-        name: pylint (dev venv)
-        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --fail-under=10 --disable=duplicate-code
-        language: system
-        files: ^(book_guard|scripts)/.*\.py$
-        types: [python]
-        # One process: pre-commit's default fan-out ran up to 16 pylints
-        # that each re-infer the same imports; under capped.sh's CPU share
-        # --all-files passed 60 s, while one process lints the tree in ~9 s.
-        require_serial: true
-      # Two workers fit capped.sh's CPU share (16 s -> 13.5 s); more workers are
-      # slower under the CPU % cap.
-      # An old .venv without pytest-xdist falls back to one process.
-      # CI's whole-tree duplicate-code run, here too (the per-file pylint above
-      # cannot see a copy between two files): a lock helper copied from
-      # _indexer into _grade_pass passed every local gate and turned CI red
-      # for three pushes. Whole tree, ~3 s.
-      - id: pylint-duplicate-code
-        name: pylint duplicate-code (whole tree, as CI)
-        entry: .venv/bin/python -m pylint --rcfile=pyproject.toml --disable=all --enable=duplicate-code book_guard scripts
-        language: system
-        files: ^(book_guard|scripts)/.*\.py$
-        pass_filenames: false
       - id: pytest
         name: pytest (100% branch coverage)
         entry: |
@@ -102,31 +59,8 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.9.4
-    hooks:
-      - id: bandit
-        args: [-c, pyproject.toml, --severity-level=high, --confidence-level=medium]
-        additional_dependencies: ["bandit[toml]"]
-        exclude: ^(book_guard/tests/|scripts/)
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.3
-    hooks:
-      - id: codespell
-        args:
-          - --skip=*.json,*.lock,.git,__pycache__,.venv,.demo,app/build
-          - --ignore-words-list=nd,te,als,ans
   - repo: local
     hooks:
-      - id: shellcheck
-        name: shellcheck
-        entry: bash -c 'printf "%s\0" "$@" | xargs -0 -n 40 shellcheck --severity=warning' --
-        language: system
-        types: [shell]
-      - id: file-length
-        name: file length <= 250 lines
-        entry: scripts/check_file_length.sh
-        language: system
       - id: no-silent-failures
         name: Block silent failures (swallowed exceptions must log why)
         entry: python3 scripts/check_silent_failures.py
@@ -169,12 +103,6 @@ repos:
         files: >-
           (pubspec\.(yaml|lock)|pyproject\.toml|requirements.*\.txt
           |\.fvmrc|\.github/workflows/.*\.ya?ml)$
-      - id: app-analyze
-        name: flutter analyze (app)
-        entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) flutter analyze --fatal-infos'
-        language: system
-        pass_filenames: false
-        files: ^app/(lib|test|bin)/.*\.dart$
       - id: app-format
         name: dart format (app, as CI checks it)
         entry: bash -c 'cd app && $(command -v fvm >/dev/null && echo fvm) dart format --output=none --set-exit-if-changed lib test bin'

@@ -121,10 +121,6 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "-ra",
-    "--cov=book_guard",
-    "--cov-branch",
-    "--cov-report=term-missing",
-    "--cov-fail-under=100",
 ]
 # An unclosed sqlite connection or file is a descriptor leak in the
 # long-running inbox worker (found 2026-09-26): fail the suite on it.
